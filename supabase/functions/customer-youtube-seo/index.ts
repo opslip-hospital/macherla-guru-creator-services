@@ -20,15 +20,75 @@ function normalizeTags(value: unknown, max: number): string[] {
   if (!Array.isArray(value)) return [];
   return value.map((x) => String(x).trim()).filter(Boolean).slice(0, max);
 }
+async function uploadVideoToGemini(apiKey: string, bytes: Uint8Array, mime: string, name: string) {
+  const start = await fetch("https://generativelanguage.googleapis.com/upload/v1beta/files", {
+    method: "POST",
+    headers: {
+      "x-goog-api-key": apiKey,
+      "X-Goog-Upload-Protocol": "resumable",
+      "X-Goog-Upload-Command": "start",
+      "X-Goog-Upload-Header-Content-Length": String(bytes.byteLength),
+      "X-Goog-Upload-Header-Content-Type": mime,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ file: { display_name: name.slice(0, 100) } }),
+  });
+  if (!start.ok) throw new Error("gemini_file_start_failed");
+  const uploadUrl = start.headers.get("x-goog-upload-url") ?? start.headers.get("location");
+  if (!uploadUrl || !uploadUrl.startsWith("https://")) throw new Error("gemini_upload_url_missing");
+  const uploaded = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      "x-goog-api-key": apiKey,
+      "X-Goog-Upload-Offset": "0",
+      "X-Goog-Upload-Command": "upload, finalize",
+      "Content-Length": String(bytes.byteLength),
+    },
+    body: bytes,
+  });
+  if (!uploaded.ok) throw new Error("gemini_file_upload_failed");
+  const payload = await uploaded.json();
+  const file = payload.file ?? payload;
+  if (!file.name || !file.uri) throw new Error("gemini_file_reference_missing");
+  return { name: String(file.name), uri: String(file.uri), state: String(file.state ?? "PROCESSING") };
+}
+async function waitForGeminiFile(apiKey: string, fileName: string) {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/" + fileName,
+      { headers: { "x-goog-api-key": apiKey } },
+    );
+    if (!response.ok) throw new Error("gemini_file_status_failed");
+    const payload = await response.json();
+    const state = String(payload.state ?? payload.file?.state ?? "");
+    if (state === "ACTIVE") return;
+    if (state === "FAILED") throw new Error("gemini_video_processing_failed");
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+  throw new Error("gemini_video_processing_timeout");
+}
+async function deleteGeminiFile(apiKey: string, fileName: string) {
+  try {
+    await fetch("https://generativelanguage.googleapis.com/v1beta/" + fileName, {
+      method: "DELETE",
+      headers: { "x-goog-api-key": apiKey },
+    });
+  } catch {
+    // Temporary Gemini files are best-effort deleted after metadata generation.
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+  let geminiFileName = "";
+  let geminiKey = "";
   try {
     const url = required("SUPABASE_URL");
     const publishable = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY");
     const service = Deno.env.get("SUPABASE_SECRET_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!publishable || !service) throw new Error("missing_configuration");
-    const bearer = (req.headers.get("Authorization") ?? "").match(/^Bearer\s+(.+)$/i)?.[1];
+    const bearer = (req.headers.get("Authorization") ?? "").match(/^Bearer\\s+(.+)$/i)?.[1];
     if (!bearer) return json({ error: "authentication_required" }, 401);
     const userClient = createClient(url, publishable, {
       global: { headers: { Authorization: `Bearer ${bearer}` } },
@@ -44,7 +104,8 @@ Deno.serve(async (req: Request) => {
     }
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data: job, error: jobError } = await admin.from("upload_jobs")
-      .select("id,tenant_id,video_title,status").eq("id", jobId).maybeSingle();
+      .select("id,tenant_id,video_title,status,storage_object_path,mime_type,file_size_bytes")
+      .eq("id", jobId).maybeSingle();
     if (jobError || !job) return json({ error: "video_not_found" }, 404);
     const { data: membership } = await admin.from("tenant_memberships")
       .select("tenant_id").eq("tenant_id", job.tenant_id).eq("user_id", auth.user.id)
@@ -56,37 +117,49 @@ Deno.serve(async (req: Request) => {
 
     let metadata: Record<string, unknown>;
     if (action === "generate") {
-      const apiKey = required("GEMINI_API_KEY");
-      const sourceTitle = cleanText(body.title, 100) || cleanText(job.video_title, 100);
-      const context = cleanText(body.context, 1500);
+      geminiKey = required("GEMINI_API_KEY");
+      if (!job.storage_object_path || !["video/mp4", "video/quicktime", "video/webm"].includes(String(job.mime_type))) {
+        return json({ error: "video_file_unavailable_or_unsupported" }, 409);
+      }
+      const { data: videoBlob, error: storageError } = await admin.storage
+        .from("customer-video-intake").download(job.storage_object_path);
+      if (storageError || !videoBlob) return json({ error: "video_file_unavailable" }, 409);
+      if (videoBlob.size !== Number(job.file_size_bytes) || videoBlob.size > 104857600) {
+        return json({ error: "video_file_size_mismatch" }, 409);
+      }
+      const videoBytes = new Uint8Array(await videoBlob.arrayBuffer());
+      const geminiFile = await uploadVideoToGemini(
+        geminiKey, videoBytes, String(job.mime_type), String(job.video_title ?? "creator-video"),
+      );
+      geminiFileName = geminiFile.name;
+      await waitForGeminiFile(geminiKey, geminiFileName);
       const language = cleanText(body.language, 40) || "Telugu";
-      if (!sourceTitle) return json({ error: "video_topic_required" }, 400);
-      const prompt = `You are an expert YouTube SEO editor for a creator's own channel.
-Create truthful, compelling YouTube metadata based only on the supplied video topic/context. Do not invent events, claims, names, or details absent from the input. Optimize naturally for YouTube search and viewer clarity; never promise virality.
+      const prompt = `You are an expert YouTube SEO editor. Watch and listen to the attached complete video. Identify the actual scenes, actions, spoken dialogue, language, mood, subject and context. Base every metadata field on what is genuinely visible or audible; do not invent events or claims. Produce engaging, searchable metadata for the creator's own YouTube channel.
 Output language/script: ${language}.
-Video title/topic: ${sourceTitle}
-Creator context / what happens in the video: ${context || "Not provided; stay close to the topic and avoid unsupported specifics."}
 Return JSON only with this exact shape:
-{"title":"under 100 characters","description":"SEO-friendly description, up to 4500 characters; include relevant hashtags at the end","tags":["short relevant tags"],"hashtags":["without #, up to 5"],"caption":"short social caption"}
-Rules: title <=100 chars; description <=4500 chars; tags <=20 and total tag characters <=450; hashtags <=5; caption <=1000 chars. Use the requested language/script. Tags should be concise search phrases, not hashtag strings. Hashtags must be relevant and not generic spam.`;
+{"title":"under 100 characters","description":"SEO-friendly description up to 4500 characters; include relevant hashtags at the end","tags":["short relevant YouTube search tags"],"hashtags":["without #, up to 5"],"caption":"short social caption"}
+Rules: title <=100 chars; description <=4500 chars; tags <=20 and total tag characters <=450; hashtags <=5; caption <=1000 chars. Use the requested language/script. Tags are concise search phrases, not hashtag strings. Hashtags must be relevant, avoid generic spam. Do not claim you heard dialogue unless it is audible.`;
       const response = await fetch(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+          headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
           body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            contents: [{ role: "user", parts: [
+              { fileData: { mimeType: String(job.mime_type), fileUri: geminiFile.uri } },
+              { text: prompt },
+            ] }],
             generationConfig: { responseMimeType: "application/json", temperature: 0.6, maxOutputTokens: 1800 },
           }),
         },
       );
       if (!response.ok) {
         const status = response.status;
-        return json({ error: status === 429 || status === 503 ? "ai_temporarily_busy" : "ai_generation_failed" }, 502);
+        return json({ error: status === 429 || status === 503 ? "ai_temporarily_busy" : "ai_generation_failed", provider_status: status }, 502);
       }
       const generated = await response.json();
       const text = generated?.candidates?.[0]?.content?.parts?.map((p: {text?: string}) => p.text ?? "").join("") ?? "";
-      const parsed = JSON.parse(text.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim());
+      const parsed = JSON.parse(text.replace(/^\x60\x60\x60(?:json)?/i, "").replace(/\x60\x60\x60$/i, "").trim());
       metadata = {
         title: cleanText(parsed.title, 100),
         description: cleanText(parsed.description, 5000),
@@ -94,6 +167,7 @@ Rules: title <=100 chars; description <=4500 chars; tags <=20 and total tag char
         hashtags: normalizeTags(parsed.hashtags, 5).map((x) => x.replace(/^#+/, "")),
         caption: cleanText(parsed.caption, 2200),
       };
+      if (!metadata.title) return json({ error: "ai_returned_empty_metadata" }, 502);
     } else {
       metadata = {
         title: cleanText(body.title, 100),
@@ -126,13 +200,15 @@ Rules: title <=100 chars; description <=4500 chars; tags <=20 and total tag char
     await admin.from("audit_events").insert({
       tenant_id: job.tenant_id,
       actor_user_id: auth.user.id,
-      event_type: action === "generate" ? "customer_ai_seo_generated" : "customer_seo_metadata_saved",
-      details: { upload_job_id: jobId },
+      event_type: action === "generate" ? "customer_ai_video_seo_generated" : "customer_seo_metadata_saved",
+      details: { upload_job_id: jobId, analyzed_uploaded_video: action === "generate" },
     });
-    return json({ success: true, metadata });
+    return json({ success: true, metadata, analyzed_uploaded_video: action === "generate" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message === "missing_configuration") return json({ error: "ai_not_configured" }, 503);
     return json({ error: "seo_request_failed" }, 502);
+  } finally {
+    if (geminiFileName && geminiKey) await deleteGeminiFile(geminiKey, geminiFileName);
   }
 });
