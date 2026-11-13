@@ -1111,7 +1111,7 @@ else:
                 st.warning("Your workspace is not active yet. Upload and AI actions are paused; contact the service team.")
             else:
                 with st.form("customer_video_intake", clear_on_submit=True):
-                    upload_tenant = st.selectbox("Workspace", active_tenant_ids)
+                    upload_tenant = st.selectbox("Workspace", active_tenant_ids, index=active_tenant_ids.index(selected_active_tenant_id) if selected_active_tenant_id in active_tenant_ids else 0, format_func=lambda value: workspace_labels.get(str(value), "Creator workspace"))
                     video_file = st.file_uploader("Choose video file", type=["mp4", "mov", "webm"], max_upload_size=100)
                     gemini_ai_consent = st.checkbox(
                         "I consent to send this video to Google Gemini for AI SEO analysis. The current Gemini API Free Tier may use submitted content to improve Google products. I confirm I have the rights to share this video.",
