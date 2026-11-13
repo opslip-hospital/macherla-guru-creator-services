@@ -16,6 +16,9 @@ SIGNUP_MIGRATION = (
 HARDENING_MIGRATION = (
     ROOT / "supabase/migrations/20261113060934_harden_private_rls_helpers_and_fk_indexes.sql"
 ).read_text(encoding="utf-8")
+WORKFLOW_MIGRATION = (
+    ROOT / "supabase/migrations/20261113171000_creator_service_workflows.sql"
+).read_text(encoding="utf-8")
 
 
 class AuthenticationContractTests(unittest.TestCase):
@@ -61,6 +64,23 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('supabase.table("billing_accounts")', APP)
         self.assertNotIn('supabase.table("upload_jobs").insert(', APP)
         self.assertNotIn('supabase.table("billing_accounts").insert(', APP)
+
+    def test_metadata_mutations_are_admin_only_server_functions(self):
+        self.assertIn("private.admin_save_content_metadata", WORKFLOW_MIGRATION)
+        self.assertIn("private.is_platform_admin()", WORKFLOW_MIGRATION)
+        self.assertIn("public.admin_save_content_metadata", WORKFLOW_MIGRATION)
+        self.assertIn("content_metadata_prepared", WORKFLOW_MIGRATION)
+
+    def test_customer_publish_consent_is_owner_checked_and_audited(self):
+        self.assertIn("private.customer_approve_upload", WORKFLOW_MIGRATION)
+        self.assertIn("membership_role='owner'", WORKFLOW_MIGRATION)
+        self.assertIn("customer_approved_video_publish", WORKFLOW_MIGRATION)
+        self.assertIn('supabase.rpc("customer_approve_upload"', APP)
+
+    def test_support_status_changes_are_admin_only_and_audited(self):
+        self.assertIn("private.admin_update_service_ticket_status", WORKFLOW_MIGRATION)
+        self.assertIn("support_ticket_status_changed", WORKFLOW_MIGRATION)
+        self.assertIn('supabase.rpc("admin_update_service_ticket_status"', APP)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
