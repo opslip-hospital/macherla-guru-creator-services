@@ -203,11 +203,72 @@ with right:
 
 if role == "admin":
     st.header("Master Admin Dashboard")
-    st.caption("Platform overview — customer data is read through admin-only RLS policies.")
+    st.caption("Approve customer access and provision isolated workspaces.")
+    st.subheader("Pending customer requests")
+    try:
+        requests_result = (
+            supabase.table("customer_requests")
+            .select("user_id, email, display_name, status, created_at")
+            .eq("status", "pending")
+            .order("created_at", desc=False)
+            .execute()
+        )
+        pending_requests = requests_result.data or []
+    except Exception:
+        pending_requests = []
+        st.error("Customer requests could not be loaded. Check the admin RLS policy.")
+
+    st.metric("Pending approvals", len(pending_requests))
+    if not pending_requests:
+        st.info("There are no pending customer requests.")
+    else:
+        for request in pending_requests:
+            request_id = request["user_id"]
+            customer_name = request.get("display_name") or "Creator"
+            with st.container(border=True):
+                st.write(f"**{customer_name}**")
+                st.caption(request.get("email", "Email unavailable"))
+                workspace_name = st.text_input(
+                    "Workspace / business name",
+                    value=f"{customer_name} YouTube Workspace",
+                    key=f"workspace_{request_id}",
+                )
+                approve_col, reject_col = st.columns(2)
+                with approve_col:
+                    if st.button("Approve & create workspace", key=f"approve_{request_id}",
+                                 type="primary", use_container_width=True):
+                        if len(workspace_name.strip()) < 2:
+                            st.warning("Enter a workspace name with at least 2 characters.")
+                        else:
+                            try:
+                                supabase.rpc("admin_approve_customer", {
+                                    "target_user": request_id,
+                                    "workspace_name": workspace_name.strip(),
+                                }).execute()
+                            except Exception:
+                                st.error("Approval failed. No access was granted; check the request and try again.")
+                            else:
+                                st.success("Customer approved and workspace created.")
+                                st.rerun()
+                with reject_col:
+                    if st.button("Reject request", key=f"reject_{request_id}",
+                                 use_container_width=True):
+                        try:
+                            supabase.rpc("admin_reject_customer", {
+                                "target_user": request_id,
+                            }).execute()
+                        except Exception:
+                            st.error("The request could not be rejected. Please try again.")
+                        else:
+                            st.success("Customer request rejected.")
+                            st.rerun()
+
+    st.divider()
+    st.subheader("Active customer workspaces")
     try:
         tenants_result = (
             supabase.table("tenants")
-            .select("id, business_name, status")
+            .select("id, business_name, status, created_at")
             .order("created_at", desc=True)
             .execute()
         )
@@ -218,11 +279,11 @@ if role == "admin":
         else:
             st.info("No customer workspaces have been provisioned yet.")
     except Exception:
-        st.error("Admin access could not be verified for the customer workspace list.")
+        st.error("Admin access could not be verified for the workspace list.")
     st.info(
-        "Upload controls, YouTube OAuth, SEO operations, scheduling, billing, and "
-        "support workflows will be added only after their server-side authorization "
-        "and audit controls are implemented."
+        "Approval creates the customer workspace, owner membership, and audit event "
+        "in one database transaction. YouTube OAuth, uploads, SEO, scheduling, and "
+        "billing remain disabled until their separate controls are implemented."
     )
 else:
     st.header("Customer Dashboard")
