@@ -1251,7 +1251,10 @@ else:
                                     if video_id:
                                         st.link_button("Open YouTube video", f"https://www.youtube.com/watch?v={video_id}")
                                 elif str(exc) == "publish_status_unknown":
-                                    st.warning("The publish/schedule response was interrupted. YouTube may already have accepted it. Check YouTube Studio before retrying.")
+                                    st.warning("The publish/schedule response was interrupted. YouTube may already have accepted it. Check YouTube Studio before retrying; do not repeat the action.")
+                                    existing_video_id = str(job.get("youtube_video_id") or "")
+                                    if re.fullmatch(r"[A-Za-z0-9_-]{6,20}", existing_video_id):
+                                        st.link_button("Open YouTube video to check status", f"https://www.youtube.com/watch?v={existing_video_id}")
                                 else:
                                     st.error("YouTube could not complete this action. Your video remains private; check publishing permissions and schedule time.")
                             else:
