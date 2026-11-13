@@ -310,6 +310,13 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("youtube_upload_status_unknown", YOUTUBE_WORKER)
         self.assertIn("youtube_upload_status_unknown", APP)
 
+    def test_gemini_file_and_model_errors_return_safe_stage_diagnostics(self):
+        self.assertIn("ai_temporarily_busy", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("provider_status", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("gemini_file_start_failed:", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("gemini_file_upload_failed:", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("gemini_file_status_failed:", CUSTOMER_SEO_FUNCTION)
+
     def test_customer_seo_save_enforces_five_hashtags_and_valid_tag_limits(self):
         self.assertIn("exactly_5_unique_hashtags_required", CUSTOMER_SEO_FUNCTION)
         self.assertIn("tags_must_be_12_to_18_and_within_450_characters", CUSTOMER_SEO_FUNCTION)
