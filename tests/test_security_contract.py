@@ -255,6 +255,17 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('normalizeTags(parsed.title_options, 5).map((title) => cleanText(title, 100))', CUSTOMER_SEO_FUNCTION)
         self.assertIn('normalizeTags(body.metadata_details?.title_options, 5).map((title) => cleanText(title, 100))', CUSTOMER_SEO_FUNCTION)
 
+    def test_seo_is_locked_after_private_upload(self):
+        self.assertIn("metadata_locked_after_private_upload", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("SEO metadata uploaded to YouTube (read-only)", APP)
+        self.assertIn("locked after private upload", APP)
+
+    def test_uncertain_upload_is_not_retryable(self):
+        self.assertIn("upload_unknown", UPLOAD_OUTCOME_MIGRATION)
+        self.assertIn("youtubeUploadAccepted = true", YOUTUBE_WORKER)
+        self.assertIn('status: "upload_unknown"', YOUTUBE_WORKER)
+        self.assertIn("Do not retry this upload", APP)
+
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
         self.assertNotIn("youtube.com/@macherlaguru", APP)
