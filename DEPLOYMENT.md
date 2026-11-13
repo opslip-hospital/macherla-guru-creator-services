@@ -53,7 +53,7 @@ The project-provided Supabase URL and server credentials are read inside Edge Fu
 
 ## AI YouTube SEO generation
 
-The customer dashboard includes **Generate YouTube SEO** for each uploaded video. It creates a title, description, tags, up to five hashtags, and a short caption; the customer can edit and save the result before uploading.
+The customer dashboard includes **Generate YouTube SEO** for each uploaded video. It creates five title options, an SEO description, 12–18 search tags, exactly five separate hashtags, YouTube and Instagram captions, keywords, and a YouTube category; the customer can edit and save the result before uploading.
 
 In the dedicated Supabase project's **Edge Functions > Secrets**, add:
 
