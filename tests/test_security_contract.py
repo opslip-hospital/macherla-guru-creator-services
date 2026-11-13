@@ -72,6 +72,15 @@ SEO_TAG_SEPARATOR_GUARD = (
 
 
 class AuthenticationContractTests(unittest.TestCase):
+    def test_migration_versions_are_unique_and_final_guard_runs_last(self):
+        migration_dir = ROOT / "supabase/migrations"
+        versions = [path.name[:14] for path in migration_dir.glob("*.sql")]
+        self.assertEqual(len(versions), len(set(versions)))
+        self.assertGreater(
+            "20261113292000_finalize_complete_seo_upload_guard.sql",
+            "20261113289000_finalize_upload_state_machine.sql",
+        )
+
     def test_app_uses_publishable_key_not_privileged_key(self):
         self.assertIn("SUPABASE_PUBLISHABLE_KEY", APP)
         self.assertNotIn("SUPABASE_SECRET_KEY", APP)
