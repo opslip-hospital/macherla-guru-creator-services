@@ -20,6 +20,21 @@ function normalizeTags(value: unknown, max: number): string[] {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.map((x) => String(x).trim()).filter(Boolean))].slice(0, max);
 }
+function normalizeHashtags(value: unknown, max: number): string[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of value) {
+    const tag = String(item).replace(/^#+/, "").trim()
+      .replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_]/gu, "");
+    const key = tag.toLowerCase();
+    if (!tag || seen.has(key)) continue;
+    seen.add(key);
+    result.push(tag);
+    if (result.length >= max) break;
+  }
+  return result;
+}
 async function uploadVideoToGemini(apiKey: string, bytes: Uint8Array, mime: string, name: string) {
   const start = await fetch("https://generativelanguage.googleapis.com/upload/v1beta/files", {
     method: "POST",
@@ -166,7 +181,7 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
         title: cleanText(parsed.title, 100),
         description: cleanText(parsed.description, 5000),
         tags: normalizeTags(parsed.tags, 18),
-        hashtags: [...new Set(normalizeTags(parsed.hashtags, 5).map((x) => x.replace(/^#+/, "").trim()).filter(Boolean))],
+        hashtags: normalizeHashtags(parsed.hashtags, 5),
         caption: cleanText(parsed.caption, 2200),
         metadata_details: {
           title_options: normalizeTags(parsed.title_options, 5),
@@ -195,7 +210,7 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
         title: cleanText(body.title, 100),
         description: cleanText(body.description, 5000),
         tags: normalizeTags(body.tags, 100),
-        hashtags: normalizeTags(body.hashtags, 30).map((x) => x.replace(/^#+/, "")),
+        hashtags: normalizeHashtags(body.hashtags, 30),
         caption: cleanText(body.caption, 2200),
         metadata_details: {
           title_options: normalizeTags(body.metadata_details?.title_options, 5),
