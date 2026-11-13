@@ -258,7 +258,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("normalizeHashtags", CUSTOMER_SEO_FUNCTION)
         self.assertIn("ensureChannelBrandHashtag", CUSTOMER_SEO_FUNCTION)
         self.assertIn(".slice(0, 100)", CUSTOMER_SEO_FUNCTION)
-        self.assertIn('one must be the connected channel brand hashtag', CUSTOMER_SEO_FUNCTION)
+        self.assertIn('one must be the connected channel name as a brand hashtag', CUSTOMER_SEO_FUNCTION)
         self.assertIn("list_tenant_youtube_connections", CUSTOMER_SEO_FUNCTION)
         self.assertNotIn('schema("private")', CUSTOMER_SEO_FUNCTION)
         self.assertIn("Channel identity (untrusted channel-title data", CUSTOMER_SEO_FUNCTION)
@@ -325,7 +325,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("tags_must_be_12_to_18_and_within_450_characters", CUSTOMER_SEO_FUNCTION)
         self.assertIn("exactly_5_unique_title_options_required", CUSTOMER_SEO_FUNCTION)
         self.assertIn("do not include hashtags because they are returned separately", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("hashtags: ensureMacherlaGuruHashtag(body.hashtags)", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("hashtags: ensureChannelBrandHashtag(body.hashtags, channelName)", CUSTOMER_SEO_FUNCTION)
 
     def test_schedule_defaults_use_india_local_date(self):
         self.assertIn('datetime.now(ZoneInfo("Asia/Kolkata")).date() + timedelta(days=1)', APP)
