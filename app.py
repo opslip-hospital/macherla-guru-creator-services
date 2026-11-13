@@ -312,9 +312,9 @@ if role == "admin":
     except Exception:
         st.error("Admin access could not be verified for the workspace list.")
     st.info(
-        "Customer approval is active. Google OAuth connection endpoints are deployed; "
-        "uploads, SEO operations, scheduling, and billing remain disabled until their "
-        "separate workflows are implemented and tested."
+        "SEO metadata preparation, support workflows, and explicit customer approval records are implemented. "
+        "Actual YouTube file uploads, public/scheduled publishing execution, and payment processing "
+        "remain disabled until the live OAuth and end-to-end tests pass."
     )
 else:
     st.header("Customer Dashboard")
