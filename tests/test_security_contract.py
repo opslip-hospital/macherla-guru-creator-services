@@ -169,7 +169,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('customer-youtube-seo', APP)
         self.assertIn('✨ Generate YouTube SEO', APP)
         self.assertIn('Save my SEO edits', APP)
-        self.assertIn('membership_role', CUSTOMER_SEO_FUNCTION)
+        self.assertIn('membership_role', CUSTOMER_CUSTOMER_SEO_FUNCTION)
         self.assertIn('GEMINI_API_KEY', CUSTOMER_SEO_FUNCTION)
         self.assertIn('customer_ai_seo_generated', CUSTOMER_SEO_FUNCTION)
         self.assertNotIn('GEMINI_API_KEY', APP)
