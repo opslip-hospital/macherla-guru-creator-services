@@ -178,9 +178,9 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("revoke all on function private.is_platform_admin() from public, anon", HARDENING_MIGRATION)
 
     def test_customer_support_uses_existing_tenant_insert_policy(self):
-        self.assertIn("customer support", WORKFLOW_MIGRATION.lower())
+        self.assertIn("service_tickets", WORKFLOW_MIGRATION)
         self.assertIn("tenant_id", WORKFLOW_MIGRATION)
-        # Support UI is intentionally removed from the minimal customer dashboard.
+        # Support submission is intentionally not exposed in the three-step customer UI.
         self.assertNotIn('supabase.table("service_tickets").insert({', APP)
         self.assertNotIn("customer_support_request", APP)
 
