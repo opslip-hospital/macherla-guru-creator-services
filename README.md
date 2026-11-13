@@ -26,8 +26,11 @@ Migrations are in `supabase/migrations/`:
 - New registrations receive the database default `customer` role only. Registration does not create a tenant, membership, or admin permission.
 - GitHub Actions CI compiles the app and runs static security-contract tests on pushes and pull requests.
 - The admin workspace appears only when the database profile has the trusted `admin` role.
-- Customer workspace activation and trusted admin provisioning are still manual backend operations.
-- Google OAuth, encrypted token handling, video upload, approval/scheduling execution, billing, hosting configuration, and end-to-end security tests are not yet implemented.
+- Customer workspace activation and trusted admin provisioning are handled by the Master Admin approval workflow.
+- YouTube OAuth start/callback Edge Functions and encrypted refresh-token storage are deployed, but a real Google test-account connection is still pending.
+- Customers can submit support tickets; the Master Admin can view the support inbox.
+- Customer and admin dashboards include read-only upload-queue and billing-status views.
+- Actual video file intake, YouTube private upload execution, editable SEO metadata, customer publish approval, scheduling execution, ticket resolution controls, payment processing, and end-to-end channel tests are not yet implemented.
 
 Do not use the app with real customer channels until provisioning, OAuth, upload, publishing approval, audit logging, and live end-to-end security tests are complete. The current CI checks are static guardrails, not a penetration test or live authentication test.
 
