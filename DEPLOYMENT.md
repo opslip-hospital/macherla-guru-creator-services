@@ -51,8 +51,22 @@ In the Supabase project's **Edge Functions > Secrets**, set:
 
 The project-provided `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are read inside Edge Functions. Never copy the service-role key into Streamlit or GitHub.
 
+## AI YouTube SEO generation
+
+The customer dashboard includes **Generate YouTube SEO** for each uploaded video. It creates a title, description, tags, up to five hashtags, and a short caption; the customer can edit and save the result before uploading.
+
+In the dedicated Supabase project's **Edge Functions > Secrets**, add:
+
+- `GEMINI_API_KEY` — a Google AI Studio / Gemini API key for the Creator Services project.
+
+Keep this key only in Supabase Edge Function secrets. Do not add it to Streamlit secrets, GitHub, or chat. The Edge Function calls Gemini server-side and checks that the signed-in user owns the video's workspace before generating or saving metadata. It uses the Gemini `generateContent` REST endpoint and structured JSON output.
+
+## Customer self-service publishing
+
+Customers can upload their own video to their connected YouTube channel as **PRIVATE**, then choose **Publish now** or **Schedule** from their dashboard. The publish/schedule button is the customer's explicit action; there is no separate platform-admin video approval. Google OAuth publishing permission is still required for changing video visibility or scheduling. Customers must reconnect their channel if the requested publishing scope was not granted.
+
 The OAuth flow requests only `youtube.upload` and `youtube.readonly`. A short-lived, one-use state is stored as a hash. The refresh token is encrypted with AES-256-GCM before it is stored in the private schema. Only the channel identity and granted scopes are returned to the customer UI.
 
 ## Current limitations
 
-OAuth endpoints and the customer connection entry point are deployed, but Google credentials and the encryption key still need to be configured. Do not treat OAuth as live until a real test account connects and the channel appears in the customer workspace. Video upload, private-first approval, scheduled publishing, SEO operations, billing, and production support workflows are not yet enabled.
+OAuth endpoints and the customer connection entry point are deployed, but Google credentials and the encryption key still need to be configured. Do not treat OAuth as live until a real test account connects and the channel appears in the customer workspace. The AI SEO and customer self-service upload/publish code is deployed, but live Gemini generation and real YouTube upload/publish actions are not verified until the Gemini secret is set and a valid YouTube channel completes end-to-end testing. Billing/payment processing is not enabled.
