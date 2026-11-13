@@ -831,8 +831,14 @@ else:
             .execute().data or []
         )
         own_tenant_ids = [r["tenant_id"] for r in own_memberships if r.get("tenant_id")]
+        own_tenant_rows = (
+            supabase.table("tenants").select("id, status")
+            .in_("id", own_tenant_ids).execute().data or []
+        ) if own_tenant_ids else []
+        active_tenant_ids = [r["id"] for r in own_tenant_rows if r.get("status") == "active"]
     except Exception:
         own_tenant_ids = []
+        active_tenant_ids = []
 
     # Channel-first customer home, matching the existing Macherla Guru Manager layout.
     # Every query is scoped to this authenticated customer's tenant memberships.
@@ -958,10 +964,14 @@ else:
             st.divider()
             st.subheader("🎥 Upload one video")
             st.caption("Choose one MP4, MOV or WebM file. Gemini watches the video and prepares its SEO automatically.")
-            with st.form("customer_video_intake", clear_on_submit=True):
-                upload_tenant = st.selectbox("Workspace", own_tenant_ids)
-                video_file = st.file_uploader("Choose video file", type=["mp4", "mov", "webm"], max_upload_size=100)
-                submit_video = st.form_submit_button("⬆️ Upload video & generate AI SEO", type="primary", use_container_width=True)
+            submit_video = False
+            if not active_tenant_ids:
+                st.warning("Your workspace is not active yet. Upload and AI actions are paused; contact the service team.")
+            else:
+                with st.form("customer_video_intake", clear_on_submit=True):
+                    upload_tenant = st.selectbox("Workspace", active_tenant_ids)
+                    video_file = st.file_uploader("Choose video file", type=["mp4", "mov", "webm"], max_upload_size=100)
+                    submit_video = st.form_submit_button("⬆️ Upload video & generate AI SEO", type="primary", use_container_width=True)
             if submit_video:
                 if video_file is None:
                     st.warning("Choose a video file.")
