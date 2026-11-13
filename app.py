@@ -545,10 +545,12 @@ else:
     except Exception:
         channel_connections = []
     upload_scope = "https://www.googleapis.com/auth/youtube.upload"
-    has_upload_permission = any(
-        upload_scope in (row.get("granted_scopes") or [])
-        for row in channel_connections
+    upload_connection = next(
+        (row for row in channel_connections if upload_scope in (row.get("granted_scopes") or [])),
+        None,
     )
+    has_upload_permission = upload_connection is not None
+    connected_channel_name = str((upload_connection or {}).get("channel_title") or "").strip()
     if not has_upload_permission:
         st.info("You can upload a video and prepare Gemini SEO without a YouTube channel. Connect your channel later to upload privately and schedule.")
         if st.button("Connect / reconnect YouTube channel", key="minimal_connect_youtube", type="primary"):
@@ -742,8 +744,15 @@ else:
             st.caption("This metadata is locked after private upload so dashboard edits cannot silently differ from YouTube.")
 
         if job.get("status") == "received":
+            connected_brand = re.sub(r"[^\w]", "", connected_channel_name, flags=re.UNICODE).lower()
+            saved_brands = [
+                re.sub(r"[^\w]", "", str(tag).lstrip("#"), flags=re.UNICODE).lower()
+                for tag in (saved_meta.get("hashtags") or [])
+            ]
             if saved_meta and not has_upload_permission:
                 st.info("Your SEO draft is ready. Connect your YouTube channel, then generate SEO once more so the brand hashtag matches your channel before private upload.")
+            elif saved_meta and connected_brand and connected_brand not in saved_brands:
+                st.info("Your channel is connected, but this SEO draft uses a different brand hashtag. Generate and save SEO again to match your connected channel before private upload.")
             elif saved_meta:
                 if st.button(
                     "📅 Continue to Schedule (private upload first)",
