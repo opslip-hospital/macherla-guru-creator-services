@@ -36,7 +36,7 @@ Deno.serve(async(req)=>{
    publishAt=date.toISOString();
   }
   admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
-  const {data:claimed,error:claimError}=await admin.rpc("claim_youtube_publish_job",{
+  const {data:claimed,error:claimError}=await userClient.rpc("claim_youtube_publish_job",{
    p_job_id:jobId,p_admin_user_id:auth.user.id,p_mode:mode,p_publish_at:publishAt,
   });
   if(claimError||!claimed)return json({error:"workspace_owner_or_private_upload_required"},409);
@@ -61,7 +61,7 @@ Deno.serve(async(req)=>{
   if(updateError)throw new Error("job_status_update_failed");
   await admin.from("audit_events").insert({
    tenant_id:claimed.tenant_id,actor_user_id:auth.user.id,event_type:mode==="now"?"youtube_video_published":"youtube_video_scheduled",
-   details:{upload_job_id:jobId,youtube_video_id:claimed.youtube_video_id,channel_id:claimed.channel_id,publish_at:publishAt,initiated_by_authenticated_owner_or_admin:true},
+   details:{upload_job_id:jobId,youtube_video_id:claimed.youtube_video_id,channel_id:claimed.channel_id,publish_at:publishAt,initiated_by_authenticated_owner:true},
   });
   return json({success:true,status:finalStatus,youtube_video_id:claimed.youtube_video_id,
    youtube_url:`https://www.youtube.com/watch?v=${claimed.youtube_video_id}`,
