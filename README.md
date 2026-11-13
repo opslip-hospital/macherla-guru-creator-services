@@ -115,10 +115,10 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 
 - `youtube-oauth-start`: v11 ACTIVE
 - `youtube-oauth-callback`: v11 ACTIVE
-- `youtube-upload-private`: v22 ACTIVE
+- `youtube-upload-private`: v23 ACTIVE
 - `youtube-publish-approved`: v9 ACTIVE
 - `youtube-refresh-analytics`: v7 ACTIVE
-- `customer-youtube-seo`: v37 ACTIVE
+- `customer-youtube-seo`: v39 ACTIVE
 - `customer-channel-dashboard`: v5 ACTIVE
 - `customer-content-studio`: v5 ACTIVE
 
@@ -147,3 +147,4 @@ These are deployment-state checks only, not successful end-to-end tests. The liv
 - SEO hashtag normalization caps each saved hashtag at 100 characters before the five-tag set is appended to the 5,000-character YouTube description limit.
 - Gemini SEO generation now rejects more than 20 keywords before saving, matching the database upload gate and the customer editor's validation contract.
 - A single uniquely versioned final migration now runs after all earlier upload/workflow migrations and enforces the complete SEO contract, including comma separators in the 450-character tag budget, exactly five unique hashtags with `MacherlaGuru`, five title options, description length, and the 20-keyword maximum. Duplicate migration-version filenames were removed so clean replay has an unambiguous order. The migration is applied to the live database.
+- Both video-processing workers now keep the downloaded file as a Blob and read only the first 12 bytes for container validation. Gemini and YouTube receive the Blob directly, avoiding an additional full-size 100 MB Uint8Array copy inside the Edge Function memory budget. Both functions are deployed ACTIVE: customer SEO v39 and private upload v23.
