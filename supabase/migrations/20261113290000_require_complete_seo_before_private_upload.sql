@@ -44,7 +44,7 @@ begin
   end if;
   select count(distinct lower(x)) into v_tag_count
     from unnest(coalesce(v_metadata.tags,'{}'::text[])) as x;
-  select coalesce(sum(length(x)),0) into v_tag_chars
+  select coalesce(sum(length(x)),0) + greatest(cardinality(coalesce(v_metadata.tags,'{}'::text[]))-1,0) into v_tag_chars
     from unnest(coalesce(v_metadata.tags,'{}'::text[])) as x;
   if v_tag_count<12 or v_tag_count>18 or v_tag_chars>450
      or v_tag_count<>cardinality(coalesce(v_metadata.tags,'{}'::text[])) then
