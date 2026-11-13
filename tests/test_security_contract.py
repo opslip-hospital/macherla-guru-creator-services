@@ -249,6 +249,7 @@ class AuthenticationContractTests(unittest.TestCase):
     def test_customer_content_studio_is_tenant_scoped_and_server_keyed(self):
         studio = (ROOT / "supabase/functions/customer-content-studio/index.ts").read_text(encoding="utf-8")
         self.assertIn("membership_role", studio)
+        self.assertIn('list_tenant_youtube_connections', studio)
         self.assertIn("GEMINI_API_KEY", studio)
         self.assertIn("customer_content_studio_request", APP)
         self.assertIn("✨ Gemini AI Content Studio", APP)
