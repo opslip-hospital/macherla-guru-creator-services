@@ -44,6 +44,6 @@
 - Confirm anonymous public-table/RPC access remains revoked and public tables have RLS enabled.
 - Confirm service-role credentials never appear in Streamlit code or browser responses.
 - Enable Supabase Auth **Leaked Password Protection** in the project Authentication password/security settings before real customer onboarding.
-- Confirm Google OAuth consent-screen test users and redirect URI are configured for the test account.
+- Confirm Google OAuth test users and redirect URI are configured for the test account. Before real customer onboarding, move the consent screen from Testing to In production and complete Google's verification for required YouTube scopes; external Testing mode is limited to 100 test users and refresh tokens for YouTube scopes expire after 7 days.
 - Do not onboard real customers until OAuth, Gemini video analysis, private upload, Publish now, Schedule, analytics, tenant isolation, and admin workflows pass.
 - Keep the existing **Macherla Guru YouTube AI Manager** untouched throughout all tests.
