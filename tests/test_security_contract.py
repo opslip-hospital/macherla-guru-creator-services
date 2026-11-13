@@ -19,7 +19,7 @@ HARDENING_MIGRATION = (
     ROOT / "supabase/migrations/20261113060934_harden_private_rls_helpers_and_fk_indexes.sql"
 ).read_text(encoding="utf-8")
 WORKFLOW_MIGRATION = (
-    ROOT / "supabase/migrations/20261113171000_creator_service_workflows.sql"
+    ROOT / "supabase/migrations/20261113114225_creator_service_workflows.sql"
 ).read_text(encoding="utf-8")
 UPLOAD_MIGRATION = (
     ROOT / "supabase/migrations/20261113180000_customer_video_intake_storage.sql"
