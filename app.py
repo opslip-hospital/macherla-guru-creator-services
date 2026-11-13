@@ -900,7 +900,7 @@ else:
         try:
             dashboard_rows = (
                 supabase.table("channel_analytics_snapshots")
-                .select("channel_id, channel_title, channel_description, subscriber_count, view_count, video_count, recent_uploads, captured_at")
+                .select("channel_id, channel_title, channel_description, subscriber_count, view_count, video_count, recent_uploads, analytics_comparison, captured_at")
                 .in_("tenant_id", own_tenant_ids)
                 .order("captured_at", desc=True)
                 .limit(1)
@@ -920,6 +920,24 @@ else:
         if dashboard_snapshot.get("channel_description"):
             with st.expander("Channel description"):
                 st.write(dashboard_snapshot.get("channel_description"))
+        comparison = dashboard_snapshot.get("analytics_comparison") or {}
+        if comparison.get("available"):
+            current = comparison.get("current_period") or {}
+            previous = comparison.get("previous_period") or {}
+            with st.expander("📈 Last 15 days vs previous 15 days", expanded=False):
+                def _delta(key: str) -> str:
+                    now_value = float(current.get(key) or 0)
+                    old_value = float(previous.get(key) or 0)
+                    if old_value == 0:
+                        return "New data" if now_value > 0 else "—"
+                    return f"{((now_value-old_value)/old_value)*100:+.1f}%"
+                p1, p2, p3 = st.columns(3)
+                p1.metric("Views", f"{int(current.get('views') or 0):,}", _delta("views"))
+                p2.metric("Watch time (minutes)", f"{int(current.get('estimatedMinutesWatched') or 0):,}", _delta("estimatedMinutesWatched"))
+                p3.metric("Avg. view duration (sec)", f"{float(current.get('averageViewDuration') or 0):.1f}", _delta("averageViewDuration"))
+                st.caption(f"Current: {current.get('start')} to {current.get('end')} • Previous: {previous.get('start')} to {previous.get('end')}")
+        else:
+            st.caption("For 15-day views/watch-time comparisons, reconnect YouTube and grant the optional read-only YouTube Analytics permission.")
         st.subheader("Recent uploads — sorted by views")
         if recent_uploads:
             st.caption(f"Loaded {len(recent_uploads)} recent uploads. Showing the top {min(20, len(recent_uploads))} by views.")
@@ -1215,6 +1233,22 @@ else:
             st.info("Refresh your YouTube channel above to load video performance.")
     with customer_growth:
         st.subheader("🩺 Your AI Growth Doctor")
+        comparison = dashboard_snapshot.get("analytics_comparison") or {}
+        if comparison.get("available"):
+            current = comparison.get("current_period") or {}
+            previous = comparison.get("previous_period") or {}
+            def _growth_delta(key: str) -> str:
+                now_value = float(current.get(key) or 0)
+                old_value = float(previous.get(key) or 0)
+                if old_value == 0:
+                    return "New data" if now_value > 0 else "—"
+                return f"{((now_value-old_value)/old_value)*100:+.1f}%"
+            g1, g2, g3 = st.columns(3)
+            g1.metric("15-day views", f"{int(current.get('views') or 0):,}", _growth_delta("views"))
+            g2.metric("Watch minutes", f"{int(current.get('estimatedMinutesWatched') or 0):,}", _growth_delta("estimatedMinutesWatched"))
+            g3.metric("Avg. view duration", f"{float(current.get('averageViewDuration') or 0):.1f}s", _growth_delta("averageViewDuration"))
+        else:
+            st.info("Reconnect YouTube with read-only YouTube Analytics permission to enable the full 15-day comparison.")
         if recent_uploads:
             ranked = sorted(recent_uploads, key=lambda v: int(v.get("views") or 0), reverse=True)
             total_recent_views = sum(int(v.get("views") or 0) for v in recent_uploads)
