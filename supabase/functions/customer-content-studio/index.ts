@@ -18,6 +18,8 @@ Deno.serve(async(req)=>{
   const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data:membership}=await admin.from("tenant_memberships").select("tenant_id").eq("tenant_id",tenant).eq("user_id",auth.user.id).eq("membership_role","owner").maybeSingle();
   if(!membership)return json({error:"workspace_owner_required"},403);
+  const {data:tenantStatus}=await admin.from("tenants").select("status").eq("id",tenant).maybeSingle();
+  if(tenantStatus?.status!=="active")return json({error:"workspace_not_active"},403);
   const {data:channelSnapshot}=await admin.from("channel_analytics_snapshots").select("channel_title")
    .eq("tenant_id",tenant).order("captured_at",{ascending:false}).limit(1).maybeSingle();
   const channelName=clean(channelSnapshot?.channel_title,120)||"the creator's connected YouTube channel";
