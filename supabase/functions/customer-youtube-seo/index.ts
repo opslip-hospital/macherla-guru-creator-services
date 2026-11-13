@@ -13,6 +13,17 @@ function required(name: string) {
   if (!value) throw new Error("missing_configuration");
   return value;
 }
+function hasExpectedVideoContainer(bytes: Uint8Array, mime: string): boolean {
+  if (mime === "video/webm") {
+    return bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 &&
+      bytes[2] === 0xdf && bytes[3] === 0xa3;
+  }
+  if (mime === "video/mp4" || mime === "video/quicktime") {
+    return bytes.length >= 12 &&
+      String.fromCharCode(...bytes.slice(4, 8)) === "ftyp";
+  }
+  return false;
+}
 function cleanText(value: unknown, max: number): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
@@ -168,6 +179,9 @@ Deno.serve(async (req: Request) => {
         return json({ error: "video_file_size_mismatch" }, 409);
       }
       const videoBytes = new Uint8Array(await videoBlob.arrayBuffer());
+      if (!hasExpectedVideoContainer(videoBytes, String(job.mime_type))) {
+        return json({ error: "video_container_does_not_match_file_type" }, 415);
+      }
       const geminiFile = await uploadVideoToGemini(
         geminiKey, videoBytes, String(job.mime_type), String(job.video_title ?? "creator-video"),
       );
