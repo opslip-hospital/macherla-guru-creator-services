@@ -286,6 +286,11 @@ def clear_session() -> None:
             pass
     st.session_state.pop("_creator_supabase_client", None)
     st.session_state.pop("_creator_user_id", None)
+    # Do not carry one customer's selected video, channel data, or AI drafts
+    # into a later login in the same browser session.
+    for key in list(st.session_state.keys()):
+        if str(key).startswith("creator_"):
+            st.session_state.pop(key, None)
 
 
 def safe_error_message(error: Exception) -> str:
