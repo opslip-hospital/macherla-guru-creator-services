@@ -1,6 +1,6 @@
 # Final test plan — Macherla Guru Creator Services
 
-**Status:** Not run. Development owner requested that all testing be deferred until the end.
+**Status:** Final test pass not yet authorized. An earlier interim CI run exposed two outdated static assertions; the assertions have since been updated to match the current server-side analytics-scope check and admin signed-download flow. No rerun has been performed. The development owner requested that the final test pass be deferred until all development is complete.
 
 ## 1. Automated checks
 - In GitHub Actions, open **Creator Services CI** and choose **Run workflow**.
