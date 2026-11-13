@@ -1225,8 +1225,8 @@ else:
                                 customer_schedule_date, selected_time,
                                 tzinfo=ZoneInfo("Asia/Kolkata"),
                             )
-                            if scheduled_local <= datetime.now(ZoneInfo("Asia/Kolkata")):
-                                st.error("Choose a future date and time in IST.")
+                            if scheduled_local < datetime.now(ZoneInfo("Asia/Kolkata")) + timedelta(minutes=15):
+                                st.error("Choose a schedule time at least 15 minutes in the future (IST).")
                             else:
                                 customer_publish_at = scheduled_local.isoformat()
                         if customer_publish_mode == "Publish now" or customer_publish_at:
