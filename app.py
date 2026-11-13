@@ -1153,7 +1153,7 @@ else:
                                 },
                             )
                         except RuntimeError:
-                            st.error("Your SEO edits could not be saved. Check the title and tag limits.")
+                            st.error("SEO was not saved. Use 12–18 unique tags (450 characters max), exactly 5 unique hashtags, 5 unique title options, and no more than 20 keywords.")
                         else:
                             st.success("SEO saved.")
                             st.rerun()
