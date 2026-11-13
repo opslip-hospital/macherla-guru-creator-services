@@ -132,7 +132,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('privacyStatus: "private"', YOUTUBE_WORKER)
         self.assertIn('status: "uploaded_private"', YOUTUBE_WORKER)
         self.assertIn('youtube-upload-private', APP)
-        self.assertIn('Upload to YouTube as PRIVATE', APP)
+        self.assertIn('Upload to my YouTube channel (PRIVATE)', APP)
         self.assertIn("The channel owner can now publish or schedule it", YOUTUBE_WORKER)
 
     def test_customer_publish_is_explicit_and_tenant_scoped(self):
@@ -154,8 +154,8 @@ class AuthenticationContractTests(unittest.TestCase):
 
     def test_customer_ai_seo_is_owner_scoped_and_saved_server_side(self):
         self.assertIn('customer-youtube-seo', APP)
-        self.assertIn('Analyze this video & create SEO, Tags and Hashtags', APP)
-        self.assertIn('Save SEO & prepare YouTube upload', APP)
+        self.assertIn('✨ Generate YouTube SEO', APP)
+        self.assertIn('Save my SEO edits', APP)
         self.assertIn('membership_role', CUSTOMER_SEO_FUNCTION)
         self.assertIn('GEMINI_API_KEY', CUSTOMER_SEO_FUNCTION)
         self.assertIn('customer_ai_seo_generated', CUSTOMER_SEO_FUNCTION)
