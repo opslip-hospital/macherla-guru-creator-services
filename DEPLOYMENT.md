@@ -59,7 +59,7 @@ In the dedicated Supabase project's **Edge Functions > Secrets**, add:
 
 - `GEMINI_API_KEY` — a Google AI Studio / Gemini API key for the Creator Services project.
 
-Keep this key only in Supabase Edge Function secrets. Do not add it to Streamlit secrets, GitHub, or chat. The Edge Function calls Gemini server-side and checks that the signed-in user owns the video's workspace before generating or saving metadata. It uses the Gemini `generateContent` REST endpoint and structured JSON output.
+Keep this key only in Supabase Edge Function secrets. Do not add it to Streamlit secrets, GitHub, or chat. The Edge Function calls Gemini server-side and checks that the signed-in user owns the video's workspace before generating or saving metadata. It uses the Gemini `generateContent` REST endpoint and structured JSON output. Video analysis is blocked until the customer checks the per-video consent box; the service records the consent event before transmitting the video. The UI discloses that the current Gemini API Free Tier may use submitted content to improve Google products. Text prompts and Growth Doctor metrics also require explicit consent before being sent to Gemini. Requests are rate-limited per customer/workspace.
 
 ## Customer self-service publishing
 
