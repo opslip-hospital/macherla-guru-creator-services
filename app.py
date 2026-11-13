@@ -99,11 +99,14 @@ def start_private_youtube_upload(job_id: str, client: Client) -> dict[str, Any]:
         return payload
     except urllib.error.HTTPError as exc:
         try:
-            error_code = json.loads(exc.read().decode("utf-8")).get("error")
+            error_payload = json.loads(exc.read().decode("utf-8"))
         except (ValueError, AttributeError):
-            error_code = None
-        if error_code == "youtube_upload_status_sync_failed":
-            raise RuntimeError("youtube_upload_status_sync_failed") from None
+            error_payload = {}
+        if error_payload.get("error") == "youtube_upload_status_sync_failed":
+            video_id = str(error_payload.get("youtube_video_id") or "")
+            if not re.fullmatch(r"[A-Za-z0-9_-]{6,20}", video_id):
+                video_id = ""
+            raise RuntimeError(f"youtube_upload_status_sync_failed:{video_id}") from None
         raise RuntimeError("private_upload_failed") from None
     except (urllib.error.URLError, TimeoutError, ValueError, RuntimeError, AttributeError):
         raise RuntimeError("private_upload_failed") from None
@@ -139,11 +142,14 @@ def publish_approved_video(
         return payload
     except urllib.error.HTTPError as exc:
         try:
-            error_code = json.loads(exc.read().decode("utf-8")).get("error")
+            error_payload = json.loads(exc.read().decode("utf-8"))
         except (ValueError, AttributeError):
-            error_code = None
-        if error_code == "publish_status_sync_failed":
-            raise RuntimeError("publish_status_sync_failed") from None
+            error_payload = {}
+        if error_payload.get("error") == "publish_status_sync_failed":
+            video_id = str(error_payload.get("youtube_video_id") or "")
+            if not re.fullmatch(r"[A-Za-z0-9_-]{6,20}", video_id):
+                video_id = ""
+            raise RuntimeError(f"publish_status_sync_failed:{video_id}") from None
         raise RuntimeError("publish_failed") from None
     except (urllib.error.URLError, TimeoutError, ValueError, RuntimeError, AttributeError):
         raise RuntimeError("publish_failed") from None
@@ -1154,8 +1160,11 @@ else:
                             try:
                                 upload_result = start_private_youtube_upload(job["id"], supabase)
                             except RuntimeError as exc:
-                                if str(exc) == "youtube_upload_status_sync_failed":
+                                if str(exc).startswith("youtube_upload_status_sync_failed"):
                                     st.warning("YouTube may already have received this video as PRIVATE, but the dashboard could not confirm it. Check YouTube Studio before retrying; do not upload the video again yet.")
+                                    video_id = str(exc).partition(":")[2]
+                                    if video_id:
+                                        st.link_button("Open private YouTube video", f"https://www.youtube.com/watch?v={video_id}")
                                 else:
                                     st.error("YouTube upload failed. Connect your channel with upload permission and retry.")
                             else:
@@ -1205,8 +1214,11 @@ else:
                                     customer_publish_at, supabase,
                                 )
                             except RuntimeError as exc:
-                                if str(exc) == "publish_status_sync_failed":
+                                if str(exc).startswith("publish_status_sync_failed"):
                                     st.warning("YouTube may already have accepted the publish or schedule action, but the dashboard could not confirm it. Check YouTube Studio before retrying.")
+                                    video_id = str(exc).partition(":")[2]
+                                    if video_id:
+                                        st.link_button("Open YouTube video", f"https://www.youtube.com/watch?v={video_id}")
                                 else:
                                     st.error("YouTube could not complete this action. Your video remains private; check publishing permissions and schedule time.")
                             else:
