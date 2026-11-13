@@ -24,7 +24,7 @@ Migrations are in `supabase/migrations/`:
 - The signed-in identity is revalidated with Supabase Auth on each rerun.
 - The app reads role and tenant membership from RLS-protected database tables. User-editable metadata is not used for authorization.
 - New registrations receive the database default `customer` role only. Registration does not create a tenant, membership, or admin permission.
-- GitHub Actions CI compiles the app and runs static security-contract tests on pushes and pull requests.
+- GitHub Actions CI is manual-only during development; compilation and static security-contract tests are reserved for the owner-authorized final test pass.
 - The admin workspace appears only when the database profile has the trusted `admin` role.
 - Customer workspace activation and trusted admin provisioning are handled by the Master Admin approval workflow.
 - YouTube OAuth start/callback Edge Functions and encrypted refresh-token storage are deployed. The callback now stores only scopes explicitly returned by Google and refuses to record a connection unless upload, read-only, and publishing permissions are present; Analytics read-only is optional. The customer UI displays actionable OAuth completion messages. A real Google test-account connection is still pending.
