@@ -883,6 +883,7 @@ else:
     st.subheader("📊 YouTube Channel Overview")
     dashboard_data = st.session_state.get("creator_channel_dashboard", {})
     dashboard_channel = dashboard_data.get("channel", {}) if isinstance(dashboard_data, dict) else {}
+    recent_uploads = dashboard_data.get("recent_uploads", []) if isinstance(dashboard_data, dict) else []
     if own_tenant_ids:
         dashboard_tenant = own_tenant_ids[0]
         refresh_col, info_col = st.columns([1, 3])
@@ -913,7 +914,6 @@ else:
         if dashboard_channel.get("description"):
             with st.expander("Channel description"):
                 st.write(dashboard_channel.get("description"))
-        recent_uploads = dashboard_data.get("recent_uploads") or []
         st.subheader("Recent uploads — sorted by views")
         if recent_uploads:
             st.caption(f"Loaded {len(recent_uploads)} recent uploads. Showing the top {min(20, len(recent_uploads))} by views.")
