@@ -60,6 +60,7 @@ function channelBrandHashtag(channelName: string): string {
   const brand = channelName.normalize("NFKC")
     .replace(/[^\p{L}\p{N}]/gu, "")
     .slice(0, 60);
+  if (brand.toLocaleLowerCase() === "macherlaguru") return "MacherlaGuru";
   return brand || "YouTubeCreator";
 }
 function ensureChannelBrandHashtag(value: unknown, channelName: string): string[] {
