@@ -100,13 +100,14 @@ if not st.session_state.get("_creator_user_id"):
                     response = supabase.auth.sign_in_with_password(
                         {"email": email, "password": password}
                     )
+                except Exception as exc:
+                    st.error(safe_error_message(exc))
+                else:
                     if not response.session or not response.user:
                         st.warning("Sign-in needs email verification. Check your inbox.")
                     else:
                         st.session_state["_creator_user_id"] = str(response.user.id)
                         st.rerun()
-                except Exception as exc:
-                    st.error(safe_error_message(exc))
 
     with register_tab:
         st.caption("Create a customer login. Service access is activated separately by our team.")
@@ -140,6 +141,9 @@ if not st.session_state.get("_creator_user_id"):
                             "options": {"data": {"display_name": display_name.strip()}},
                         }
                     )
+                except Exception as exc:
+                    st.error(safe_error_message(exc))
+                else:
                     if response.session and response.user:
                         st.session_state["_creator_user_id"] = str(response.user.id)
                         st.success("Account created. Your service access will be activated separately.")
@@ -149,23 +153,21 @@ if not st.session_state.get("_creator_user_id"):
                             "Account request received. Please confirm your email, then sign in. "
                             "Our team will activate your customer workspace separately."
                         )
-                except Exception as exc:
-                    st.error(safe_error_message(exc))
     st.stop()
 
 # Re-validate the identity with Supabase Auth on every rerun. Never trust a
 # browser-supplied user ID, role, tenant ID, or user_metadata for authorization.
+user = None
 try:
     verified = supabase.auth.get_user()
     user = getattr(verified, "user", None)
-    if user is None or str(user.id) != st.session_state["_creator_user_id"]:
-        clear_session()
-        st.warning("Your session expired. Please sign in again.")
-        st.rerun()
 except Exception:
+    user = None
+
+if user is None or str(user.id) != st.session_state["_creator_user_id"]:
     clear_session()
     st.warning("Your session expired. Please sign in again.")
-    st.rerun()
+    st.stop()
 
 user_id = str(user.id)
 
