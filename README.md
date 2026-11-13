@@ -101,7 +101,7 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - The final automated and live end-to-end test pass remains intentionally deferred until all development work is complete and the owner authorizes testing.
 - The channel-connection listing RPC was checked against the private-schema function lockdown. Its guarded helper has the narrowly scoped authenticated EXECUTE grant required by the public invoker wrapper; it returns only channel ID/title, connection time, and scopes, never OAuth tokens. The live privilege check confirmed authenticated access and no anonymous access.
 - Nine customer/admin public RPC wrappers were converted from SECURITY DEFINER to SECURITY INVOKER. The underlying private functions retain the authorization checks and are granted only to authenticated callers where required. A live catalog check confirmed all nine wrappers are invoker functions and none is executable by anonymous callers.
-- The customer channel-dashboard refresh Edge Function now checks that the workspace is active on the server before accessing stored YouTube credentials or refreshing channel data; the updated function is deployed as version 4.
+- The customer channel-dashboard refresh Edge Function now checks that the workspace is active on the server before accessing stored YouTube credentials or refreshing channel data; the updated function is deployed as version 5.
 - The obsolete separate `customer_approve_upload` RPC has been retired from client execution. The current customer flow uses the Publish now / Schedule action as the explicit consent step; a live privilege query confirmed anonymous and authenticated execution are both revoked for the legacy approval RPC.
 - Upload/publish workers return a distinct status-sync warning if YouTube accepted an action but the dashboard update failed. The customer UI now surfaces the YouTube video link and warns against retrying blindly, reducing duplicate-upload or unintended-repeat-action risk.
 - Gemini SEO prompts now keep hashtags separate from the description, and the private-upload worker appends only hashtags missing from the edited description while reserving space under YouTube's 5,000-character description limit.
@@ -112,3 +112,16 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - The final database hardening migrations are ordered after the schema, workflow, storage, and worker migrations so a clean project replay creates the target functions/tables/policies before applying global grants, function lockdown, indexes, and the final storage policy.
 - Customer-edited SEO is validated server-side before saving: 12–18 unique tags within 450 characters, exactly five unique hashtags, five unique title options, and at most 20 SEO keywords. The SEO worker prompt keeps hashtags separate from the description; the private upload worker appends missing hashtags once while respecting YouTube's 5,000-character description limit. The updated SEO Edge Function is deployed ACTIVE (version 26).
 - AI SEO now requires the brand hashtag `MacherlaGuru` within the exact five unique generated hashtags. The private upload worker strips stray hashtags from the description and appends the saved AI hashtag list once, keeping the full description within YouTube's 5,000-character limit. YouTube tags are capped using the combined tag text plus separator characters. The updated SEO and private-upload Edge Functions are deployed ACTIVE as versions 28 and 14 respectively.
+
+### Current deployed Edge Function versions (13 Nov 2026)
+
+- `youtube-oauth-start`: v11 ACTIVE
+- `youtube-oauth-callback`: v11 ACTIVE
+- `youtube-upload-private`: v13 ACTIVE
+- `youtube-publish-approved`: v7 ACTIVE
+- `youtube-refresh-analytics`: v5 ACTIVE
+- `customer-youtube-seo`: v25 ACTIVE
+- `customer-channel-dashboard`: v5 ACTIVE
+- `customer-content-studio`: v5 ACTIVE
+
+These are deployment-state checks only, not successful end-to-end tests. Database migration history was compared with the repository migration set; the latest storage-binding migration is applied. The final test run remains deferred by request.
