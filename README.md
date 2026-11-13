@@ -120,7 +120,7 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - `youtube-refresh-analytics`: v7 ACTIVE
 - `customer-youtube-seo`: v48 ACTIVE
 - `customer-channel-dashboard`: v5 ACTIVE
-- `customer-content-studio`: v10 ACTIVE
+- `customer-content-studio`: v11 ACTIVE
 
 These are deployment-state checks only, not successful end-to-end tests. The live database migration history and current schema were reviewed; the required storage-binding, analytics/SEO columns, upload status constraint, and final SEO upload guard are present. Idempotent final migrations are committed for clean setup. The final test run remains deferred by request.
 - The scheduling date picker uses the India local calendar date, and schedule times are displayed and submitted in 12-hour AM/PM IST. The backend rejects schedule times that are not at least 15 minutes in the future.
