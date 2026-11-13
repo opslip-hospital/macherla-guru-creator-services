@@ -200,6 +200,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("youtube_upload_status_sync_failed", APP)
         self.assertIn("do not upload the video again yet", APP)
         self.assertIn("publish_status_sync_failed", APP)
+        self.assertIn("youtube_upload_status_unknown", APP)
+        self.assertIn("publish_status_unknown", APP)
         self.assertIn("Check YouTube Studio before retrying", APP)
         self.assertIn("youtube_upload_status_sync_failed", YOUTUBE_WORKER)
         self.assertIn("publish_status_sync_failed", PUBLISH_WORKER)
