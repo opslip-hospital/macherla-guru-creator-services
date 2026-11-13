@@ -1,10 +1,10 @@
 # Macherla Guru Creator Services
 
-A separate, private managed YouTube creator service. It is independent of the existing Macherla Guru YouTube AI Manager.
+A separate, private managed YouTube creator service. It is independent of the existing Macherla Guru YouTube AI Manager. Customer workspace owners control their own SEO, private uploads, and explicit publish/schedule actions; the Master Admin manages workspace access and service operations, not individual video approvals.
 
 ## Architecture
 
-- **Customer workspace:** email/password account, own workspace after team activation, upload status, and explicit approval before public publishing or scheduling.
+- **Customer workspace:** email/password account, isolated workspace after team activation, AI SEO editing, private upload, and customer-initiated Publish Now or Schedule.
 - **Master admin:** database-verified admin role, customer workspace overview, and server-enforced tenant permissions.
 - **Tenant isolation:** PostgreSQL row-level security limits customer reads to tenant memberships. Browser-provided roles and tenant IDs are never trusted.
 - **OAuth credentials:** YouTube refresh tokens belong in the non-exposed `private.youtube_connections` schema and must be encrypted by the trusted server before storage.
@@ -30,12 +30,12 @@ Migrations are in `supabase/migrations/`:
 - YouTube OAuth start/callback Edge Functions and encrypted refresh-token storage are deployed, but a real Google test-account connection is still pending.
 - Customers can submit support tickets; the Master Admin can view tickets and update their status with an audited admin-only RPC.
 - The Master Admin can prepare title, description, tags, hashtags and captions for existing upload jobs through an admin-only audited RPC.
-- Customers can explicitly approve a video for public publishing after a private upload exists; owner membership is checked and consent is audited.
+- Customers explicitly initiate Publish Now or Schedule after a private upload exists; the authenticated workspace owner is checked and the action is audited. No separate Master Admin approval is required for an individual video.
 - Customer and admin dashboards include upload-queue and billing-status views.
 - Customers can submit MP4, MOV, or WebM files up to 100 MB into a private tenant-scoped Supabase Storage bucket. Upload intake is not a YouTube upload.
 - The Master Admin can access submitted files through temporary one-hour signed download links; the bucket itself remains private.
-- A server-side YouTube upload worker is deployed. It requires a trusted Master Admin action, decrypts the stored refresh token only inside the Edge Function, uploads with YouTube privacy set to private, and records the returned video ID.
-- A separate server-side publish/schedule worker is deployed. It only accepts jobs with recorded customer approval, requires the YouTube video-management scope, and can publish immediately or set a future publish time.
+- A server-side YouTube upload worker is deployed. The authenticated customer workspace owner claims only their own eligible upload job; the worker decrypts the stored refresh token only inside the Edge Function, uploads with YouTube privacy set to private, and records the returned video ID.
+- A separate server-side publish/schedule worker is deployed. It accepts a direct customer-owner action only after a private YouTube video exists, requires the YouTube video-management scope, and can publish immediately or set a future publish time.
 - Customers can reconnect to grant the additional video-management permission; Google displays the requested access before consent. The `youtube.force-ssl` scope is broader than upload-only and is required by YouTube's videos.update endpoint.
 - Gemini video-file analysis and customer SEO metadata generation are implemented in the deployed `customer-youtube-seo` Edge Function. The function analyzes the uploaded video through Gemini Files API and prepares title options, description, tags, hashtags, captions, keywords, and category. A live Gemini video test is still pending.
 - Customer owners can now refresh their own channel overview and recent uploads. The analytics worker stores optional current-vs-previous 15-day YouTube Analytics metrics when the owner grants the read-only YouTube Analytics scope; otherwise public channel/video statistics remain available.
@@ -68,3 +68,11 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 
 - Suspended or closed workspaces cannot create new video jobs, write video files to intake storage, generate SEO/content drafts, or claim YouTube upload/publish actions.
 - The admin console includes a recent audit-event viewer for workspace, billing, support and customer publishing activity.
+
+
+## Recent hardening notes
+
+- Public RPC wrappers for customer upload finalization, upload/publish claims, admin workspace/billing updates, customer request approval/rejection, and support ticket status changes are security-definer wrappers with an empty search path. Execution is revoked from anonymous/public roles and granted to authenticated users; the underlying private functions enforce the owner/admin checks.
+- Customer analytics claims now require an active tenant for workspace owners; platform admins retain the administrative refresh path.
+- Inactive customer workspaces have the channel refresh control disabled in the customer UI.
+- These are development changes, not a substitute for the deferred final test pass. Validate migrations, OAuth, tenant isolation, Gemini video analysis, YouTube private upload, publish/schedule, and admin actions before onboarding real customers.
