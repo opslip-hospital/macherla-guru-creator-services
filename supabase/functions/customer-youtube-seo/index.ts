@@ -233,7 +233,7 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
         title: cleanText(body.title, 100),
         description: cleanText(body.description, 5000),
         tags: normalizeTags(body.tags, 100),
-        hashtags: normalizeHashtags(body.hashtags, 30),
+        hashtags: ensureMacherlaGuruHashtag(body.hashtags),
         caption: cleanText(body.caption, 2200),
         metadata_details: {
           title_options: normalizeTags(body.metadata_details?.title_options, 5).map((title) => cleanText(title, 100)),
