@@ -867,7 +867,7 @@ else:
             if st.button("🔄 Refresh my channel", key="customer_refresh_channel", type="primary"):
                 with st.spinner("Fetching your YouTube channel and latest video performance..."):
                     try:
-                        refresh_result = refresh_youtube_analytics(own_tenant_ids[0], supabase)
+                        refresh_result = refresh_youtube_analytics(active_tenant_ids[0], supabase)
                     except RuntimeError:
                         st.error("Channel refresh failed. Connect YouTube with read-only permission, then retry.")
                     else:
@@ -1231,7 +1231,7 @@ else:
             g3.metric("Avg. view duration", f"{float(current.get('averageViewDuration') or 0):.1f}s", _growth_delta("averageViewDuration"))
         else:
             st.info("Reconnect YouTube with read-only YouTube Analytics permission to enable the full 15-day comparison.")
-        if recent_uploads:
+        if recent_uploads and active_tenant_ids:
             ranked = sorted(recent_uploads, key=lambda v: int(v.get("views") or 0), reverse=True)
             total_recent_views = sum(int(v.get("views") or 0) for v in recent_uploads)
             avg_recent_views = round(total_recent_views / max(len(recent_uploads), 1))
@@ -1257,7 +1257,7 @@ else:
                 with st.spinner("Gemini is reviewing your recent video performance..."):
                     try:
                         growth_text = customer_content_studio_request(
-                            own_tenant_ids[0], "YouTube AI Growth Doctor",
+                            active_tenant_ids[0], "YouTube AI Growth Doctor",
                             f"Analyze these recent public YouTube video metrics. Average views: {avg_recent_views}.",
                             growth_summary + "\nGive practical next-video ideas, opening-hook improvements, and repeatable formats. Clearly state limits of public metrics.",
                             supabase,
@@ -1273,8 +1273,8 @@ else:
     with customer_studio:
         st.subheader("✨ Gemini AI Content Studio")
         st.caption("Generate scripts and fresh ideas for your connected channel. Gemini creates the draft; you decide what to use.")
-        if not own_tenant_ids:
-            st.info("Content Studio is available after workspace activation.")
+        if not active_tenant_ids:
+            st.info("Content Studio is available after your workspace is active.")
         else:
             with st.form("customer_content_studio_form"):
                 studio_kind = st.selectbox("What should Gemini create?", [
@@ -1291,7 +1291,7 @@ else:
                     with st.spinner("Gemini is preparing your content..."):
                         try:
                             studio_result = customer_content_studio_request(
-                                own_tenant_ids[0], studio_kind, studio_topic, studio_notes, supabase
+                                active_tenant_ids[0], studio_kind, studio_topic, studio_notes, supabase
                             )
                         except RuntimeError as exc:
                             st.error("AI Content Studio error: " + str(exc)[:100])
