@@ -60,6 +60,9 @@ ANALYTICS_WORKER = (
 SELF_SERVICE_MIGRATION = (
     ROOT / "supabase/migrations/20261113220000_customer_self_service_youtube_workflow.sql"
 ).read_text(encoding="utf-8")
+SEO_REQUIRED_MIGRATION = (
+    ROOT / "supabase/migrations/20261113290000_require_complete_seo_before_private_upload.sql"
+).read_text(encoding="utf-8")
 CUSTOMER_SEO_FUNCTION = (
     ROOT / "supabase/functions/customer-youtube-seo/index.ts"
 ).read_text(encoding="utf-8")
@@ -169,6 +172,13 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('youtube-upload-private', APP)
         self.assertIn('Upload to my YouTube channel (PRIVATE)', APP)
         self.assertIn("The channel owner can now publish or schedule it", YOUTUBE_WORKER)
+
+    def test_private_upload_requires_complete_macherla_guru_seo(self):
+        self.assertIn("complete SEO metadata must be saved before upload", SEO_REQUIRED_MIGRATION)
+        self.assertIn("12 to 18 unique tags within 450 characters", SEO_REQUIRED_MIGRATION)
+        self.assertIn("five unique hashtags including MacherlaGuru", SEO_REQUIRED_MIGRATION)
+        self.assertIn("five title options", SEO_REQUIRED_MIGRATION)
+        self.assertIn("at most 20 keywords", SEO_REQUIRED_MIGRATION)
 
     def test_customer_publish_is_explicit_and_tenant_scoped(self):
         self.assertIn("v_job.status not in ('uploaded_private','approved')", SELF_SERVICE_MIGRATION)
