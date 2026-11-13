@@ -193,11 +193,24 @@ def customer_youtube_seo_request(
             body = json.loads(exc.read().decode("utf-8"))
             detail = str(body.get("error") or "seo_request_failed")
             stage = str(body.get("stage") or "")
+            provider_status = str(body.get("provider_status") or "")
+            provider_code = str(body.get("provider_code") or "")
+            provider_message = str(body.get("provider_message") or "")
         except Exception:
-            detail, stage = "seo_request_failed", ""
+            detail, stage, provider_status, provider_code, provider_message = "seo_request_failed", "", "", "", ""
         safe_detail = detail[:80]
         safe_stage = stage[:40]
-        raise RuntimeError(f"{safe_detail}:{safe_stage}" if safe_stage else safe_detail) from None
+        safe_provider = re.sub(r"[^A-Za-z0-9 _.,:()/-]", "", provider_message)[:180]
+        parts = [safe_detail]
+        if safe_stage:
+            parts.append(safe_stage)
+        if provider_status:
+            parts.append(f"Gemini HTTP {provider_status}")
+        if provider_code and provider_code != "not_provided":
+            parts.append(provider_code[:80])
+        if safe_provider:
+            parts.append(safe_provider)
+        raise RuntimeError(": ".join(parts)) from None
     except (urllib.error.URLError, TimeoutError, ValueError, AttributeError):
         raise RuntimeError("seo_request_failed") from None
 
