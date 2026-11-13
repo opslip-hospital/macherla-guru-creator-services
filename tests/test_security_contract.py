@@ -246,6 +246,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("Check YouTube Studio before retrying", APP)
         self.assertIn("youtube_upload_status_sync_failed", YOUTUBE_WORKER)
         self.assertIn("publish_status_sync_failed", PUBLISH_WORKER)
+        self.assertIn("youtubeUpdateOutcomeUnknown", PUBLISH_WORKER)
+        self.assertIn('status:"publishing"', PUBLISH_WORKER)
 
     def test_uncertain_youtube_uploads_are_locked_from_automatic_retry(self):
         self.assertIn("'upload_unknown'", UPLOAD_OUTCOME_MIGRATION)
