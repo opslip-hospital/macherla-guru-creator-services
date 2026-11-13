@@ -105,13 +105,13 @@ Deno.serve(async (req) => {
       : [];
     let description = String(claimed.description ?? "");
     const existingHashtags = new Set(
-      (description.match(/#[\\p{L}\\p{N}_]+/gu) ?? []).map((tag: string) => tag.slice(1).toLowerCase()),
+      (description.match(/#[\p{L}\p{N}_]+/gu) ?? []).map((tag: string) => tag.slice(1).toLowerCase()),
     );
     const missingHashtags = hashtags.filter((tag: string) => !existingHashtags.has(tag.toLowerCase()));
     const hashtagLine = missingHashtags.map((tag: string) => `#${tag}`).join(" ");
     const baseDescription = description.trim();
     if (hashtagLine) {
-      const separator = baseDescription ? "\\n\\n" : "";
+      const separator = baseDescription ? "\n\n" : "";
       const availableBaseLength = Math.max(0, 5000 - separator.length - hashtagLine.length);
       description = baseDescription.slice(0, availableBaseLength) + separator + hashtagLine;
     } else {
