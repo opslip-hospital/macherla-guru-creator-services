@@ -402,6 +402,12 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertNotIn("thumbnail_prompt", CUSTOMER_SEO_FUNCTION.lower())
         self.assertNotIn("thumbnail", YOUTUBE_WORKER.lower())
 
+    def test_gemini_video_analysis_requires_explicit_free_tier_consent(self):
+        self.assertIn("gemini_video_consent_required", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("customer_gemini_video_consent_granted", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("ai_consent", APP)
+        self.assertIn("Gemini API Free Tier may use submitted content to improve Google products", APP)
+
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
         self.assertNotIn("youtube.com/@macherlaguru", APP)
