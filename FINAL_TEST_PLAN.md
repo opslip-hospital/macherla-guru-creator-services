@@ -5,6 +5,7 @@
 ## 1. Automated checks
 - In GitHub Actions, open **Creator Services CI** and choose **Run workflow**.
 - Confirm Python compilation and all security contract tests pass.
+- Confirm Streamlit Community Cloud has deployed the latest `main` commit and the signed-out homepage, Privacy Policy, and Terms pages load.
 - If a failure appears, fix the code first, then rerun the complete workflow only after the owner approves testing.
 
 ## 2. Authentication and workspace isolation
