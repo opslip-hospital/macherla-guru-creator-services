@@ -550,7 +550,7 @@ else:
         for row in channel_connections
     )
     if not has_upload_permission:
-        st.info("Connect or reconnect your YouTube channel with upload permission to enable this workflow.")
+        st.info("You can upload a video and prepare Gemini SEO without a YouTube channel. Connect your channel later to upload privately and schedule.")
         if st.button("Connect / reconnect YouTube channel", key="minimal_connect_youtube", type="primary"):
             try:
                 google_url = start_youtube_oauth(selected_active_tenant_id, supabase)
@@ -742,7 +742,9 @@ else:
             st.caption("This metadata is locked after private upload so dashboard edits cannot silently differ from YouTube.")
 
         if job.get("status") == "received":
-            if saved_meta:
+            if saved_meta and not has_upload_permission:
+                st.info("Your SEO draft is ready. Connect your YouTube channel, then generate SEO once more so the brand hashtag matches your channel before private upload.")
+            elif saved_meta:
                 if st.button(
                     "📅 Continue to Schedule (private upload first)",
                     key=f"customer_upload_youtube_{job['id']}",
