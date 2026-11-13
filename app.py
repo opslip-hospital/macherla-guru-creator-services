@@ -1072,7 +1072,10 @@ else:
                                     {"title": upload_title, "language": "Telugu"},
                                 )
                             except RuntimeError as exc:
-                                st.warning(f"Video is safe. AI SEO needs a retry: {str(exc)[:130]}.")
+                                if "youtube_channel_not_connected" in str(exc):
+                                    st.info("Connect your YouTube channel above, then select this video and generate SEO. The brand hashtag will match your channel.")
+                                else:
+                                    st.warning(f"Video is safe. AI SEO needs a retry: {str(exc)[:130]}.")
                             else:
                                 st.success("Gemini finished the video SEO. Review it below.")
                             st.rerun()
@@ -1119,7 +1122,10 @@ else:
                                 {"title": job.get("video_title") or "", "language": "Telugu"},
                             )
                         except RuntimeError as exc:
-                            st.error(f"AI SEO error: {str(exc)[:130]}")
+                            if "youtube_channel_not_connected" in str(exc):
+                                st.info("Connect your YouTube channel above before generating SEO. The required brand hashtag is based on your connected channel.")
+                            else:
+                                st.error(f"AI SEO error: {str(exc)[:130]}")
                         else:
                             st.success("Gemini created your SEO. Review and save it below.")
                             st.rerun()
