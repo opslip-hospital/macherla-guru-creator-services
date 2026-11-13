@@ -70,3 +70,6 @@ The OAuth flow requests `youtube.upload`, `youtube.readonly`, and `youtube.force
 ## Current limitations
 
 The application, database workflows, and Edge Functions are deployed. Deployment status alone does not prove that Google OAuth, Gemini video analysis, or YouTube publishing works end to end. Confirm that the listed OAuth, encryption, and Gemini secrets are present in the dedicated Supabase project's Edge Function Secrets without copying their values into chat or GitHub. A real test Google account must connect a channel before live OAuth is considered verified. Gemini video SEO, private upload, Publish now, Schedule, analytics refresh, and admin/customer flows remain pending the final authorized test pass. Supabase Auth leaked-password protection is currently reported disabled by Security Advisor; enable it in the project's Authentication password/security settings before onboarding real customers. Billing is administrative status tracking only; payment processing and automatic charges are not enabled.
+## Streamlit upload configuration
+
+The app requires Streamlit 1.53 or newer for the per-widget `max_upload_size` setting. The repository pins `streamlit>=1.53,<2.0` and includes `.streamlit/config.toml` with a 100 MB global upload cap. Keep this aligned with the private Supabase bucket and database upload limit.
