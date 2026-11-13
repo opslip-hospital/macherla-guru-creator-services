@@ -197,10 +197,13 @@ Deno.serve(async (req) => {
       if (uploaded.status >= 500) youtubeUploadOutcomeUnknown = true;
       throw new Error("youtube_private_upload_failed");
     }
-    // A successful response confirms YouTube accepted the upload.
+    // A 2xx response means the transfer may have been accepted. Keep it
+    // non-retryable until a valid YouTube video ID is recovered.
+    youtubeUploadOutcomeUnknown = true;
     const youtubeVideo = await uploaded.json();
     if (!youtubeVideo.id) throw new Error("youtube_video_id_missing");
     uploadedVideoId = String(youtubeVideo.id);
+    youtubeUploadOutcomeUnknown = false;
 
     const { error: updateError } = await admin.from("upload_jobs").update({
       status: "uploaded_private",
