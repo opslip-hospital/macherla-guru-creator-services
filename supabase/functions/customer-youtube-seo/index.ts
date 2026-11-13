@@ -111,6 +111,8 @@ Deno.serve(async (req: Request) => {
       .select("tenant_id").eq("tenant_id", job.tenant_id).eq("user_id", auth.user.id)
       .eq("membership_role", "owner").maybeSingle();
     if (!membership) return json({ error: "workspace_owner_required" }, 403);
+    const { data: tenantStatus } = await admin.from("tenants").select("status").eq("id", job.tenant_id).maybeSingle();
+    if (tenantStatus?.status !== "active") return json({ error: "workspace_not_active" }, 403);
     if (!["received", "uploaded_private", "awaiting_approval", "approved"].includes(job.status)) {
       return json({ error: "video_not_ready_for_metadata" }, 409);
     }
