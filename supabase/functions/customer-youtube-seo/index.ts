@@ -18,7 +18,7 @@ function cleanText(value: unknown, max: number): string {
 }
 function normalizeTags(value: unknown, max: number): string[] {
   if (!Array.isArray(value)) return [];
-  return value.map((x) => String(x).trim()).filter(Boolean).slice(0, max);
+  return [...new Set(value.map((x) => String(x).trim()).filter(Boolean))].slice(0, max);
 }
 async function uploadVideoToGemini(apiKey: string, bytes: Uint8Array, mime: string, name: string) {
   const start = await fetch("https://generativelanguage.googleapis.com/upload/v1beta/files", {
@@ -180,11 +180,14 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
       const generatedHashtags = metadata.hashtags as string[];
       const generatedTitles = (metadata.metadata_details as Record<string, unknown>).title_options as string[];
       const generatedTagLength = generatedTags.reduce((total, tag) => total + tag.length, 0);
+      const uniqueHashtags = new Set(generatedHashtags.map((tag) => tag.toLowerCase()));
+      const uniqueTitles = new Set(generatedTitles.map((title) => title.toLowerCase()));
       if (!metadata.title) return json({ error: "ai_returned_empty_metadata" }, 502);
       if (generatedTags.length < 12 || generatedTagLength > 450) {
         return json({ error: "ai_returned_invalid_tags" }, 502);
       }
-      if (generatedHashtags.length !== 5 || generatedTitles.length !== 5) {
+      if (generatedHashtags.length !== 5 || uniqueHashtags.size !== 5 ||
+          generatedTitles.length !== 5 || uniqueTitles.size !== 5) {
         return json({ error: "ai_returned_incomplete_metadata" }, 502);
       }
     } else {
