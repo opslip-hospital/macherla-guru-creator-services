@@ -85,3 +85,17 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - Registration lifecycle was checked against the live database: the auth-user trigger creates a customer profile and a pending customer request; customer/admin row-level security policies protect the request and workspace data.
 - All core customer/admin data tables inspected have row-level security enabled.
 - SEO normalization now removes duplicate tags, hashtags, title options, and keywords; generated output must contain five distinct title options and five distinct hashtags.
+
+## Latest development hardening (13 Nov 2026)
+
+- Anonymous callers have no table or sequence privileges in the public schema, and the live grant check returned zero anonymous public-table grants.
+- Authenticated clients have read-only table grants plus the support-ticket insert permission; customer writes to workflow data are performed by owner/admin-checked database functions and trusted Edge Functions.
+- Internal functions in the non-exposed `private` schema have direct execution revoked from `PUBLIC`, `anon`, and `authenticated`. Only the RLS helper functions needed by authenticated policies remain executable by signed-in users; service-role backend workers retain internal execution.
+- Public RPC wrappers are callable by authenticated users only (not anonymous callers). Their underlying functions enforce the platform-admin or active tenant-owner checks and write audit events.
+- Foreign-key indexes flagged by Supabase's performance advisor were added for OAuth state ownership, analytics connection references, and customer request reviewers. The live database check confirmed all four indexes.
+- Private video intake bucket configuration was confirmed: non-public, 100 MB maximum, and MP4/MOV/WebM MIME restrictions. Storage policies scope customer upload/read access to tenant ownership.
+- Private upload and publish workers now preserve the YouTube video ID/state if YouTube accepted an action but the subsequent dashboard database update fails. This reduces the risk of duplicate uploads or unsafe retries.
+- OAuth start/callback and upload/publish workers were redeployed after the latest backend changes. Their deployment status is active; this does not replace a real customer OAuth/upload/publish test.
+- Supabase Security Advisor still reports leaked-password protection disabled. This project Auth setting must be enabled in Supabase Dashboard under Authentication password/security settings before real customer onboarding. It was not changed automatically here.
+- Supabase Security Advisor also flags the authenticated-only SECURITY DEFINER RPC wrappers because signed-in callers can invoke them. They are intentionally required for the app's RPC workflow; anonymous execution is revoked and every underlying function enforces admin or tenant-owner authorization. Review these warnings during final security sign-off.
+- The final automated and live end-to-end test pass remains intentionally deferred until all development work is complete and the owner authorizes testing.
