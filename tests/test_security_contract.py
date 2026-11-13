@@ -247,6 +247,10 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('datetime.now(ZoneInfo("Asia/Kolkata")).date() + timedelta(days=1)', APP)
         self.assertIn('min_value=datetime.now(ZoneInfo("Asia/Kolkata")).date()', APP)
 
+    def test_schedule_form_matches_backend_minimum_lead_time(self):
+        self.assertIn('timedelta(minutes=15)', APP)
+        self.assertIn('at least 15 minutes in the future (IST)', APP)
+
     def test_seo_title_options_are_limited_to_youtube_title_length(self):
         self.assertIn('normalizeTags(parsed.title_options, 5).map((title) => cleanText(title, 100))', CUSTOMER_SEO_FUNCTION)
         self.assertIn('normalizeTags(body.metadata_details?.title_options, 5).map((title) => cleanText(title, 100))', CUSTOMER_SEO_FUNCTION)
