@@ -63,7 +63,7 @@ def safe_error_message(error: Exception) -> str:
     if "invalid login credentials" in message:
         return "Email or password is incorrect."
     if "email not confirmed" in message:
-        return "Please confirm your email using the link sent to your inbox."
+        return "Your account is not ready to sign in. Please contact the service administrator."
     if "user already registered" in message:
         return "An account already exists. Please sign in."
     return "We couldn't complete that request. Please check your details and try again."
@@ -104,7 +104,7 @@ if not st.session_state.get("_creator_user_id"):
                     st.error(safe_error_message(exc))
                 else:
                     if not response.session or not response.user:
-                        st.warning("Sign-in needs email verification. Check your inbox.")
+                        st.warning("Sign-in is not ready yet. Please contact the service administrator.")
                     else:
                         st.session_state["_creator_user_id"] = str(response.user.id)
                         st.rerun()
@@ -150,8 +150,8 @@ if not st.session_state.get("_creator_user_id"):
                         st.rerun()
                     else:
                         st.success(
-                            "Account request received. Please confirm your email, then sign in. "
-                            "Our team will activate your customer workspace separately."
+                            "Account request received. Your login will be available now; "
+                            "our team must approve your customer workspace separately."
                         )
     st.stop()
 
