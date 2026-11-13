@@ -38,6 +38,7 @@ Migrations are in `supabase/migrations/`:
 - A separate server-side publish/schedule worker is deployed. It only accepts jobs with recorded customer approval, requires the YouTube video-management scope, and can publish immediately or set a future publish time.
 - Customers can reconnect to grant the additional video-management permission; Google displays the requested access before consent. The `youtube.force-ssl` scope is broader than upload-only and is required by YouTube's videos.update endpoint.
 - Gemini video-file analysis and customer SEO metadata generation are implemented in the deployed `customer-youtube-seo` Edge Function. The function analyzes the uploaded video through Gemini Files API and prepares title options, description, tags, hashtags, captions, keywords, and category. A live Gemini video test is still pending.
+- Customer owners can now refresh their own channel overview and recent uploads. The analytics worker stores optional current-vs-previous 15-day YouTube Analytics metrics when the owner grants the read-only YouTube Analytics scope; otherwise public channel/video statistics remain available.
 - The upload and publish workers have not yet passed a live Google OAuth/channel test. Payment processing and end-to-end channel tests are not yet complete.
 
 Do not use the app with real customer channels until provisioning, OAuth, upload, publishing approval, audit logging, and live end-to-end security tests are complete. The current CI checks are static guardrails, not a penetration test or live authentication test.
