@@ -80,9 +80,10 @@ class AuthenticationContractTests(unittest.TestCase):
         versions = [path.name[:14] for path in migration_dir.glob("*.sql")]
         self.assertEqual(len(versions), len(set(versions)))
         self.assertGreater(
+            "20261113293000_validate_connected_channel_brand_hashtag.sql",
             "20261113292000_finalize_complete_seo_upload_guard.sql",
-            "20261113289000_finalize_upload_state_machine.sql",
         )
+        self.assertIn("connected channel brand", CHANNEL_BRAND_GUARD_MIGRATION)
 
     def test_app_uses_publishable_key_not_privileged_key(self):
         self.assertIn("SUPABASE_PUBLISHABLE_KEY", APP)
