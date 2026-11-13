@@ -17,6 +17,7 @@ Deno.serve(async(req)=>{
  let youtubeUpdated=false;
  let youtubeUpdateStarted=false;
  let youtubeUpdateResponded=false;
+ let youtubeUpdateOutcomeUnknown=false;
  let youtubeVideoId:string|null=null;
  try{
   const url=required("SUPABASE_URL");
@@ -59,7 +60,10 @@ Deno.serve(async(req)=>{
    body:JSON.stringify({id:claimed.youtube_video_id,status}),
   });
   youtubeUpdateResponded=true;
-  if(!update.ok)throw new Error("youtube_video_update_failed");
+  if(!update.ok){
+   if(update.status>=500)youtubeUpdateOutcomeUnknown=true;
+   throw new Error("youtube_video_update_failed");
+  }
   youtubeUpdated=true;
   const finalStatus=mode==="now"?"published":"scheduled";
   const {error:updateError}=await admin.from("upload_jobs").update({
@@ -74,7 +78,7 @@ Deno.serve(async(req)=>{
    youtube_url:`https://www.youtube.com/watch?v=${claimed.youtube_video_id}`,
    message:mode==="now"?"Your video is now public.":"Your video is scheduled."});
  }catch{
-  const outcomeUnknown=youtubeUpdateStarted&&!youtubeUpdateResponded;
+  const outcomeUnknown=youtubeUpdateStarted&&(!youtubeUpdateResponded||youtubeUpdateOutcomeUnknown);
   if(admin&&jobId&&!youtubeUpdated&&!outcomeUnknown)await admin.from("upload_jobs").update({status:"uploaded_private",scheduled_for:null,updated_at:new Date().toISOString()}).eq("id",jobId).eq("status","publishing");
   return json({
    error:youtubeUpdated?"publish_status_sync_failed":outcomeUnknown?"publish_status_unknown":"publish_or_schedule_failed",
