@@ -861,8 +861,11 @@ if role == "admin":
 
 else:
     st.divider()
-    st.header("Your service")
-    customer_uploads, customer_tickets, customer_billing, customer_analytics = st.tabs(["My videos & AI SEO", "Support", "Plan & billing", "Channel analytics"])
+    st.header("Your YouTube Manager")
+    customer_uploads, customer_video_analytics, customer_growth, customer_studio, customer_tickets, customer_billing = st.tabs([
+        "📤 Upload & Performance", "📊 Video Analytics", "🩺 AI Growth Doctor",
+        "✨ Gemini Content Studio", "Support", "Plan & billing"
+    ])
     try:
         own_memberships = (
             supabase.table("tenant_memberships")
@@ -877,7 +880,55 @@ else:
     # Channel-first customer home, matching the existing Macherla Guru Manager layout.
     # Every query is scoped to this authenticated customer's tenant memberships.
     st.divider()
-    st.subheader("📊 Your YouTube Channel")
+    st.subheader("📊 YouTube Channel Overview")
+    dashboard_data = st.session_state.get("creator_channel_dashboard", {})
+    dashboard_channel = dashboard_data.get("channel", {}) if isinstance(dashboard_data, dict) else {}
+    if own_tenant_ids:
+        dashboard_tenant = own_tenant_ids[0]
+        refresh_col, info_col = st.columns([1, 3])
+        with refresh_col:
+            if st.button("🔄 Refresh channel & uploads", key="customer_refresh_channel", type="primary"):
+                with st.spinner("Loading your YouTube channel and latest 20 uploads..."):
+                    try:
+                        dashboard_data = customer_channel_dashboard_request(dashboard_tenant, supabase)
+                    except RuntimeError as exc:
+                        st.error("Channel refresh failed: " + str(exc)[:90])
+                    else:
+                        st.session_state["creator_channel_dashboard"] = dashboard_data
+                        st.success("Your YouTube channel data is refreshed.")
+                        st.rerun()
+        with info_col:
+            st.caption("Refresh uses only your connected YouTube channel. The dashboard never displays another customer's channel.")
+    else:
+        st.info("Your channel overview will appear after your workspace is activated and YouTube is connected.")
+    if dashboard_channel:
+        st.markdown(f"### 🎬 {dashboard_channel.get('title') or 'Your YouTube channel'}")
+        if dashboard_channel.get("custom_url"):
+            st.caption("@" + str(dashboard_channel.get("custom_url")).lstrip("@"))
+        st.caption(f"Channel ID: {dashboard_channel.get('id') or 'Unavailable'} • Updated: {dashboard_data.get('captured_at', 'Unknown')}")
+        home_a, home_b, home_c = st.columns(3)
+        home_a.metric("Subscribers", dashboard_channel.get("subscribers") if dashboard_channel.get("subscribers") is not None else "Hidden")
+        home_b.metric("Total views", dashboard_channel.get("views") if dashboard_channel.get("views") is not None else "Unavailable")
+        home_c.metric("Videos", dashboard_channel.get("videos") if dashboard_channel.get("videos") is not None else "Unavailable")
+        if dashboard_channel.get("description"):
+            with st.expander("Channel description"):
+                st.write(dashboard_channel.get("description"))
+        recent_uploads = dashboard_data.get("recent_uploads") or []
+        st.subheader("Recent uploads — sorted by views")
+        if recent_uploads:
+            st.caption(f"Loaded {len(recent_uploads)} recent uploads. Showing the top {min(20, len(recent_uploads))} by views.")
+            st.dataframe(
+                [{"Title": v.get("title"), "Published": (v.get("published_at") or "")[:10],
+                  "Views": v.get("views", 0), "Likes": v.get("likes", 0),
+                  "Comments": v.get("comments", 0), "URL": v.get("url")}
+                 for v in recent_uploads[:20]],
+                use_container_width=True, hide_index=True,
+                column_config={"URL": st.column_config.LinkColumn("URL", display_text="Open video")}
+            )
+        else:
+            st.info("No public recent uploads were returned by YouTube.")
+    else:
+        st.info("Connect YouTube and tap Refresh channel & uploads to load your channel statistics and recent uploads.")
     if own_tenant_ids:
         try:
             home_snapshot_rows = (
@@ -1162,31 +1213,87 @@ else:
                     st.error("This video needs attention. Please contact support.")
             else:
                 st.info("Upload a video above, then select it from the small Uploads list to manage its SEO and publishing.")
-    with customer_analytics:
-        if not own_tenant_ids:
-            st.info("Channel analytics will appear after your workspace is activated.")
+    with customer_video_analytics:
+        st.subheader("📊 Your video performance")
+        if recent_uploads:
+            st.dataframe(
+                [{"Video": v.get("title"), "Views": v.get("views", 0), "Likes": v.get("likes", 0),
+                  "Comments": v.get("comments", 0), "Published": (v.get("published_at") or "")[:10],
+                  "YouTube": v.get("url")} for v in recent_uploads[:20]],
+                use_container_width=True, hide_index=True,
+                column_config={"YouTube": st.column_config.LinkColumn("YouTube", display_text="Watch")}
+            )
+            total_recent_views = sum(int(v.get("views") or 0) for v in recent_uploads)
+            avg_recent_views = round(total_recent_views / max(len(recent_uploads), 1))
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Recent uploads", len(recent_uploads))
+            m2.metric("Combined views", f"{total_recent_views:,}")
+            m3.metric("Average views / video", f"{avg_recent_views:,}")
+            st.caption("These are public YouTube video statistics for the latest uploads. Private CTR, impressions and audience retention require YouTube Analytics access and are not inferred here.")
         else:
-            try:
-                latest_analytics = (
-                    supabase.table("channel_analytics_snapshots")
-                    .select("channel_title, subscriber_count, view_count, video_count, captured_at")
-                    .in_("tenant_id", own_tenant_ids)
-                    .order("captured_at", desc=True)
-                    .limit(1)
-                    .execute().data or []
+            st.info("Refresh your YouTube channel above to load video performance.")
+    with customer_growth:
+        st.subheader("🩺 Your AI Growth Doctor")
+        if recent_uploads:
+            ranked = sorted(recent_uploads, key=lambda v: int(v.get("views") or 0), reverse=True)
+            total_recent_views = sum(int(v.get("views") or 0) for v in recent_uploads)
+            avg_recent_views = round(total_recent_views / max(len(recent_uploads), 1))
+            st.markdown("**Top-performing videos**")
+            for item in ranked[:3]:
+                st.write(f"• {item.get('title')} — {int(item.get('views') or 0):,} views")
+            st.caption("Recommendations are based on public recent-upload views/likes/comments only, not private CTR or retention.")
+            if st.button("✨ Generate AI growth suggestions", key="customer_growth_suggestions", type="primary"):
+                growth_summary = "\n".join(
+                    f"- {v.get('title')} | views {v.get('views')} | likes {v.get('likes')} | comments {v.get('comments')}"
+                    for v in ranked[:20]
                 )
-                if latest_analytics:
-                    snapshot = latest_analytics[0]
-                    st.subheader(snapshot.get("channel_title") or "YouTube channel")
-                    st.caption(f"Last refreshed: {snapshot.get('captured_at')}")
-                    metric_a, metric_b, metric_c = st.columns(3)
-                    metric_a.metric("Subscribers", snapshot.get("subscriber_count") if snapshot.get("subscriber_count") is not None else "Hidden")
-                    metric_b.metric("Channel views", snapshot.get("view_count") if snapshot.get("view_count") is not None else "Unavailable")
-                    metric_c.metric("Videos", snapshot.get("video_count") if snapshot.get("video_count") is not None else "Unavailable")
+                with st.spinner("Gemini is reviewing your recent video performance..."):
+                    try:
+                        growth_text = customer_content_studio_request(
+                            own_tenant_ids[0], "YouTube AI Growth Doctor",
+                            f"Analyze these recent public YouTube video metrics. Average views: {avg_recent_views}.",
+                            growth_summary + "\nGive practical next-video ideas, opening-hook improvements, and repeatable formats. Clearly state limits of public metrics.",
+                            supabase,
+                        )
+                    except RuntimeError as exc:
+                        st.error("AI growth analysis could not be generated: " + str(exc)[:100])
+                    else:
+                        st.session_state["creator_growth_report"] = growth_text
+            if st.session_state.get("creator_growth_report"):
+                st.markdown(st.session_state["creator_growth_report"])
+        else:
+            st.info("Refresh your channel first. The Growth Doctor needs recent public video metrics.")
+    with customer_studio:
+        st.subheader("✨ Gemini AI Content Studio")
+        st.caption("Generate scripts and fresh ideas for your connected channel. Gemini creates the draft; you decide what to use.")
+        if not own_tenant_ids:
+            st.info("Content Studio is available after workspace activation.")
+        else:
+            with st.form("customer_content_studio_form"):
+                studio_kind = st.selectbox("What should Gemini create?", [
+                    "PJ Babu comedy script", "Video idea / topic", "YouTube Shorts script",
+                    "Telugu caption and hook"
+                ])
+                studio_topic = st.text_area("Video idea / topic", placeholder="ఉదా: యముడు నరకాన్ని PJ బాబుకి అమ్మేశాడు…", max_chars=500)
+                studio_notes = st.text_area("Additional instructions (optional)", placeholder="ఉదా: 15 seconds, fast comedy, Telugu dialogue", max_chars=1000)
+                studio_submit = st.form_submit_button("✨ Generate with Gemini", type="primary", use_container_width=True)
+            if studio_submit:
+                if not studio_topic.strip():
+                    st.warning("Enter a topic for Gemini.")
                 else:
-                    st.info("Your service team has not refreshed channel analytics yet.")
-            except Exception:
-                st.warning("Channel analytics are temporarily unavailable.")
+                    with st.spinner("Gemini is preparing your content..."):
+                        try:
+                            studio_result = customer_content_studio_request(
+                                own_tenant_ids[0], studio_kind, studio_topic, studio_notes, supabase
+                            )
+                        except RuntimeError as exc:
+                            st.error("AI Content Studio error: " + str(exc)[:100])
+                        else:
+                            st.session_state["creator_studio_result"] = studio_result
+            if st.session_state.get("creator_studio_result"):
+                st.text_area("Gemini result", value=st.session_state["creator_studio_result"], height=320)
+                st.download_button("Download content draft", st.session_state["creator_studio_result"],
+                                   file_name="youtube_content_draft.txt", mime="text/plain")
 
     with customer_tickets:
         if not own_tenant_ids:
