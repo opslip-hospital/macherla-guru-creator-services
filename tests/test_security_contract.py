@@ -226,10 +226,10 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("publish_status_sync_failed", PUBLISH_WORKER)
 
     def test_customer_seo_save_enforces_five_hashtags_and_valid_tag_limits(self):
-        self.assertIn("exactly_5_unique_hashtags_required", SEO_WORKER)
-        self.assertIn("tags_must_be_12_to_18_and_within_450_characters", SEO_WORKER)
-        self.assertIn("exactly_5_unique_title_options_required", SEO_WORKER)
-        self.assertIn("do not include hashtags because they are returned separately", SEO_WORKER)
+        self.assertIn("exactly_5_unique_hashtags_required", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("tags_must_be_12_to_18_and_within_450_characters", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("exactly_5_unique_title_options_required", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("do not include hashtags because they are returned separately", CUSTOMER_SEO_FUNCTION)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
