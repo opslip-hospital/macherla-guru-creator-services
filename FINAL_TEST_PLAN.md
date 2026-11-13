@@ -29,7 +29,7 @@
 - Confirm SEO becomes read-only after the YouTube private upload.
 
 ## 5. YouTube upload and publishing
-- On the dedicated test channel, upload the sample video and verify YouTube receives the title, description, tags, category, and exactly five saved hashtags in the description.
+- On the dedicated test channel, upload the sample video and verify YouTube receives the title, description, tags, category, and exactly five saved hashtags in the description, including that test channel's own brand hashtag (not a hardcoded MacherlaGuru hashtag).
 - Confirm the video is **Private** immediately after upload.
 - Verify **Publish now** changes the test video to Public only after the customer clicks the explicit action.
 - Verify **Schedule** uses IST date and 12-hour AM/PM display, rejects times less than 15 minutes ahead, and appears correctly in YouTube Studio.
