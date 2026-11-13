@@ -564,7 +564,7 @@ if role == "admin":
                 .limit(100)
                 .execute().data or []
             )
-            st.caption("Prepare SEO metadata, upload received videos privately, and publish or schedule only after recorded customer approval. Live Google OAuth testing is still pending.")
+            st.caption("Monitor customer uploads, metadata, private uploads and publishing activity. Customers can publish or schedule their own videos; live Google OAuth testing is still pending.")
             if rows:
                 for job in rows:
                     with st.container(border=True):
@@ -580,7 +580,7 @@ if role == "admin":
                                     st.success("YouTube accepted the video as PRIVATE. Customer approval is still required before publishing.")
                                     if upload_result.get("youtube_url"):
                                         st.link_button("Open private YouTube video", upload_result["youtube_url"])
-                        if job.get("status") == "approved":
+                        if job.get("status") in {"uploaded_private", "approved"}:
                             with st.form(f"publish_action_{job['id']}"):
                                 publish_mode = st.radio(
                                     "Customer-approved action",
@@ -861,7 +861,7 @@ else:
                         st.write(f"**{job.get('video_title') or 'Your video'}**")
                         st.caption(f"Status: {job.get('status', 'draft')}")
                         if job.get("status") == "received":
-                            st.info("Video received securely. Generate your YouTube SEO below.")
+                            st.info("Video received securely. Generate and save your SEO, then upload it to your connected YouTube channel.")
                         try:
                             saved_rows = (
                                 supabase.table("content_metadata")
@@ -937,8 +937,73 @@ else:
                                     else:
                                         st.success("Your SEO edits are saved.")
                                         st.rerun()
-                        if job.get("status") in {"uploaded_private", "awaiting_approval", "approved"}:
-                            st.info("Your video is uploaded privately. Self-service publish/schedule is the next workflow being enabled.")
+                        if job.get("status") == "received":
+                            if saved_meta:
+                                if st.button(
+                                    "⬆️ Upload to my YouTube channel (PRIVATE)",
+                                    key=f"customer_upload_youtube_{job['id']}",
+                                    type="primary",
+                                    use_container_width=True,
+                                ):
+                                    try:
+                                        upload_result = start_private_youtube_upload(job["id"], supabase)
+                                    except RuntimeError:
+                                        st.error("YouTube upload failed. Reconnect your channel with upload permission and retry.")
+                                    else:
+                                        st.success("Your video is uploaded to your channel as PRIVATE.")
+                                        if upload_result.get("youtube_url"):
+                                            st.link_button("Open private YouTube video", upload_result["youtube_url"])
+                                        st.rerun()
+                            else:
+                                st.info("Generate and save your AI SEO first. Then the private upload button will appear.")
+                        if job.get("status") in {"uploaded_private", "approved"}:
+                            st.success("Your video is uploaded as PRIVATE. You control when it becomes public.")
+                            with st.form(f"customer_publish_action_{job['id']}"):
+                                customer_publish_mode = st.radio(
+                                    "What would you like to do?",
+                                    ["Publish now", "Schedule"],
+                                    horizontal=True,
+                                    key=f"customer_publish_mode_{job['id']}",
+                                )
+                                if customer_publish_mode == "Schedule":
+                                    customer_schedule_date = st.date_input(
+                                        "Schedule date (IST)",
+                                        value=date.today() + timedelta(days=1),
+                                        min_value=date.today(),
+                                        key=f"customer_schedule_date_{job['id']}",
+                                    )
+                                    customer_schedule_time = st.time_input(
+                                        "Schedule time (IST)",
+                                        value=time(9, 0),
+                                        key=f"customer_schedule_time_{job['id']}",
+                                    )
+                                else:
+                                    customer_schedule_date = None
+                                    customer_schedule_time = None
+                                customer_publish_submit = st.form_submit_button(
+                                    "Confirm my publish / schedule", type="primary"
+                                )
+                            if customer_publish_submit:
+                                customer_publish_at = None
+                                if customer_publish_mode == "Schedule" and customer_schedule_date and customer_schedule_time:
+                                    customer_publish_at = datetime.combine(
+                                        customer_schedule_date, customer_schedule_time,
+                                        tzinfo=ZoneInfo("Asia/Kolkata"),
+                                    ).isoformat()
+                                try:
+                                    result = publish_approved_video(
+                                        job["id"],
+                                        "schedule" if customer_publish_mode == "Schedule" else "now",
+                                        customer_publish_at,
+                                        supabase,
+                                    )
+                                except RuntimeError:
+                                    st.error("YouTube could not complete this action. Your video remains private; check your publishing permission and schedule time.")
+                                else:
+                                    st.success(result.get("message", "YouTube action completed."))
+                                    if result.get("youtube_url"):
+                                        st.link_button("Open YouTube video", result["youtube_url"])
+                                    st.rerun()
                         elif job.get("status") == "scheduled":
                             st.info(f"Your video is scheduled for {job.get('scheduled_for')}.")
                         elif job.get("status") == "published":
