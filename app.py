@@ -190,10 +190,14 @@ def customer_youtube_seo_request(
         return result
     except urllib.error.HTTPError as exc:
         try:
-            detail = json.loads(exc.read().decode("utf-8")).get("error", "seo_request_failed")
+            body = json.loads(exc.read().decode("utf-8"))
+            detail = str(body.get("error") or "seo_request_failed")
+            stage = str(body.get("stage") or "")
         except Exception:
-            detail = "seo_request_failed"
-        raise RuntimeError(str(detail)) from None
+            detail, stage = "seo_request_failed", ""
+        safe_detail = detail[:80]
+        safe_stage = stage[:40]
+        raise RuntimeError(f"{safe_detail}:{safe_stage}" if safe_stage else safe_detail) from None
     except (urllib.error.URLError, TimeoutError, ValueError, AttributeError):
         raise RuntimeError("seo_request_failed") from None
 
@@ -907,7 +911,7 @@ else:
                                         elif str(exc) == "ai_temporarily_busy":
                                             st.warning("AI is temporarily busy. Please try again in a little while.")
                                         else:
-                                            st.error("AI SEO could not be generated. Check the video topic and try again.")
+                                            st.error(f"AI SEO error: {str(exc)[:130]}")
                                     else:
                                         st.success("AI generated your YouTube SEO. Review and edit it below.")
                                         st.rerun()
