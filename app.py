@@ -183,7 +183,7 @@ def customer_youtube_seo_request(
             },
             method="POST",
         )
-        with urllib.request.urlopen(request, timeout=90) as response:
+        with urllib.request.urlopen(request, timeout=180) as response:
             result = json.loads(response.read().decode("utf-8"))
         if not result.get("success"):
             raise RuntimeError(str(result.get("error") or "seo_request_failed"))
