@@ -170,6 +170,9 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('Upload to my YouTube channel (PRIVATE)', APP)
         self.assertIn("The channel owner can now publish or schedule it", YOUTUBE_WORKER)
 
+    def test_customer_seo_editor_explains_required_channel_hashtag(self):
+        self.assertIn("including #MacherlaGuru", APP)
+
     def test_private_upload_requires_complete_macherla_guru_seo(self):
         self.assertIn("complete SEO metadata must be saved before upload", SEO_REQUIRED_MIGRATION)
         self.assertIn("12 to 18 unique tags within 450 characters", SEO_REQUIRED_MIGRATION)
