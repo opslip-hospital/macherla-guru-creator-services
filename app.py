@@ -1258,6 +1258,10 @@ else:
                     st.success(f"Scheduled: {scheduled_text}")
                 elif job.get("status") == "published":
                     st.success("Published on YouTube.")
+                elif job.get("status") == "upload_unknown":
+                    st.warning("The upload response was interrupted. The video may already exist as PRIVATE. Check YouTube Studio before retrying; do not upload it again yet. Contact support if you cannot confirm its status.")
+                elif job.get("status") == "publishing":
+                    st.warning("YouTube is still confirming the publish/schedule action. Check YouTube Studio before retrying; do not click Publish or Schedule again while this status remains.")
                 elif job.get("status") == "failed":
                     st.error("This video needs attention. Please contact support.")
             else:
