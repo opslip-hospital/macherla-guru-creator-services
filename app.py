@@ -1193,8 +1193,8 @@ else:
                         )
                         if customer_publish_mode == "Schedule":
                             customer_schedule_date = st.date_input(
-                                "Schedule date (IST)", value=date.today() + timedelta(days=1),
-                                min_value=date.today(), key=f"customer_schedule_date_{job['id']}",
+                                "Schedule date (IST)", value=datetime.now(ZoneInfo("Asia/Kolkata")).date() + timedelta(days=1),
+                                min_value=datetime.now(ZoneInfo("Asia/Kolkata")).date(), key=f"customer_schedule_date_{job['id']}",
                             )
                             hour_12 = st.selectbox("Hour", list(range(1, 13)), index=8, key=f"schedule_hour_{job['id']}")
                             minute = st.selectbox("Minutes", [f"{m:02d}" for m in range(60)], index=0, key=f"schedule_minute_{job['id']}")
