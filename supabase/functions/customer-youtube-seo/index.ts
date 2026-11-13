@@ -47,7 +47,7 @@ function normalizeHashtags(value: unknown, max: number): string[] {
   const result: string[] = [];
   for (const item of value) {
     const tag = String(item).replace(/^#+/, "").trim()
-      .replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_]/gu, "");
+      .replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_]/gu, "").slice(0, 100);
     const key = tag.toLowerCase();
     if (!tag || seen.has(key)) continue;
     seen.add(key);
