@@ -179,7 +179,14 @@ Deno.serve(async (req: Request) => {
     if (job.status !== "received") {
       return json({ error: "metadata_locked_after_private_upload" }, 409);
     }
+    let metadata: Record<string, unknown>;
     if (action === "generate") {
+      geminiKey = required("GEMINI_API_KEY");
+      if (!job.storage_object_path || !["video/mp4", "video/quicktime", "video/webm"].includes(String(job.mime_type)) ||
+          !Number.isFinite(Number(job.file_size_bytes)) || Number(job.file_size_bytes) <= 0 ||
+          Number(job.file_size_bytes) > 104857600) {
+        return json({ error: "video_file_unavailable_or_unsupported" }, 409);
+      }
       const { data: rateAllowed, error: rateError } = await admin.rpc(
         "consume_customer_ai_rate_limit",
         { p_user_id: auth.user.id, p_tenant_id: job.tenant_id, p_action: "youtube_seo", p_limit: 5 },
@@ -189,14 +196,6 @@ Deno.serve(async (req: Request) => {
         const now = new Date();
         const retryAfter = 3600 - (now.getUTCMinutes() * 60 + now.getUTCSeconds());
         return json({ error: "ai_rate_limit_exceeded", stage: "rate_limit", retry_after_seconds: retryAfter }, 429);
-      }
-    }
-
-    let metadata: Record<string, unknown>;
-    if (action === "generate") {
-      geminiKey = required("GEMINI_API_KEY");
-      if (!job.storage_object_path || !["video/mp4", "video/quicktime", "video/webm"].includes(String(job.mime_type))) {
-        return json({ error: "video_file_unavailable_or_unsupported" }, 409);
       }
       stage = "video_storage_download";
       const { data: videoBlob, error: storageError } = await admin.storage
