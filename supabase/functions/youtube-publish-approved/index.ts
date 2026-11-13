@@ -15,6 +15,7 @@ Deno.serve(async(req)=>{
  if(req.method!=="POST")return json({error:"method_not_allowed"},405);
  let admin:ReturnType<typeof createClient>|null=null,jobId:string|null=null;
  let youtubeUpdated=false;
+ let youtubeVideoId:string|null=null;
  try{
   const url=required("SUPABASE_URL");
   const publishable=Deno.env.get("SUPABASE_PUBLISHABLE_KEY")??Deno.env.get("SUPABASE_ANON_KEY");
@@ -41,6 +42,7 @@ Deno.serve(async(req)=>{
    p_job_id:jobId,p_admin_user_id:auth.user.id,p_mode:mode,p_publish_at:publishAt,
   });
   if(claimError||!claimed)return json({error:"workspace_owner_or_private_upload_required"},409);
+  youtubeVideoId=String(claimed.youtube_video_id);
   const refresh=await decrypt(claimed.encrypted_refresh_token_hex,required("TOKEN_ENCRYPTION_KEY"));
   const tokenResponse=await fetch("https://oauth2.googleapis.com/token",{
    method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
@@ -71,6 +73,7 @@ Deno.serve(async(req)=>{
   if(admin&&jobId&&!youtubeUpdated)await admin.from("upload_jobs").update({status:"uploaded_private",scheduled_for:null,updated_at:new Date().toISOString()}).eq("id",jobId).eq("status","publishing");
   return json({
    error:youtubeUpdated?"publish_status_sync_failed":"publish_or_schedule_failed",
+   ...(youtubeUpdated&&youtubeVideoId?{youtube_video_id:youtubeVideoId,youtube_url:`https://www.youtube.com/watch?v=${youtubeVideoId}`}:{}),
    message:youtubeUpdated
     ?"YouTube accepted the publish or schedule action, but dashboard status sync failed. Check YouTube Studio before retrying."
     :"Publishing could not be completed. The video remains private; review the channel connection and retry."
