@@ -120,7 +120,7 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - `youtube-refresh-analytics`: v7 ACTIVE
 - `customer-youtube-seo`: v48 ACTIVE
 - `customer-channel-dashboard`: v5 ACTIVE
-- `customer-content-studio`: v8 ACTIVE
+- `customer-content-studio`: v10 ACTIVE
 
 These are deployment-state checks only, not successful end-to-end tests. The live database migration history and current schema were reviewed; the required storage-binding, analytics/SEO columns, upload status constraint, and final SEO upload guard are present. Idempotent final migrations are committed for clean setup. The final test run remains deferred by request.
 - The scheduling date picker uses the India local calendar date, and schedule times are displayed and submitted in 12-hour AM/PM IST. The backend rejects schedule times that are not at least 15 minutes in the future.
@@ -162,6 +162,8 @@ These are deployment-state checks only, not successful end-to-end tests. The liv
 - Fixed the Unicode normalization regex used to derive each connected channel's brand hashtag. The SEO worker is deployed ACTIVE v44; the corresponding static contract check is included in the final test suite.
 - Gemini Content Studio now reads the connected channel title directly through the authenticated tenant-scoped connection RPC, so its prompts use the correct channel brand even before an analytics snapshot has been refreshed. The Content Studio Edge Function is deployed ACTIVE v7.
 - Gemini SEO generation now requires an active connected YouTube upload-scope connection before it analyzes the video. This ensures the five-hashtag set includes the correct connected-channel brand; if the customer uploads before connecting, the video remains safely stored and the UI asks them to connect before retrying SEO.
+- Gemini video SEO requires explicit per-video consent and records a consent audit event before the uploaded video is sent to the Gemini API. The UI discloses that the current Gemini API Free Tier may use submitted content to improve Google products.
+- Gemini Content Studio and Growth Doctor require separate explicit consent before sending customer prompts or channel metrics to Gemini; consent is audited. AI requests are rate-limited per customer/workspace and the rate-limit RPC is callable only by the service role through a public-schema wrapper.
 - Customer Content Studio is channel-neutral: it uses the authenticated tenant's connected channel title directly and does not force PJ Babu or another fixed character. The customer upload workflow remains thumbnail-free.
 - Macherla Guru's channel title is canonicalized to the exact `#MacherlaGuru` casing even when the YouTube channel title is uppercase or contains decorative characters. The database mirrors the same rule in migration `20261113294000_canonicalize_macherla_guru_brand_hashtag.sql`.
 - Production Google OAuth has an additional external launch dependency: a custom domain owned by the service operator, a public homepage with privacy-policy/terms links on that verified domain, and Google's domain/brand/sensitive-scope verification. The shared `streamlit.app` hostname should not be treated as an owned domain. See `DEPLOYMENT.md` before inviting real customers.
