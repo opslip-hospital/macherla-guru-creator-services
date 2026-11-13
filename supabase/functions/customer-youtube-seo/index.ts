@@ -180,13 +180,14 @@ Deno.serve(async (req: Request) => {
       if (videoBlob.size !== Number(job.file_size_bytes) || videoBlob.size > 104857600) {
         return json({ error: "video_file_size_mismatch" }, 409);
       }
-      const videoBytes = new Uint8Array(await videoBlob.arrayBuffer());
-      if (!hasExpectedVideoContainer(videoBytes, String(job.mime_type))) {
+      const videoHeader = new Uint8Array(await videoBlob.slice(0, 12).arrayBuffer());
+      if (!hasExpectedVideoContainer(videoHeader, String(job.mime_type))) {
         return json({ error: "video_container_does_not_match_file_type" }, 415);
       }
+
       stage = "gemini_file_upload";
       const geminiFile = await uploadVideoToGemini(
-        geminiKey, videoBytes, String(job.mime_type), String(job.video_title ?? "creator-video"),
+        geminiKey, videoBlob, String(job.mime_type), String(job.video_title ?? "creator-video"),
       );
       geminiFileName = geminiFile.name;
       stage = "gemini_file_processing";
