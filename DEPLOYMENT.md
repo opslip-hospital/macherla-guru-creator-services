@@ -53,7 +53,7 @@ The project-provided Supabase URL and server credentials are read inside Edge Fu
 
 ## AI YouTube SEO generation
 
-The customer dashboard includes **Generate YouTube SEO** for each uploaded video. It creates five title options, an SEO description, 12–18 search tags, exactly five separate hashtags, YouTube and Instagram captions, keywords, and a YouTube category; the customer can edit and save the result before uploading.
+The customer dashboard lets a workspace owner upload one video and prepare SEO before connecting YouTube. It creates five title options, an SEO description, 12–18 search tags, exactly five separate hashtags, YouTube and Instagram captions, keywords, and a YouTube category; the customer can edit and save the result. Before a channel is connected, the workspace/business name supplies the brand hashtag. After connecting, the customer regenerates SEO so the brand hashtag matches the connected channel.
 
 In the dedicated Supabase project's **Edge Functions > Secrets**, add:
 
@@ -63,13 +63,13 @@ Keep this key only in Supabase Edge Function secrets. Do not add it to Streamlit
 
 ## Customer self-service publishing
 
-Customers can upload their own video to their connected YouTube channel as **PRIVATE**, then choose **Publish now** or **Schedule** from their dashboard. The publish/schedule button is the customer's explicit action; there is no separate platform-admin video approval. Google OAuth publishing permission is still required for changing video visibility or scheduling. Customers must reconnect their channel if the requested publishing scope was not granted.
+After SEO is saved and a YouTube channel is connected with upload permission, customers can upload their video to that channel as **PRIVATE**. The customer-facing dashboard then offers **Schedule** only, using an IST date and AM/PM time. It does not expose Publish Now. Google OAuth publishing permission is required for scheduling; customers must reconnect if the required scope was not granted.
 
 The OAuth flow requests `youtube.upload`, `youtube.readonly`, and `youtube.force-ssl`; the last permission is needed to publish or schedule a video after the customer chooses that action. A short-lived, one-use state is stored as a hash. The refresh token is encrypted with AES-256-GCM before it is stored in the private schema. Only the channel identity and granted scopes are returned to the customer UI.
 
 ## Current limitations
 
-The application, database workflows, and Edge Functions are deployed. Deployment status alone does not prove that Google OAuth, Gemini video analysis, or YouTube publishing works end to end. Confirm that the listed OAuth, encryption, and Gemini secrets are present in the dedicated Supabase project's Edge Function Secrets without copying their values into chat or GitHub. A real test Google account must connect a channel before live OAuth is considered verified. Gemini video SEO, private upload, Publish now, Schedule, analytics refresh, and admin/customer flows remain pending the final authorized test pass. Supabase Auth leaked-password protection is currently reported disabled by Security Advisor; enable it in the project's Authentication password/security settings before onboarding real customers. Billing is administrative status tracking only; payment processing and automatic charges are not enabled.
+The application, database workflows, and Edge Functions are deployed. Deployment status alone does not prove that Google OAuth, Gemini video analysis, or YouTube publishing works end to end. Confirm that the listed OAuth, encryption, and Gemini secrets are present in the dedicated Supabase project's Edge Function Secrets without copying their values into chat or GitHub. A real test Google account must connect a channel before live OAuth is considered verified. Gemini video SEO, private upload, Schedule, and admin/customer flows remain pending the final authorized test pass. Supabase Auth leaked-password protection is currently reported disabled by Security Advisor; enable it in the project's Authentication password/security settings before onboarding real customers. Billing is administrative status tracking only; payment processing and automatic charges are not enabled.
 ## Streamlit upload configuration
 
 The app requires Streamlit 1.53 or newer for the per-widget `max_upload_size` setting. The repository pins `streamlit>=1.53,<2.0` and includes `.streamlit/config.toml` with a 100 MB global upload cap. Keep this aligned with the private Supabase bucket and database upload limit.
@@ -82,3 +82,8 @@ The current Streamlit URL is a shared `streamlit.app` subdomain. Google requires
 ## Gemini API data-use disclosure
 
 The current integration uses the Gemini Developer API. Google's current documentation says Free Tier prompts, responses, and submitted files may be used to improve Google products; Paid Tier content is not used for that purpose. Because this service analyzes customer video files, the customer UI now displays this disclosure, requires an explicit per-video consent before sending a file to Gemini, and records that consent in the tenant audit log. If the service owner later upgrades the Gemini project to a Paid Tier, review and update the notice based on the exact active billing tier and Google's current terms. Do not describe the Free Tier as private/no-training. See Google's [Gemini API billing and tier data-use details](https://ai.google.dev/gemini-api/docs/billing) and [pricing data-use table](https://ai.google.dev/gemini-api/docs/pricing).
+
+
+## Current customer dashboard workflow
+
+The customer home is intentionally limited to one video workflow: upload one video to the private intake bucket, generate/review/edit/save Gemini SEO, connect YouTube if not already connected, upload privately, then choose an IST schedule time with AM/PM. Customers without a YouTube channel can still prepare SEO using their workspace brand name. Exactly five hashtags are stored; one is the workspace brand until a channel is connected, then the connected channel's brand after regeneration. There is no thumbnail feature, customer analytics panel, Growth Doctor, Content Studio, support panel, billing panel, or Publish Now control in this customer workflow. The Master Admin view remains separate and is used for workspace activation/status.
