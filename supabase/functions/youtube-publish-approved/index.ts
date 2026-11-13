@@ -24,8 +24,6 @@ Deno.serve(async(req)=>{
   const userClient=createClient(url,publishable,{global:{headers:{Authorization:`Bearer ${bearer}`}},auth:{persistSession:false,autoRefreshToken:false}});
   const {data:auth,error:authError}=await userClient.auth.getUser(bearer);
   if(authError||!auth.user)return json({error:"invalid_session"},401);
-  const {data:profile}=await userClient.from("profiles").select("role").eq("user_id",auth.user.id).maybeSingle();
-  if(profile?.role!=="admin")return json({error:"admin_required"},403);
   const body=await req.json().catch(()=>({}));
   jobId=typeof body.job_id==="string"?body.job_id:"";
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId))return json({error:"invalid_job_id"},400);
@@ -41,7 +39,7 @@ Deno.serve(async(req)=>{
   const {data:claimed,error:claimError}=await admin.rpc("claim_youtube_publish_job",{
    p_job_id:jobId,p_admin_user_id:auth.user.id,p_mode:mode,p_publish_at:publishAt,
   });
-  if(claimError||!claimed)return json({error:"approval_or_publishing_permission_required"},409);
+  if(claimError||!claimed)return json({error:"workspace_owner_or_private_upload_required"},409);
   const refresh=await decrypt(claimed.encrypted_refresh_token_hex,required("TOKEN_ENCRYPTION_KEY"));
   const tokenResponse=await fetch("https://oauth2.googleapis.com/token",{
    method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
@@ -63,13 +61,13 @@ Deno.serve(async(req)=>{
   if(updateError)throw new Error("job_status_update_failed");
   await admin.from("audit_events").insert({
    tenant_id:claimed.tenant_id,actor_user_id:auth.user.id,event_type:mode==="now"?"youtube_video_published":"youtube_video_scheduled",
-   details:{upload_job_id:jobId,youtube_video_id:claimed.youtube_video_id,channel_id:claimed.channel_id,publish_at:publishAt,customer_approved:true},
+   details:{upload_job_id:jobId,youtube_video_id:claimed.youtube_video_id,channel_id:claimed.channel_id,publish_at:publishAt,initiated_by_authenticated_owner_or_admin:true},
   });
   return json({success:true,status:finalStatus,youtube_video_id:claimed.youtube_video_id,
    youtube_url:`https://www.youtube.com/watch?v=${claimed.youtube_video_id}`,
-   message:mode==="now"?"Customer-approved video is now public.":"Customer-approved video is scheduled."});
+   message:mode==="now"?"Your video is now public.":"Your video is scheduled."});
  }catch{
-  if(admin&&jobId)await admin.from("upload_jobs").update({status:"approved",scheduled_for:null,updated_at:new Date().toISOString()}).eq("id",jobId).eq("status","publishing");
-  return json({error:"publish_or_schedule_failed",message:"Publishing could not be completed. The video remains private; review the channel connection and approval before retrying."},502);
+  if(admin&&jobId)await admin.from("upload_jobs").update({status:"uploaded_private",scheduled_for:null,updated_at:new Date().toISOString()}).eq("id",jobId).eq("status","publishing");
+  return json({error:"publish_or_schedule_failed",message:"Publishing could not be completed. The video remains private; review the channel connection and retry."},502);
  }
 });
