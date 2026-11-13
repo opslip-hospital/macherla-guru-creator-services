@@ -11,7 +11,7 @@ When you create an account or use the service, we process your name, email addre
 
 If you connect a YouTube channel, we receive the channel ID and title, the permissions (OAuth scopes) you grant, and the channel/video information needed to show your channel dashboard and analytics. Depending on the permissions granted, this can include subscriber, view, video, likes, comments, and YouTube Analytics metrics.
 
-When you upload a video for AI SEO, the video file is stored in a private service bucket and transmitted to Google's Gemini API for video analysis and metadata generation. The resulting title suggestions, description, tags, hashtags, captions, keywords, and category are stored with your workspace.
+When you upload a video for AI SEO, the video file is stored in a private service bucket and transmitted to Google's Gemini API for video analysis and metadata generation. The resulting title suggestions, description, tags, hashtags, captions, keywords, and category are stored with your workspace. A temporary Gemini file is deleted on a best-effort basis after processing; if provider-side deletion fails, Google's applicable API retention terms govern that copy.
 
 ## 2. How we use information
 We use information to:
