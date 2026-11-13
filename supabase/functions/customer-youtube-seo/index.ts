@@ -231,6 +231,7 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
       const generatedTags = metadata.tags as string[];
       const generatedHashtags = metadata.hashtags as string[];
       const generatedTitles = (metadata.metadata_details as Record<string, unknown>).title_options as string[];
+      const generatedKeywords = (metadata.metadata_details as Record<string, unknown>).keywords as string[];
       const generatedTagLength = generatedTags.reduce((total, tag) => total + tag.length, 0) + Math.max(0, generatedTags.length - 1);
       const uniqueHashtags = new Set(generatedHashtags.map((tag) => tag.toLowerCase()));
       const uniqueTitles = new Set(generatedTitles.map((title) => title.toLowerCase()));
@@ -241,6 +242,9 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
       if (generatedHashtags.length !== 5 || uniqueHashtags.size !== 5 ||
           generatedTitles.length !== 5 || uniqueTitles.size !== 5) {
         return json({ error: "ai_returned_incomplete_metadata" }, 502);
+      }
+      if (generatedKeywords.length > 20) {
+        return json({ error: "ai_returned_too_many_keywords" }, 502);
       }
     } else {
       metadata = {
