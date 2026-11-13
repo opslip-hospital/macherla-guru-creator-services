@@ -66,6 +66,9 @@ CUSTOMER_SEO_FUNCTION = (
 SEO_UPLOAD_GUARD = (
     ROOT / "supabase/migrations/20261113169000_require_complete_seo_before_private_upload.sql"
 ).read_text(encoding="utf-8")
+SEO_TAG_SEPARATOR_GUARD = (
+    ROOT / "supabase/migrations/20261113171000_count_tag_separators_before_upload.sql"
+).read_text(encoding="utf-8")
 
 
 class AuthenticationContractTests(unittest.TestCase):
@@ -317,6 +320,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("12 to 18 unique tags", SEO_UPLOAD_GUARD)
         self.assertIn("five unique hashtags including MacherlaGuru", SEO_UPLOAD_GUARD)
         self.assertIn("five title options", SEO_UPLOAD_GUARD)
+        self.assertIn("greatest(cardinality", SEO_TAG_SEPARATOR_GUARD)
+        self.assertIn("Math.max(0, savedTags.length - 1)", CUSTOMER_SEO_FUNCTION)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
