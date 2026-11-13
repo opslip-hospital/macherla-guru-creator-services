@@ -80,3 +80,8 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 
 - Customer SEO bearer-token parsing was corrected so authenticated customer requests are recognized by the SEO Edge Function.
 - Generated SEO output is checked before saving: 12–18 YouTube tags within the character budget, exactly five unique hashtags, and five title options. Invalid/incomplete AI output is rejected for retry rather than silently saved.
+
+
+- Registration lifecycle was checked against the live database: the auth-user trigger creates a customer profile and a pending customer request; customer/admin row-level security policies protect the request and workspace data.
+- All core customer/admin data tables inspected have row-level security enabled.
+- SEO normalization now removes duplicate tags, hashtags, title options, and keywords; generated output must contain five distinct title options and five distinct hashtags.
