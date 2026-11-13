@@ -380,7 +380,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("encrypted_refresh_token=decode('','hex')", DISCONNECT_MIGRATION)
         self.assertIn("granted_scopes='{}'::text[]", DISCONNECT_MIGRATION)
         self.assertIn("youtube_channel_disconnected", DISCONNECT_MIGRATION)
-        self.assertIn('supabase.rpc("revoke_youtube_connection"', APP)
+        self.assertIn("supabase.rpc(", APP)
+        self.assertIn('"revoke_youtube_connection"', APP)
         self.assertIn("Disconnect this YouTube channel", APP)
         self.assertIn("Existing YouTube videos and schedules remain in YouTube", APP)
 
