@@ -427,9 +427,46 @@ if role == "admin":
                 .limit(100)
                 .execute().data or []
             )
-            st.caption("Latest 100 customer upload jobs. Publishing controls are intentionally not exposed yet.")
+            st.caption("Prepare SEO metadata for customer video jobs. Actual YouTube upload and publish execution remain gated on the live OAuth test.")
             if rows:
-                st.dataframe(rows, use_container_width=True, hide_index=True)
+                for job in rows:
+                    with st.container(border=True):
+                        st.write(f"**{job.get('video_title') or 'Untitled video'}**")
+                        st.caption(f"Job: {job['id']} • Status: {job.get('status', 'draft')} • Workspace: {job.get('tenant_id', '')}")
+                        try:
+                            existing_meta = (
+                                supabase.table("content_metadata")
+                                .select("title, description, tags, hashtags, caption")
+                                .eq("upload_job_id", job["id"])
+                                .order("created_at", desc=True)
+                                .limit(1)
+                                .execute().data or []
+                            )
+                            meta = existing_meta[0] if existing_meta else {}
+                        except Exception:
+                            meta = {}
+                        with st.form(f"seo_metadata_{job['id']}"):
+                            seo_title = st.text_input("SEO title", value=meta.get("title") or job.get("video_title") or "", max_chars=100)
+                            seo_description = st.text_area("Description", value=meta.get("description") or "", max_chars=5000)
+                            seo_tags = st.text_input("Tags (comma separated)", value=", ".join(meta.get("tags") or []))
+                            seo_hashtags = st.text_input("Hashtags (comma separated)", value=" ".join(meta.get("hashtags") or []))
+                            seo_caption = st.text_area("Caption", value=meta.get("caption") or "", max_chars=2200)
+                            save_seo = st.form_submit_button("Save SEO metadata")
+                        if save_seo:
+                            try:
+                                supabase.rpc("admin_save_content_metadata", {
+                                    "p_upload_job": job["id"],
+                                    "p_title": seo_title.strip(),
+                                    "p_description": seo_description,
+                                    "p_tags": [x.strip() for x in seo_tags.split(",") if x.strip()],
+                                    "p_hashtags": [x.strip().lstrip("#") for x in seo_hashtags.split() if x.strip()],
+                                    "p_caption": seo_caption,
+                                }).execute()
+                            except Exception:
+                                st.error("SEO metadata could not be saved. Check the title and try again.")
+                            else:
+                                st.success("SEO metadata saved.")
+                                st.rerun()
             else:
                 st.info("No upload jobs have been submitted yet.")
         except Exception:
@@ -444,7 +481,26 @@ if role == "admin":
                 .execute().data or []
             )
             if tickets:
-                st.dataframe(tickets, use_container_width=True, hide_index=True)
+                for ticket in tickets:
+                    with st.container(border=True):
+                        st.write(f"**{ticket.get('subject') or 'Support request'}**")
+                        st.caption(f"Ticket: {ticket['id']} • Workspace: {ticket.get('tenant_id')} • Status: {ticket.get('status')}")
+                        st.write(ticket.get("message") or "")
+                        status_options = ["open", "in_progress", "waiting_customer", "resolved", "closed"]
+                        current_status = ticket.get("status") if ticket.get("status") in status_options else "open"
+                        with st.form(f"ticket_status_{ticket['id']}"):
+                            new_status = st.selectbox("Update status", status_options, index=status_options.index(current_status))
+                            save_status = st.form_submit_button("Update ticket")
+                        if save_status and new_status != current_status:
+                            try:
+                                supabase.rpc("admin_update_service_ticket_status", {
+                                    "p_ticket": ticket["id"], "p_status": new_status
+                                }).execute()
+                            except Exception:
+                                st.error("Ticket status could not be updated.")
+                            else:
+                                st.success("Ticket status updated.")
+                                st.rerun()
             else:
                 st.info("No customer support requests yet.")
         except Exception:
@@ -467,7 +523,7 @@ if role == "admin":
 else:
     st.divider()
     st.header("Your service")
-    customer_tickets, customer_billing = st.tabs(["Support", "Plan & billing"])
+    customer_uploads, customer_tickets, customer_billing = st.tabs(["Videos & approvals", "Support", "Plan & billing"])
     try:
         own_memberships = (
             supabase.table("tenant_memberships")
@@ -478,6 +534,46 @@ else:
         own_tenant_ids = [r["tenant_id"] for r in own_memberships if r.get("tenant_id")]
     except Exception:
         own_tenant_ids = []
+
+    with customer_uploads:
+        if not own_tenant_ids:
+            st.info("Your video jobs will appear here after your workspace is activated.")
+        else:
+            try:
+                own_jobs = (
+                    supabase.table("upload_jobs")
+                    .select("id, tenant_id, video_title, status, youtube_video_id, scheduled_for, created_at")
+                    .in_("tenant_id", own_tenant_ids)
+                    .order("created_at", desc=True)
+                    .limit(50)
+                    .execute().data or []
+                )
+                if not own_jobs:
+                    st.info("No video jobs yet. The video file upload workflow is still being built.")
+                for job in own_jobs:
+                    with st.container(border=True):
+                        st.write(f"**{job.get('video_title') or 'Your video'}**")
+                        st.caption(f"Status: {job.get('status', 'draft')}")
+                        if job.get("status") in {"uploaded_private", "awaiting_approval"}:
+                            st.warning("This video is private. Review it before approving public publishing.")
+                            if st.button("Approve public publishing", key=f"approve_video_{job['id']}", type="primary"):
+                                try:
+                                    supabase.rpc("customer_approve_upload", {"p_upload_job": job["id"]}).execute()
+                                except Exception:
+                                    st.error("Approval could not be recorded. Please contact support.")
+                                else:
+                                    st.success("Your approval has been recorded.")
+                                    st.rerun()
+                        elif job.get("status") == "approved":
+                            st.info("Your approval is recorded. Publishing execution is not enabled yet.")
+                        elif job.get("status") == "scheduled":
+                            st.info("This video is marked as scheduled. Live scheduling execution is not enabled yet.")
+                        elif job.get("status") == "published":
+                            st.success("Published video.")
+                        elif job.get("status") == "failed":
+                            st.error("This job needs service-team attention.")
+            except Exception:
+                st.warning("Your video list is temporarily unavailable.")
 
     with customer_tickets:
         if not own_tenant_ids:
