@@ -1093,7 +1093,7 @@ else:
 
                 if not saved_meta and job.get("status") == "received":
                     st.info("Video upload complete. Gemini is ready to analyze its scenes and audio.")
-                if st.button(
+                if job.get("status") == "received" and st.button(
                     "✨ Generate YouTube SEO",
                     key=f"generate_seo_{job['id']}",
                     type="primary",
@@ -1111,7 +1111,7 @@ else:
                             st.success("Gemini created your SEO. Review and save it below.")
                             st.rerun()
 
-                if saved_meta:
+                if saved_meta and job.get("status") == "received":
                     details = saved_meta.get("metadata_details") or {}
                     title_options = details.get("title_options") or [saved_meta.get("title") or ""]
                     if len(title_options) > 1:
@@ -1158,6 +1158,13 @@ else:
                         else:
                             st.success("SEO saved.")
                             st.rerun()
+                elif saved_meta:
+                    st.markdown("**SEO metadata uploaded to YouTube (read-only)**")
+                    st.write("**Title:**", saved_meta.get("title") or "")
+                    st.write("**Description:**", saved_meta.get("description") or "")
+                    st.write("**Tags:**", ", ".join(saved_meta.get("tags") or []))
+                    st.write("**Hashtags:**", " ".join("#" + x.lstrip("#") for x in (saved_meta.get("hashtags") or [])))
+                    st.caption("This metadata is locked after private upload so dashboard edits cannot silently differ from YouTube.")
 
                 if job.get("status") == "received":
                     if saved_meta:
