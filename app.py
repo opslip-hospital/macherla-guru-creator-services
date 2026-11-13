@@ -88,7 +88,7 @@ if not st.session_state.get("_creator_user_id"):
     sign_in_tab, register_tab = st.tabs(["Sign in", "Create customer account"])
 
     with sign_in_tab:
-        with st.form("creator_sign_in", clear_on_submit=False):
+        with st.form("creator_sign_in", clear_on_submit=True):
             email = st.text_input("Email address", key="signin_email").strip().lower()
             password = st.text_input("Password", type="password", key="signin_password")
             submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
