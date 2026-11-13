@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     admin = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { data: claimed, error: claimError } = await admin.rpc("claim_youtube_upload_job", {
+    const { data: claimed, error: claimError } = await userClient.rpc("claim_youtube_upload_job", {
       p_job_id: jobId,
       p_admin_user_id: authData.user.id,
     });
