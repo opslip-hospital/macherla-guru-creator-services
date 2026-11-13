@@ -118,7 +118,7 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - `youtube-upload-private`: v22 ACTIVE
 - `youtube-publish-approved`: v9 ACTIVE
 - `youtube-refresh-analytics`: v7 ACTIVE
-- `customer-youtube-seo`: v35 ACTIVE
+- `customer-youtube-seo`: v37 ACTIVE
 - `customer-channel-dashboard`: v5 ACTIVE
 - `customer-content-studio`: v5 ACTIVE
 
@@ -145,3 +145,4 @@ These are deployment-state checks only, not successful end-to-end tests. Databas
 - GitHub Actions CI is intentionally manual-only while development continues, honoring the owner's instruction to run tests once at the end. The final workflow can be started with GitHub Actions → Creator Services CI → Run workflow after the owner authorizes final testing.
 
 - SEO hashtag normalization caps each saved hashtag at 100 characters before the five-tag set is appended to the 5,000-character YouTube description limit.
+- Gemini SEO generation now rejects more than 20 keywords before saving, matching the database upload gate and the customer editor's validation contract.
