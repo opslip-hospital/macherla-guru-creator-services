@@ -9,6 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 APP = (ROOT / "app.py").read_text(encoding="utf-8")
 REQUIREMENTS = (ROOT / "requirements.txt").read_text(encoding="utf-8")
 STREAMLIT_CONFIG = (ROOT / ".streamlit/config.toml").read_text(encoding="utf-8")
+PRIVACY_POLICY = (ROOT / "pages/Privacy_Policy.py").read_text(encoding="utf-8")
+TERMS_OF_SERVICE = (ROOT / "pages/Terms_of_Service.py").read_text(encoding="utf-8")
 INITIAL_SCHEMA = (
     ROOT / "supabase/migrations/202611130001_initial_tenant_isolated_schema.sql"
 ).read_text(encoding="utf-8")
@@ -78,6 +80,13 @@ SEO_TAG_SEPARATOR_GUARD = (
 
 
 class AuthenticationContractTests(unittest.TestCase):
+    def test_public_homepage_links_to_privacy_and_terms(self):
+        self.assertIn("Connect your own YouTube channel", APP)
+        self.assertIn('st.page_link("pages/Privacy_Policy.py"', APP)
+        self.assertIn('st.page_link("pages/Terms_of_Service.py"', APP)
+        self.assertIn("Google API Services User Data Policy", PRIVACY_POLICY)
+        self.assertIn("Private first", TERMS_OF_SERVICE)
+
     def test_migration_versions_are_unique_and_final_guard_runs_last(self):
         migration_dir = ROOT / "supabase/migrations"
         versions = [path.name[:14] for path in migration_dir.glob("*.sql")]
