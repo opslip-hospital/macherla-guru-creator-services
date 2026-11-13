@@ -434,9 +434,8 @@ if role == "admin":
     except Exception:
         st.error("Admin access could not be verified for the workspace list.")
     st.info(
-        "SEO metadata preparation, support workflows, and explicit customer approval records are implemented. "
-        "Actual YouTube file uploads, public/scheduled publishing execution, and payment processing "
-        "remain disabled until the live OAuth and end-to-end tests pass."
+        "Customer AI SEO generation and self-service YouTube upload/publish workflows are deployed in code. "
+        "Live Gemini and YouTube actions still need a successful end-to-end test. Payment processing is not enabled."
     )
 else:
     st.header("Customer Dashboard")
@@ -489,8 +488,8 @@ else:
                     st.caption(f"Channel ID: {connection.get('channel_id', 'Unavailable')}")
                 if tenant.get("status") == "active":
                     st.caption(
-                        "Managed publishing needs permission to upload videos and update video visibility. "
-                        "Google will show the requested permissions before you approve."
+                        "YouTube needs permission to upload videos and update their visibility for publishing/scheduling. "
+                        "Google will show the requested permissions before you grant access."
                     )
                     if st.button(
                         "Reconnect for publishing permissions",
@@ -535,20 +534,20 @@ else:
                     "or ask the service administrator for help."
                 )
         st.info(
-            "Channel connection uses Google OAuth. The service never asks for your "
-            "Google password. Video uploads and public/scheduled publishing are not "
-            "enabled yet; customer approval will be required before publishing."
+            "Channel connection uses Google OAuth. The service never asks for your Google password. "
+            "After connecting, you can generate SEO, upload privately, and choose Publish now or Schedule. "
+            "Your publish/schedule button is your instruction; no separate video approval is needed."
         )
 
 st.caption(
     "Customer accounts cannot grant themselves admin access or assign tenant membership. "
-    "YouTube publishing will require explicit customer approval."
+    "Each customer can only manage videos and publish actions for their own connected workspace."
 )
 
 
-# Operational views are read-only except for customer-created support tickets.
-# Upload execution, SEO editing, publishing approval and billing changes remain
-# disabled until their trusted server-side workflows are implemented and tested.
+# Operational views let the platform admin monitor tenant-scoped customer work.
+# Customer video upload, SEO generation, and publish/schedule actions run through
+# authenticated server-side functions; billing changes remain disabled.
 if role == "admin":
     st.divider()
     st.header("Service operations")
@@ -577,13 +576,13 @@ if role == "admin":
                                 except RuntimeError:
                                     st.error("Private YouTube upload failed. Check the customer's Google channel connection and OAuth permissions before retrying.")
                                 else:
-                                    st.success("YouTube accepted the video as PRIVATE. Customer approval is still required before publishing.")
+                                    st.success("YouTube accepted the video as PRIVATE. The customer can publish or schedule it from their dashboard.")
                                     if upload_result.get("youtube_url"):
                                         st.link_button("Open private YouTube video", upload_result["youtube_url"])
                         if job.get("status") in {"uploaded_private", "approved"}:
                             with st.form(f"publish_action_{job['id']}"):
                                 publish_mode = st.radio(
-                                    "Customer-approved action",
+                                    "Publishing action",
                                     ["Publish now", "Schedule"],
                                     horizontal=True,
                                     key=f"publish_mode_{job['id']}",
