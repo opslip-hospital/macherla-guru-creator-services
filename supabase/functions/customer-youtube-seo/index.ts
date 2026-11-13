@@ -313,7 +313,7 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message === "missing_configuration") return json({ error: "ai_not_configured", stage }, 503);
-    const statusMatch = message.match(/:(\\d{3})$/);
+    const statusMatch = message.match(/:(\d{3})$/);
     const providerStatus = statusMatch ? Number(statusMatch[1]) : undefined;
     if (providerStatus === 429 || providerStatus === 503) {
       return json({ error: "ai_temporarily_busy", stage, provider_status: providerStatus }, 502);
