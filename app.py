@@ -813,6 +813,35 @@ else:
     except Exception:
         own_tenant_ids = []
 
+    # Channel-first customer home, matching the existing Macherla Guru Manager layout.
+    # Every query is scoped to this authenticated customer's tenant memberships.
+    st.divider()
+    st.subheader("📊 Your YouTube Channel")
+    if own_tenant_ids:
+        try:
+            home_snapshot_rows = (
+                supabase.table("channel_analytics_snapshots")
+                .select("channel_id, channel_title, subscriber_count, view_count, video_count, captured_at")
+                .in_("tenant_id", own_tenant_ids)
+                .order("captured_at", desc=True)
+                .limit(1)
+                .execute().data or []
+            )
+        except Exception:
+            home_snapshot_rows = []
+        if home_snapshot_rows:
+            home_snapshot = home_snapshot_rows[0]
+            st.markdown(f"### 🎬 {home_snapshot.get('channel_title') or 'Connected YouTube channel'}")
+            st.caption(f"Channel ID: {home_snapshot.get('channel_id') or 'Unavailable'} • Last updated: {home_snapshot.get('captured_at') or 'Unknown'}")
+            home_a, home_b, home_c = st.columns(3)
+            home_a.metric("Subscribers", home_snapshot.get("subscriber_count") if home_snapshot.get("subscriber_count") is not None else "Hidden")
+            home_b.metric("Total views", home_snapshot.get("view_count") if home_snapshot.get("view_count") is not None else "Unavailable")
+            home_c.metric("Videos", home_snapshot.get("video_count") if home_snapshot.get("video_count") is not None else "Unavailable")
+        else:
+            st.info("Connect your YouTube channel and refresh its analytics to show your channel name, subscribers, views and video count here.")
+    else:
+        st.info("Your channel overview will appear after your workspace is activated and YouTube is connected.")
+
     with customer_uploads:
         if not own_tenant_ids:
             st.info("Your video jobs will appear here after your workspace is activated.")
