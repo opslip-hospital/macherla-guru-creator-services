@@ -28,7 +28,7 @@ Topic: ${topic}
 Additional direction: ${notes||"None"}
 Language: ${language}
 Return a useful finished draft with a strong opening hook, clear scene/dialogue flow when it is a script, and a short ending/CTA. Avoid unsupported factual claims, copyrighted dialogue, and promises of virality. Use natural ${language}. Keep Shorts scripts suitable for 15-30 seconds unless the user specifies otherwise.`;
-  const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},body:JSON.stringify({contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:{temperature:0.75,maxOutputTokens:1800}})});
+  const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},body:JSON.stringify({contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:{temperature:0.75,maxOutputTokens:1800}})});
   if(!response.ok)return json({error:response.status===429||response.status===503?"ai_temporarily_busy":"ai_generation_failed"},502);
   const result=await response.json(),draft=result?.candidates?.[0]?.content?.parts?.map((p:any)=>p.text??"").join("").trim()??"";
   if(!draft)return json({error:"empty_ai_response"},502);
