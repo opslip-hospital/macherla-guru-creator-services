@@ -653,7 +653,14 @@ else:
                 elif not missing_scopes and tenant.get("status") == "active":
                     st.success("Your channel is connected and ready for private uploads and customer-controlled publishing/scheduling.")
                     if "https://www.googleapis.com/auth/yt-analytics.readonly" not in granted_scopes:
-                        st.caption("Channel statistics are available. Reconnect later with YouTube Analytics permission to enable the 15-day performance comparison.")
+                        st.caption("Channel statistics are available. Grant YouTube Analytics permission to enable the 15-day performance comparison.")
+                        if st.button("Reconnect for analytics comparison", key=f"reconnect_analytics_{tenant_id}"):
+                            try:
+                                google_url = start_youtube_oauth(tenant_id, supabase)
+                            except RuntimeError:
+                                st.error("Google connection could not be started. Please contact support.")
+                            else:
+                                st.link_button("Continue securely with Google", google_url)
                 elif not missing_scopes:
                     st.info("Your YouTube channel is connected. Customer actions are available when the workspace is active.")
             else:
