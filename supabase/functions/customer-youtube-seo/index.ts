@@ -140,7 +140,7 @@ Return JSON only with this exact shape:
 {"title":"best YouTube title","title_options":["five different title options"],"description":"SEO-friendly description up to 4500 characters; include relevant hashtags at the end","tags":["12 to 18 short relevant YouTube search tags"],"hashtags":["exactly 5 relevant hashtags without #"],"caption":"short social caption","youtube_caption":"YouTube caption","instagram_caption":"Instagram caption","keywords":["SEO keywords"],"category":"YouTube category"}
 Rules: return exactly 5 distinct title_options; title <=100 chars; description <=4500 chars; tags 12–18 and total tag characters <=450; exactly 5 hashtags; caption, youtube_caption and instagram_caption <=1000 chars each; keywords <=20; category must be a valid YouTube category label. Use the requested language/script. Tags are concise search phrases, not hashtag strings. Hashtags must be relevant, avoid generic spam. Do not claim you heard dialogue unless it is audible.`;
       const response = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
