@@ -571,7 +571,7 @@ else:
                         "Google will show the requested permissions before you grant access."
                     )
                     if st.button(
-                        "Reconnect for publishing permissions",
+                        "Reconnect YouTube (analytics + publishing)",
                         key=f"reconnect_youtube_{tenant_id}",
                     ):
                         try:
