@@ -934,7 +934,7 @@ else:
                 if not saved_meta and job.get("status") == "received":
                     st.info("Video upload complete. Gemini is ready to analyze its scenes and audio.")
                 if st.button(
-                    "✨ Analyze this video & create SEO, Tags and Hashtags",
+                    "✨ Generate YouTube SEO",
                     key=f"generate_seo_{job['id']}",
                     type="primary",
                     use_container_width=True,
@@ -1002,7 +1002,7 @@ else:
                 if job.get("status") == "received":
                     if saved_meta:
                         if st.button(
-                            "⬆️ Upload to YouTube as PRIVATE",
+                            "⬆️ Upload to my YouTube channel (PRIVATE)",
                             key=f"customer_upload_youtube_{job['id']}",
                             type="primary", use_container_width=True,
                         ):
