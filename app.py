@@ -818,15 +818,14 @@ else:
             st.info("Your video jobs will appear here after your workspace is activated.")
         else:
             st.subheader("Upload a video to your YouTube workspace")
-            st.caption("Upload MP4, MOV or WebM • Maximum 100 MB. Generate your title, description, tags and hashtags after upload.")
+            st.caption("Upload MP4, MOV or WebM • Maximum 100 MB. AI analyzes the video and prepares its SEO automatically.")
             with st.form("customer_video_intake", clear_on_submit=True):
                 upload_tenant = st.selectbox("Workspace", own_tenant_ids)
-                upload_title = st.text_input("Video title", max_chars=100)
                 video_file = st.file_uploader("Choose video file", type=["mp4", "mov", "webm"])
-                submit_video = st.form_submit_button("Send video securely", type="primary")
+                submit_video = st.form_submit_button("Upload video & let AI create SEO", type="primary")
             if submit_video:
-                if not upload_title.strip() or video_file is None:
-                    st.warning("Enter a video title and choose a video file.")
+                if video_file is None:
+                    st.warning("Choose a video file.")
                 else:
                     safe_filename = re.sub(r"[^A-Za-z0-9._-]", "_", Path(video_file.name).name)[:255]
                     file_bytes = video_file.getvalue()
@@ -837,9 +836,10 @@ else:
                         st.error("Use an MP4, MOV or WebM video file.")
                     else:
                         try:
+                            upload_title = Path(safe_filename).stem[:100] or "New video"
                             created = supabase.rpc("create_customer_upload_job", {
                                 "p_tenant": upload_tenant,
-                                "p_title": upload_title.strip(),
+                                "p_title": upload_title,
                                 "p_filename": safe_filename,
                                 "p_mime": mime_type,
                                 "p_size": len(file_bytes),
@@ -858,7 +858,16 @@ else:
                         except Exception:
                             st.error("Secure upload did not complete. Please retry or contact support; no YouTube publishing was started.")
                         else:
-                            st.success("Video received securely. Generate your YouTube SEO below.")
+                            st.success("Video received securely. AI is now analyzing it and preparing your YouTube SEO.")
+                            try:
+                                customer_youtube_seo_request(
+                                    "generate", job_id, supabase,
+                                    {"title": upload_title, "language": "Telugu"},
+                                )
+                            except RuntimeError as exc:
+                                st.warning(f"Video uploaded safely. AI SEO could not finish yet: {str(exc)[:130]}. You can retry below.")
+                            else:
+                                st.success("AI analyzed your video and saved the title, description, tags, hashtags and caption.")
                             st.rerun()
             st.divider()
             try:
@@ -891,19 +900,14 @@ else:
                         except Exception:
                             saved_meta = {}
                         with st.expander("🤖 AI Title, Tags, Hashtags & SEO", expanded=not bool(saved_meta)):
-                            seo_context = st.text_area(
-                                "What happens in this video? (helps AI create accurate SEO)",
-                                key=f"seo_context_{job['id']}",
-                                max_chars=1500,
-                                placeholder="Example: Telugu comedy short where a village man argues with Yama about his mobile phone...",
-                            )
+                            st.caption("AI analyzes the uploaded video's scenes and audio. You do not need to type a description.")
                             seo_language = st.selectbox(
                                 "Output language",
                                 ["Telugu", "Telugu + English", "English", "Hindi"],
                                 key=f"seo_language_{job['id']}",
                             )
                             if st.button(
-                                "✨ Generate YouTube SEO",
+                                "✨ Analyze video & generate SEO",
                                 key=f"generate_seo_{job['id']}",
                                 type="primary",
                                 use_container_width=True,
@@ -914,7 +918,6 @@ else:
                                             "generate", job["id"], supabase,
                                             {
                                                 "title": job.get("video_title") or "",
-                                                "context": seo_context,
                                                 "language": seo_language,
                                             },
                                         )
