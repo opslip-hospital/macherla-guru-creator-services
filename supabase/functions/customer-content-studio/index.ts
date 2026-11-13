@@ -20,6 +20,15 @@ Deno.serve(async(req)=>{
   if(!membership)return json({error:"workspace_owner_required"},403);
   const {data:tenantStatus}=await admin.from("tenants").select("status").eq("id",tenant).maybeSingle();
   if(tenantStatus?.status!=="active")return json({error:"workspace_not_active"},403);
+  const {data:rateAllowed,error:rateError}=await admin.schema("private").rpc("consume_customer_ai_rate_limit",{
+   p_user_id:auth.user.id,p_tenant_id:tenant,p_action:"content_studio",p_limit:12,
+  });
+  if(rateError)return json({error:"ai_rate_limit_check_failed"},503);
+  if(!rateAllowed){
+   const now=new Date();
+   const retryAfter=3600-(now.getUTCMinutes()*60+now.getUTCSeconds());
+   return json({error:"ai_rate_limit_exceeded",retry_after_seconds:retryAfter},429);
+  }
   const {data:connections}=await user.rpc("list_tenant_youtube_connections",{target_tenant:tenant});
   const {data:channelSnapshot}=await admin.from("channel_analytics_snapshots").select("channel_title")
    .eq("tenant_id",tenant).order("captured_at",{ascending:false}).limit(1).maybeSingle();
