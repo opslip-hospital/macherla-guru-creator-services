@@ -242,6 +242,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("youtubeUploadStarted", YOUTUBE_WORKER)
         self.assertIn("youtubeUploadResponded = true", YOUTUBE_WORKER)
         self.assertIn("youtubeUploadOutcomeUnknown = true", YOUTUBE_WORKER)
+        self.assertIn("youtubeUploadOutcomeUnknown = false", YOUTUBE_WORKER)
         self.assertIn("upload_unknown", UPLOAD_UNKNOWN_MIGRATION)
 
     def test_youtube_sync_errors_warn_against_unsafe_retries(self):
