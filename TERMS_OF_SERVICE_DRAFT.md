@@ -53,7 +53,7 @@ YouTube, Google Gemini, Supabase, Streamlit, and other providers operate under t
 
 ## 9. Suspension and termination
 
-The service operator may restrict or suspend access where reasonably necessary to protect customers, the service, third parties, or comply with law. Customers may request workspace closure and data deletion by contacting [Public support email]. The owner must publish the actual retention/deletion process before production launch.
+The service operator may restrict or suspend access where reasonably necessary to protect customers, the service, third parties, or comply with law. Customers may disconnect a YouTube channel inside the service; this clears the stored refresh-token access but does not cancel videos or schedules already held by YouTube. Customers may request workspace closure and data deletion by contacting [Public support email]. The owner must publish the actual retention/deletion process before production launch.
 
 ## 10. Disclaimers and liability
 
