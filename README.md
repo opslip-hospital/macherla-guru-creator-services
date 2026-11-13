@@ -34,7 +34,8 @@ Migrations are in `supabase/migrations/`:
 - Customer and admin dashboards include upload-queue and billing-status views.
 - Customers can submit MP4, MOV, or WebM files up to 100 MB into a private tenant-scoped Supabase Storage bucket. Upload intake is not a YouTube upload.
 - The Master Admin can access submitted files through temporary one-hour signed download links; the bucket itself remains private.
-- Actual YouTube private upload execution, automated AI SEO generation, publish/schedule execution, payment processing, and end-to-end channel tests are not yet implemented.
+- A server-side YouTube upload worker is deployed. It requires a trusted Master Admin action, decrypts the stored refresh token only inside the Edge Function, uploads with YouTube privacy set to private, and records the returned video ID.
+- The private upload worker has not yet passed a live Google OAuth/channel test. Automated AI SEO generation, public/scheduled publishing execution, payment processing, and end-to-end channel tests are not yet complete.
 
 Do not use the app with real customer channels until provisioning, OAuth, upload, publishing approval, audit logging, and live end-to-end security tests are complete. The current CI checks are static guardrails, not a penetration test or live authentication test.
 
