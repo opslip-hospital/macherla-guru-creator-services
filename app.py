@@ -1085,7 +1085,7 @@ else:
 
             st.divider()
             st.subheader("🎥 Upload one video")
-            st.caption("Choose one MP4, MOV or WebM file. The video is stored privately first. AI analysis is optional and requires your explicit consent.")
+            st.caption("Choose one MP4, MOV or WebM file. The video is stored privately first. Gemini analysis requires your explicit consent; without SEO metadata, YouTube upload and publishing remain locked.")
             gemini_ai_consent = False
             submit_video = False
             if not active_tenant_ids:
