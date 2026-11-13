@@ -34,15 +34,38 @@ Deno.serve(async(req)=>{
    body:new URLSearchParams({client_id:required("GOOGLE_CLIENT_ID"),client_secret:required("GOOGLE_CLIENT_SECRET"),refresh_token:refresh,grant_type:"refresh_token"})});
   if(!tr.ok)throw new Error("google_refresh_failed");
   const tokens=await tr.json();if(!tokens.access_token)throw new Error("access_token_missing");
-  const response=await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${encodeURIComponent(claim.channel_id)}`,{
+  const response=await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=${encodeURIComponent(claim.channel_id)}`,{
    headers:{Authorization:`Bearer ${tokens.access_token}`}});
   if(!response.ok)throw new Error("youtube_analytics_failed");
   const payload=await response.json(),channel=payload.items?.[0];
   if(!channel)throw new Error("channel_not_found");
   const stats=channel.statistics??{};
+  const uploadsPlaylist=channel.contentDetails?.relatedPlaylists?.uploads;
+  let recentUploads:any[]=[];
+  if(uploadsPlaylist){
+   const listResponse=await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=${encodeURIComponent(uploadsPlaylist)}`,{headers:{Authorization:`Bearer ${tokens.access_token}`}});
+   if(listResponse.ok){
+    const list=await listResponse.json();
+    const ids=(list.items??[]).map((x:any)=>x.contentDetails?.videoId).filter(Boolean);
+    if(ids.length){
+     const videoResponse=await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,status&id=${ids.join(",")}`,{headers:{Authorization:`Bearer ${tokens.access_token}`}});
+     if(videoResponse.ok){
+      const videos=await videoResponse.json();
+      recentUploads=(videos.items??[]).map((v:any)=>({
+       video_id:v.id,title:v.snippet?.title??"Untitled",published_at:v.snippet?.publishedAt??null,
+       views:Number(v.statistics?.viewCount??0),likes:Number(v.statistics?.likeCount??0),
+       comments:Number(v.statistics?.commentCount??0),url:"https://youtu.be/"+v.id,
+       privacy_status:v.status?.privacyStatus??"unknown"
+      })).sort((a:any,b:any)=>b.views-a.views).slice(0,20);
+     }
+    }
+   }
+  }
   const snapshot={
    tenant_id:tenant,connection_id:claim.connection_id,channel_id:claim.channel_id,
    channel_title:channel.snippet?.title??claim.channel_title??"YouTube channel",
+   channel_description:channel.snippet?.description??"",
+   recent_uploads:recentUploads,
    subscriber_count:stats.hiddenSubscriberCount?null:Number(stats.subscriberCount??0),
    view_count:stats.viewCount==null?null:Number(stats.viewCount),
    video_count:stats.videoCount==null?null:Number(stats.videoCount),
