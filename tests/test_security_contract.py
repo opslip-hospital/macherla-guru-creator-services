@@ -261,6 +261,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("membership_role", studio)
         self.assertIn('list_tenant_youtube_connections', studio)
         self.assertIn("GEMINI_API_KEY", studio)
+        self.assertIn("list_tenant_youtube_connections", studio)
+        self.assertIn("channel_title", studio)
         self.assertIn("customer_content_studio_request", APP)
         self.assertIn("✨ Gemini AI Content Studio", APP)
         self.assertIn("🩺 Your AI Growth Doctor", APP)
