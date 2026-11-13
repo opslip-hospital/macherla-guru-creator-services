@@ -112,8 +112,8 @@ Deno.serve(async (req) => {
     if (videoBlob.size !== Number(claimed.file_size_bytes) || videoBlob.size > 104857600) {
       throw new Error("video_file_size_mismatch");
     }
-    const videoBytes = new Uint8Array(await videoBlob.arrayBuffer());
-    if (!hasExpectedVideoContainer(videoBytes, String(claimed.mime_type))) {
+    const videoHeader = new Uint8Array(await videoBlob.slice(0, 12).arrayBuffer());
+    if (!hasExpectedVideoContainer(videoHeader, String(claimed.mime_type))) {
       throw new Error("video_container_does_not_match_file_type");
     }
 
@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${tokenData.access_token}`,
           "Content-Type": "application/json; charset=UTF-8",
           "X-Upload-Content-Type": String(claimed.mime_type),
-          "X-Upload-Content-Length": String(videoBytes.byteLength),
+          "X-Upload-Content-Length": String(videoBlob.size),
         },
         body: JSON.stringify({
           snippet: { title, description, tags, categoryId },
@@ -189,8 +189,8 @@ Deno.serve(async (req) => {
     youtubeUploadStarted = true;
     const uploaded = await fetch(uploadUrl, {
       method: "PUT",
-      headers: { "Content-Type": String(claimed.mime_type), "Content-Length": String(videoBytes.byteLength) },
-      body: videoBytes,
+      headers: { "Content-Type": String(claimed.mime_type), "Content-Length": String(videoBlob.size) },
+      body: videoBlob,
     });
     youtubeUploadResponded = true;
     if (!uploaded.ok) {
