@@ -423,7 +423,7 @@ if role == "admin":
         try:
             rows = (
                 supabase.table("upload_jobs")
-                .select("id, tenant_id, video_title, status, youtube_video_id, scheduled_for, created_at")
+                .select("id, tenant_id, video_title, status, youtube_video_id, scheduled_for, storage_object_path, original_filename, file_size_bytes, created_at")
                 .order("created_at", desc=True)
                 .limit(100)
                 .execute().data or []
@@ -434,6 +434,18 @@ if role == "admin":
                     with st.container(border=True):
                         st.write(f"**{job.get('video_title') or 'Untitled video'}**")
                         st.caption(f"Job: {job['id']} • Status: {job.get('status', 'draft')} • Workspace: {job.get('tenant_id', '')}")
+                        if job.get("storage_object_path"):
+                            try:
+                                signed = supabase.storage.from_("customer-video-intake").create_signed_url(
+                                    job["storage_object_path"], 3600
+                                )
+                                signed_url = signed.get("signedURL") or signed.get("signedUrl")
+                                if signed_url:
+                                    st.link_button("Download customer video (1-hour link)", signed_url)
+                            except Exception:
+                                st.caption("Private video download link is temporarily unavailable.")
+                        elif job.get("original_filename"):
+                            st.caption(f"Customer file: {job.get('original_filename')} — upload intake not finalized.")
                         try:
                             existing_meta = (
                                 supabase.table("content_metadata")
