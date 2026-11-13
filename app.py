@@ -864,17 +864,22 @@ else:
     if own_tenant_ids:
         refresh_col, channel_hint_col = st.columns([1, 3])
         with refresh_col:
-            if st.button("🔄 Refresh my channel", key="customer_refresh_channel", type="primary"):
-                with st.spinner("Fetching your YouTube channel and latest video performance..."):
-                    try:
-                        refresh_result = refresh_youtube_analytics(active_tenant_ids[0], supabase)
-                    except RuntimeError:
-                        st.error("Channel refresh failed. Connect YouTube with read-only permission, then retry.")
-                    else:
-                        st.success(f"Updated: {refresh_result.get('channel_title', 'your channel')}")
-                        st.rerun()
+            if active_tenant_ids:
+                if st.button("🔄 Refresh my channel", key="customer_refresh_channel", type="primary"):
+                    with st.spinner("Fetching your YouTube channel and latest video performance..."):
+                        try:
+                            refresh_result = refresh_youtube_analytics(active_tenant_ids[0], supabase)
+                        except RuntimeError:
+                            st.error("Channel refresh failed. Connect YouTube with read-only permission, then retry.")
+                        else:
+                            st.success(f"Updated: {refresh_result.get('channel_title', 'your channel')}")
+                            st.rerun()
+            else:
+                st.button("🔄 Refresh my channel", key="customer_refresh_channel_disabled", disabled=True)
         with channel_hint_col:
             st.caption("Refresh channel statistics and up to 20 recent uploads sorted by views.")
+            if not active_tenant_ids:
+                st.warning("Your workspace is inactive. Ask the service team to activate it before refreshing analytics.")
         try:
             dashboard_rows = (
                 supabase.table("channel_analytics_snapshots")
