@@ -60,6 +60,11 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertNotIn("SUPABASE_SECRET_KEY", APP)
         self.assertNotIn("service_role", APP.lower())
 
+    def test_sign_out_clears_all_prior_customer_widget_state(self):
+        self.assertIn("_creator_clear_all_state", APP)
+        self.assertIn("for _session_key in list(st.session_state.keys())", APP)
+        self.assertIn('client.auth.sign_out()', APP)
+
     def test_user_identity_is_revalidated(self):
         self.assertIn("supabase.auth.get_user()", APP)
         self.assertIn('str(user.id) != st.session_state["_creator_user_id"]', APP)
