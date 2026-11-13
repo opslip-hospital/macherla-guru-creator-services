@@ -992,86 +992,7 @@ else:
         workspace_labels = {}
         selected_active_tenant_id = None
 
-    # Channel-first customer home, matching the existing Macherla Guru Manager layout.
-    # Every query is scoped to this authenticated customer's tenant memberships.
-    st.divider()
-    st.subheader("📊 YouTube Channel Overview")
-    dashboard_snapshot = {}
-    if own_tenant_ids:
-        refresh_col, channel_hint_col = st.columns([1, 3])
-        with refresh_col:
-            if active_tenant_ids:
-                if st.button("🔄 Refresh my channel", key="customer_refresh_channel", type="primary"):
-                    with st.spinner("Fetching your YouTube channel and latest video performance..."):
-                        try:
-                            refresh_result = refresh_youtube_analytics(selected_active_tenant_id, supabase)
-                        except RuntimeError:
-                            st.error("Channel refresh failed. Connect YouTube with read-only permission, then retry.")
-                        else:
-                            st.success(f"Updated: {refresh_result.get('channel_title', 'your channel')}")
-                            st.rerun()
-            else:
-                st.button("🔄 Refresh my channel", key="customer_refresh_channel_disabled", disabled=True)
-        with channel_hint_col:
-            st.caption("Refresh channel statistics and up to 20 recent uploads sorted by views.")
-            if not active_tenant_ids:
-                st.warning("Your workspace is inactive. Ask the service team to activate it before refreshing analytics.")
-        try:
-            dashboard_rows = (
-                supabase.table("channel_analytics_snapshots")
-                .select("channel_id, channel_title, channel_description, subscriber_count, view_count, video_count, recent_uploads, analytics_comparison, captured_at")
-                .in_("tenant_id", own_tenant_ids)
-                .order("captured_at", desc=True)
-                .limit(1)
-                .execute().data or []
-            )
-            dashboard_snapshot = dashboard_rows[0] if dashboard_rows else {}
-        except Exception:
-            dashboard_snapshot = {}
-    recent_uploads = dashboard_snapshot.get("recent_uploads") or []
-    if dashboard_snapshot:
-        st.markdown(f"### 🎬 {dashboard_snapshot.get('channel_title') or 'Your YouTube channel'}")
-        st.caption(f"Channel ID: {dashboard_snapshot.get('channel_id') or 'Unavailable'} • Updated: {dashboard_snapshot.get('captured_at', 'Unknown')}")
-        home_a, home_b, home_c = st.columns(3)
-        home_a.metric("Subscribers", dashboard_snapshot.get("subscriber_count") if dashboard_snapshot.get("subscriber_count") is not None else "Hidden")
-        home_b.metric("Total views", dashboard_snapshot.get("view_count") if dashboard_snapshot.get("view_count") is not None else "Unavailable")
-        home_c.metric("Videos", dashboard_snapshot.get("video_count") if dashboard_snapshot.get("video_count") is not None else "Unavailable")
-        if dashboard_snapshot.get("channel_description"):
-            with st.expander("Channel description"):
-                st.write(dashboard_snapshot.get("channel_description"))
-        comparison = dashboard_snapshot.get("analytics_comparison") or {}
-        if comparison.get("available"):
-            current = comparison.get("current_period") or {}
-            previous = comparison.get("previous_period") or {}
-            with st.expander("📈 Last 15 days vs previous 15 days", expanded=False):
-                def _delta(key: str) -> str:
-                    now_value = float(current.get(key) or 0)
-                    old_value = float(previous.get(key) or 0)
-                    if old_value == 0:
-                        return "New data" if now_value > 0 else "—"
-                    return f"{((now_value-old_value)/old_value)*100:+.1f}%"
-                p1, p2, p3 = st.columns(3)
-                p1.metric("Views", f"{int(current.get('views') or 0):,}", _delta("views"))
-                p2.metric("Watch time (minutes)", f"{int(current.get('estimatedMinutesWatched') or 0):,}", _delta("estimatedMinutesWatched"))
-                p3.metric("Avg. view duration (sec)", f"{float(current.get('averageViewDuration') or 0):.1f}", _delta("averageViewDuration"))
-                st.caption(f"Current: {current.get('start')} to {current.get('end')} • Previous: {previous.get('start')} to {previous.get('end')}")
-        else:
-            st.caption("For 15-day views/watch-time comparisons, reconnect YouTube and grant the optional read-only YouTube Analytics permission.")
-        st.subheader("Recent uploads — sorted by views")
-        if recent_uploads:
-            st.caption(f"Loaded {len(recent_uploads)} recent uploads. Showing the top {min(20, len(recent_uploads))} by views.")
-            st.dataframe(
-                [{"Title": v.get("title"), "Published": (v.get("published_at") or "")[:10],
-                  "Views": v.get("views", 0), "Likes": v.get("likes", 0),
-                  "Comments": v.get("comments", 0), "URL": v.get("url")}
-                 for v in recent_uploads[:20]],
-                use_container_width=True, hide_index=True,
-                column_config={"URL": st.column_config.LinkColumn("URL", display_text="Open video")}
-            )
-        else:
-            st.info("No recent uploads were included in the last channel refresh.")
-    else:
-        st.info("Connect your YouTube channel, then use “Refresh my channel” to load subscribers, total views, video count and recent uploads.")
+    st.caption("🎬 Upload one video — Gemini takes care of the SEO, tags, hashtags and captions.")
     if not own_tenant_ids:
         st.info("Your video workflow will appear here after your workspace is activated.")
     else:
@@ -1349,6 +1270,87 @@ else:
                 st.error("This video needs attention. Please contact support.")
         else:
             st.info("Upload one video above. Gemini will prepare everything after you press the SEO button.")
+
+    # Channel-first customer home, matching the existing Macherla Guru Manager layout.
+    # Every query is scoped to this authenticated customer's tenant memberships.
+    st.divider()
+    st.subheader("📊 YouTube Channel Overview")
+    dashboard_snapshot = {}
+    if own_tenant_ids:
+        refresh_col, channel_hint_col = st.columns([1, 3])
+        with refresh_col:
+            if active_tenant_ids:
+                if st.button("🔄 Refresh my channel", key="customer_refresh_channel", type="primary"):
+                    with st.spinner("Fetching your YouTube channel and latest video performance..."):
+                        try:
+                            refresh_result = refresh_youtube_analytics(selected_active_tenant_id, supabase)
+                        except RuntimeError:
+                            st.error("Channel refresh failed. Connect YouTube with read-only permission, then retry.")
+                        else:
+                            st.success(f"Updated: {refresh_result.get('channel_title', 'your channel')}")
+                            st.rerun()
+            else:
+                st.button("🔄 Refresh my channel", key="customer_refresh_channel_disabled", disabled=True)
+        with channel_hint_col:
+            st.caption("Refresh channel statistics and up to 20 recent uploads sorted by views.")
+            if not active_tenant_ids:
+                st.warning("Your workspace is inactive. Ask the service team to activate it before refreshing analytics.")
+        try:
+            dashboard_rows = (
+                supabase.table("channel_analytics_snapshots")
+                .select("channel_id, channel_title, channel_description, subscriber_count, view_count, video_count, recent_uploads, analytics_comparison, captured_at")
+                .in_("tenant_id", own_tenant_ids)
+                .order("captured_at", desc=True)
+                .limit(1)
+                .execute().data or []
+            )
+            dashboard_snapshot = dashboard_rows[0] if dashboard_rows else {}
+        except Exception:
+            dashboard_snapshot = {}
+    recent_uploads = dashboard_snapshot.get("recent_uploads") or []
+    if dashboard_snapshot:
+        st.markdown(f"### 🎬 {dashboard_snapshot.get('channel_title') or 'Your YouTube channel'}")
+        st.caption(f"Channel ID: {dashboard_snapshot.get('channel_id') or 'Unavailable'} • Updated: {dashboard_snapshot.get('captured_at', 'Unknown')}")
+        home_a, home_b, home_c = st.columns(3)
+        home_a.metric("Subscribers", dashboard_snapshot.get("subscriber_count") if dashboard_snapshot.get("subscriber_count") is not None else "Hidden")
+        home_b.metric("Total views", dashboard_snapshot.get("view_count") if dashboard_snapshot.get("view_count") is not None else "Unavailable")
+        home_c.metric("Videos", dashboard_snapshot.get("video_count") if dashboard_snapshot.get("video_count") is not None else "Unavailable")
+        if dashboard_snapshot.get("channel_description"):
+            with st.expander("Channel description"):
+                st.write(dashboard_snapshot.get("channel_description"))
+        comparison = dashboard_snapshot.get("analytics_comparison") or {}
+        if comparison.get("available"):
+            current = comparison.get("current_period") or {}
+            previous = comparison.get("previous_period") or {}
+            with st.expander("📈 Last 15 days vs previous 15 days", expanded=False):
+                def _delta(key: str) -> str:
+                    now_value = float(current.get(key) or 0)
+                    old_value = float(previous.get(key) or 0)
+                    if old_value == 0:
+                        return "New data" if now_value > 0 else "—"
+                    return f"{((now_value-old_value)/old_value)*100:+.1f}%"
+                p1, p2, p3 = st.columns(3)
+                p1.metric("Views", f"{int(current.get('views') or 0):,}", _delta("views"))
+                p2.metric("Watch time (minutes)", f"{int(current.get('estimatedMinutesWatched') or 0):,}", _delta("estimatedMinutesWatched"))
+                p3.metric("Avg. view duration (sec)", f"{float(current.get('averageViewDuration') or 0):.1f}", _delta("averageViewDuration"))
+                st.caption(f"Current: {current.get('start')} to {current.get('end')} • Previous: {previous.get('start')} to {previous.get('end')}")
+        else:
+            st.caption("For 15-day views/watch-time comparisons, reconnect YouTube and grant the optional read-only YouTube Analytics permission.")
+        st.subheader("Recent uploads — sorted by views")
+        if recent_uploads:
+            st.caption(f"Loaded {len(recent_uploads)} recent uploads. Showing the top {min(20, len(recent_uploads))} by views.")
+            st.dataframe(
+                [{"Title": v.get("title"), "Published": (v.get("published_at") or "")[:10],
+                  "Views": v.get("views", 0), "Likes": v.get("likes", 0),
+                  "Comments": v.get("comments", 0), "URL": v.get("url")}
+                 for v in recent_uploads[:20]],
+                use_container_width=True, hide_index=True,
+                column_config={"URL": st.column_config.LinkColumn("URL", display_text="Open video")}
+            )
+        else:
+            st.info("No recent uploads were included in the last channel refresh.")
+    else:
+        st.info("Connect your YouTube channel, then use “Refresh my channel” to load subscribers, total views, video count and recent uploads.")
     with customer_video_analytics:
         st.subheader("📊 Your video performance")
         if recent_uploads:
