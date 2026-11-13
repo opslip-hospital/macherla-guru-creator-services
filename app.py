@@ -503,7 +503,7 @@ if role == "admin":
                 .limit(100)
                 .execute().data or []
             )
-            st.caption("Prepare SEO metadata for customer video jobs. Actual YouTube upload and publish execution remain gated on the live OAuth test.")
+            st.caption("Prepare SEO metadata, upload received videos privately, and publish or schedule only after recorded customer approval. Live Google OAuth testing is still pending.")
             if rows:
                 for job in rows:
                     with st.container(border=True):
@@ -743,7 +743,7 @@ else:
                     .execute().data or []
                 )
                 if not own_jobs:
-                    st.info("No video jobs yet. The video file upload workflow is still being built.")
+                    st.info("No video jobs yet. Use the secure upload form above to send your first video.")
                 for job in own_jobs:
                     with st.container(border=True):
                         st.write(f"**{job.get('video_title') or 'Your video'}**")
@@ -761,7 +761,7 @@ else:
                                     st.success("Your approval has been recorded.")
                                     st.rerun()
                         elif job.get("status") == "approved":
-                            st.info("Your approval is recorded. Publishing execution is not enabled yet.")
+                            st.info("Your approval is recorded. The service team may now publish or schedule this private video.")
                         elif job.get("status") == "scheduled":
                             st.info(f"Your video is scheduled for {job.get('scheduled_for')}.")
                         elif job.get("status") == "published":
