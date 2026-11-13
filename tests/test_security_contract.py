@@ -28,6 +28,15 @@ YOUTUBE_WORKER_MIGRATION = (
 YOUTUBE_WORKER = (
     ROOT / "supabase/functions/youtube-upload-private/index.ts"
 ).read_text(encoding="utf-8")
+PUBLISH_MIGRATION = (
+    ROOT / "supabase/migrations/20261113200000_youtube_customer_approved_publish_schedule.sql"
+).read_text(encoding="utf-8")
+PUBLISH_WORKER = (
+    ROOT / "supabase/functions/youtube-publish-approved/index.ts"
+).read_text(encoding="utf-8")
+OAUTH_START = (
+    ROOT / "supabase/functions/youtube-oauth-start/index.ts"
+).read_text(encoding="utf-8")
 
 
 class AuthenticationContractTests(unittest.TestCase):
@@ -112,6 +121,16 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('youtube-upload-private', APP)
         self.assertIn('Upload privately to connected YouTube channel', APP)
         self.assertIn('Customer approval is required before publishing', YOUTUBE_WORKER)
+
+    def test_public_publishing_requires_recorded_customer_approval(self):
+        self.assertIn("v_job.status<>'approved'", PUBLISH_MIGRATION)
+        self.assertIn("v_job.approved_by is null", PUBLISH_MIGRATION)
+        self.assertIn("youtube.force-ssl", PUBLISH_MIGRATION)
+        self.assertIn('privacyStatus:"public"', PUBLISH_WORKER)
+        self.assertIn('privacyStatus:"private",publishAt', PUBLISH_WORKER)
+        self.assertIn("customer_approved:true", PUBLISH_WORKER)
+        self.assertIn("youtube.force-ssl", OAUTH_START)
+        self.assertIn("Reconnect for publishing permissions", APP)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
