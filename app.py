@@ -1087,6 +1087,9 @@ else:
                     st.error("YouTube accepted the upload request but the dashboard could not confirm the video ID. Do not retry this upload. Open YouTube Studio and check the channel's private videos first.")
                 elif job.get("status") == "publishing":
                     st.warning("A Publish/Schedule request may still be processing or may already have been accepted by YouTube. Do not click Publish or Schedule again until you confirm the video's status in YouTube Studio. Contact support if it remains unclear.")
+                youtube_video_id = str(job.get("youtube_video_id") or "")
+                if re.fullmatch(r"[A-Za-z0-9_-]{6,20}", youtube_video_id):
+                    st.link_button("Open this YouTube video", f"https://www.youtube.com/watch?v={youtube_video_id}")
                 try:
                     saved_rows = (
                         supabase.table("content_metadata")
