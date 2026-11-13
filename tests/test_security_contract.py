@@ -9,8 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 APP = (ROOT / "app.py").read_text(encoding="utf-8")
 REQUIREMENTS = (ROOT / "requirements.txt").read_text(encoding="utf-8")
 STREAMLIT_CONFIG = (ROOT / ".streamlit/config.toml").read_text(encoding="utf-8")
-PRIVACY_POLICY = (ROOT / "pages/Privacy_Policy.py").read_text(encoding="utf-8")
-TERMS_OF_SERVICE = (ROOT / "pages/Terms_of_Service.py").read_text(encoding="utf-8")
+PRIVACY_POLICY = (ROOT / "PRIVACY_POLICY_DRAFT.md").read_text(encoding="utf-8")
+TERMS_OF_SERVICE = (ROOT / "TERMS_OF_SERVICE_DRAFT.md").read_text(encoding="utf-8")
 INITIAL_SCHEMA = (
     ROOT / "supabase/migrations/202611130001_initial_tenant_isolated_schema.sql"
 ).read_text(encoding="utf-8")
@@ -100,6 +100,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('st.page_link("pages/Terms_of_Service.py"', APP)
         self.assertIn("Google API Services User Data Policy", PRIVACY_POLICY)
         self.assertIn("Private first", TERMS_OF_SERVICE)
+        self.assertIn("PRIVACY_POLICY_DRAFT.md", (ROOT / "pages/Privacy_Policy.py").read_text(encoding="utf-8"))
+        self.assertIn("TERMS_OF_SERVICE_DRAFT.md", (ROOT / "pages/Terms_of_Service.py").read_text(encoding="utf-8"))
 
     def test_migration_versions_are_unique_and_final_guard_runs_last(self):
         migration_dir = ROOT / "supabase/migrations"
