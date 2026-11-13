@@ -29,6 +29,9 @@ UPLOAD_MIGRATION = (
 UPLOAD_OUTCOME_MIGRATION = (
     ROOT / "supabase/migrations/20261113168000_preserve_unknown_youtube_upload_outcomes.sql"
 ).read_text(encoding="utf-8")
+FINAL_RATE_LIMIT_RPC_MIGRATION = (
+    ROOT / "supabase/migrations/20261113300000_public_service_role_wrapper_for_ai_rate_limits.sql"
+).read_text(encoding="utf-8")
 DISCONNECT_MIGRATION = (
     ROOT / "supabase/migrations/20261113298000_customer_disconnect_youtube_channel.sql"
 ).read_text(encoding="utf-8")
@@ -127,8 +130,8 @@ class AuthenticationContractTests(unittest.TestCase):
         versions = [path.name[:14] for path in migration_dir.glob("*.sql")]
         self.assertEqual(len(versions), len(set(versions)))
         self.assertGreater(
+            "20261113300000_public_service_role_wrapper_for_ai_rate_limits.sql",
             "20261113298000_customer_disconnect_youtube_channel.sql",
-            "20261113297000_index_customer_ai_rate_limit_cleanup.sql",
         )
         self.assertIn("connected channel brand", CHANNEL_BRAND_GUARD_MIGRATION)
 
