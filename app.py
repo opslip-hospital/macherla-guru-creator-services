@@ -35,6 +35,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# Clear every prior customer's widget value on the next run, before widgets are
+# instantiated. This prevents auto-generated Streamlit widget keys from leaking
+# drafts or form values between sign-ins in the same browser session.
+if st.session_state.pop("_creator_clear_all_state", False):
+    for _session_key in list(st.session_state.keys()):
+        st.session_state.pop(_session_key, None)
+
 st.title("🎬 Macherla Guru — YouTube AI Manager")
 st.caption("Free-first channel dashboard • Telugu AI entertainment")
 
@@ -308,11 +315,8 @@ def clear_session() -> None:
             pass
     st.session_state.pop("_creator_supabase_client", None)
     st.session_state.pop("_creator_user_id", None)
-    # Do not carry one customer's selected video, channel data, or AI drafts
-    # into a later login in the same browser session.
-    for key in list(st.session_state.keys()):
-        if str(key).startswith("creator_"):
-            st.session_state.pop(key, None)
+    # Clear all widget values on the next run, before any widgets are recreated.
+    st.session_state["_creator_clear_all_state"] = True
 
 
 def format_scheduled_time(value: str | None) -> str:
