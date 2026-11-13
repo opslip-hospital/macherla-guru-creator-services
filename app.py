@@ -1265,6 +1265,8 @@ else:
                     st.warning("The upload response was interrupted. The video may already exist as PRIVATE. Check YouTube Studio before retrying; do not upload it again yet. Contact support if you cannot confirm its status.")
                 elif job.get("status") == "publishing":
                     st.warning("YouTube is still confirming the publish/schedule action. Check YouTube Studio before retrying; do not click Publish or Schedule again while this status remains.")
+                    if job.get("youtube_video_id"):
+                        st.link_button("Open YouTube video to check status", f"https://www.youtube.com/watch?v={job['youtube_video_id']}")
                 elif job.get("status") == "failed":
                     st.error("This video needs attention. Please contact support.")
             else:
