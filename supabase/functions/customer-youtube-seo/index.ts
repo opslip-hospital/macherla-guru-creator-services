@@ -180,7 +180,7 @@ Deno.serve(async (req: Request) => {
       return json({ error: "metadata_locked_after_private_upload" }, 409);
     }
     if (action === "generate") {
-      const { data: rateAllowed, error: rateError } = await admin.schema("private").rpc(
+      const { data: rateAllowed, error: rateError } = await admin.rpc(
         "consume_customer_ai_rate_limit",
         { p_user_id: auth.user.id, p_tenant_id: job.tenant_id, p_action: "youtube_seo", p_limit: 5 },
       );
