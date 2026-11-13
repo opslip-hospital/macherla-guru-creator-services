@@ -118,9 +118,9 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - `youtube-upload-private`: v23 ACTIVE
 - `youtube-publish-approved`: v9 ACTIVE
 - `youtube-refresh-analytics`: v7 ACTIVE
-- `customer-youtube-seo`: v41 ACTIVE
+- `customer-youtube-seo`: v44 ACTIVE
 - `customer-channel-dashboard`: v5 ACTIVE
-- `customer-content-studio`: v5 ACTIVE
+- `customer-content-studio`: v6 ACTIVE
 
 These are deployment-state checks only, not successful end-to-end tests. The live database migration history and current schema were reviewed; the required storage-binding, analytics/SEO columns, upload status constraint, and final SEO upload guard are present. Idempotent final migrations are committed for clean setup. The final test run remains deferred by request.
 - The scheduling date picker uses the India local calendar date, and schedule times are displayed and submitted in 12-hour AM/PM IST. The backend rejects schedule times that are not at least 15 minutes in the future.
@@ -156,7 +156,7 @@ These are deployment-state checks only, not successful end-to-end tests. The liv
 
 - Exactly one of the five generated hashtags is the connected customer's own channel brand. It is derived from that workspace's connected YouTube channel title after Unicode normalization and punctuation/space removal; it is never hardcoded to #MacherlaGuru for every customer.
 - The remaining four hashtags are topic-relevant and unique. The customer SEO Edge Function requires a connected channel identity before generating SEO, and the database upload-claim guard independently checks that the saved five-hashtag set includes the matching connected-channel brand.
-- The rule is deployed in customer-youtube-seo v41 and mirrored in the applied migration 20261113293000_validate_connected_channel_brand_hashtag.sql. The prior hardcoded MacherlaGuru-only upload requirement has been retired.
+- The rule is deployed in customer-youtube-seo v44 and mirrored in the applied migration 20261113293000_validate_connected_channel_brand_hashtag.sql. The prior hardcoded MacherlaGuru-only upload requirement has been retired.
 - Final automated and live end-to-end testing remains intentionally not run until the owner authorizes the final test pass. OAuth consent-screen production verification and Supabase Auth leaked-password protection remain pre-launch requirements.
 - SEO reserves one of its five hashtags for the connected YouTube channel's normalized brand name. For the Macherla Guru channel this is `#MacherlaGuru`; customer channels receive their own channel-brand hashtag. The database upload-claim function independently verifies the brand hashtag against the connected channel title.
 - Fixed the Unicode normalization regex used to derive each connected channel's brand hashtag. The SEO worker is deployed ACTIVE v42; the corresponding static contract check is added for the final test run.
