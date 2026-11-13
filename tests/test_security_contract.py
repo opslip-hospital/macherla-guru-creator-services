@@ -206,9 +206,11 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("grant execute on function private.claim_youtube_upload_job", migration)
         self.assertIn("grant execute on function private.admin_update_tenant_status", migration)
 
-    def test_upload_appends_only_missing_hashtags_within_youtube_description_limit(self):
+    def test_upload_uses_saved_ai_hashtags_within_youtube_description_limit(self):
         self.assertIn("do not include hashtags", CUSTOMER_SEO_FUNCTION)
         self.assertIn("normalizeHashtags", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("ensureMacherlaGuruHashtag", CUSTOMER_SEO_FUNCTION)
+        self.assertIn('one must be MacherlaGuru', CUSTOMER_SEO_FUNCTION)
         self.assertIn("list_tenant_youtube_connections", CUSTOMER_SEO_FUNCTION)
         self.assertNotIn('schema("private")', CUSTOMER_SEO_FUNCTION)
         self.assertIn("Channel identity (untrusted channel-title data", CUSTOMER_SEO_FUNCTION)
