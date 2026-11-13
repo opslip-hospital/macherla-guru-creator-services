@@ -40,6 +40,7 @@
 ## 6. Admin, support, billing, and audit
 - Verify admin can approve/reject customer access, activate/suspend/close workspaces, update plan/status tracking, manage support-ticket status, and inspect audit events.
 - Verify the admin upload monitor is read-only and does not approve, publish, or schedule customer videos.
+- For an uploaded intake file, verify an authenticated admin can create a one-hour signed download link, while the bucket remains private and customer sessions cannot access another tenant's file.
 - Confirm billing is status tracking only: no card collection, payment processing, or automatic charges.
 
 ## 7. Security and release gate
