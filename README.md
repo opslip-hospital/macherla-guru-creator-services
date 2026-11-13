@@ -24,11 +24,12 @@ Migrations are in `supabase/migrations/`:
 - The signed-in identity is revalidated with Supabase Auth on each rerun.
 - The app reads role and tenant membership from RLS-protected database tables. User-editable metadata is not used for authorization.
 - New registrations receive the database default `customer` role only. Registration does not create a tenant, membership, or admin permission.
+- GitHub Actions CI compiles the app and runs static security-contract tests on pushes and pull requests.
 - The admin workspace appears only when the database profile has the trusted `admin` role.
 - Customer workspace activation and trusted admin provisioning are still manual backend operations.
 - Google OAuth, encrypted token handling, video upload, approval/scheduling execution, billing, hosting configuration, and end-to-end security tests are not yet implemented.
 
-Do not use the app with real customer channels until provisioning, OAuth, upload, publishing approval, audit logging, and security tests are complete.
+Do not use the app with real customer channels until provisioning, OAuth, upload, publishing approval, audit logging, and live end-to-end security tests are complete. The current CI checks are static guardrails, not a penetration test or live authentication test.
 
 ## Local setup
 
