@@ -137,8 +137,8 @@ Deno.serve(async (req: Request) => {
       const prompt = `You are an expert YouTube SEO editor. Watch and listen to the attached complete video. Identify the actual scenes, actions, spoken dialogue, language, mood, subject and context. Base every metadata field on what is genuinely visible or audible; do not invent events or claims. Produce engaging, searchable metadata for the creator's own YouTube channel.
 Output language/script: ${language}.
 Return JSON only with this exact shape:
-{"title":"under 100 characters","description":"SEO-friendly description up to 4500 characters; include relevant hashtags at the end","tags":["short relevant YouTube search tags"],"hashtags":["without #, up to 5"],"caption":"short social caption"}
-Rules: title <=100 chars; description <=4500 chars; tags <=20 and total tag characters <=450; hashtags <=5; caption <=1000 chars. Use the requested language/script. Tags are concise search phrases, not hashtag strings. Hashtags must be relevant, avoid generic spam. Do not claim you heard dialogue unless it is audible.`;
+{"title":"best YouTube title","title_options":["five different title options"],"description":"SEO-friendly description up to 4500 characters; include relevant hashtags at the end","tags":["12 to 18 short relevant YouTube search tags"],"hashtags":["exactly 5 relevant hashtags without #"],"caption":"short social caption","youtube_caption":"YouTube caption","instagram_caption":"Instagram caption","keywords":["SEO keywords"],"category":"YouTube category"}
+Rules: return exactly 5 distinct title_options; title <=100 chars; description <=4500 chars; tags 12–18 and total tag characters <=450; exactly 5 hashtags; caption, youtube_caption and instagram_caption <=1000 chars each; keywords <=20; category must be a valid YouTube category label. Use the requested language/script. Tags are concise search phrases, not hashtag strings. Hashtags must be relevant, avoid generic spam. Do not claim you heard dialogue unless it is audible.`;
       const response = await fetch(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         {
@@ -166,6 +166,13 @@ Rules: title <=100 chars; description <=4500 chars; tags <=20 and total tag char
         tags: normalizeTags(parsed.tags, 20),
         hashtags: normalizeTags(parsed.hashtags, 5).map((x) => x.replace(/^#+/, "")),
         caption: cleanText(parsed.caption, 2200),
+        metadata_details: {
+          title_options: normalizeTags(parsed.title_options, 5),
+          youtube_caption: cleanText(parsed.youtube_caption, 2200) || cleanText(parsed.caption, 2200),
+          instagram_caption: cleanText(parsed.instagram_caption, 2200),
+          keywords: normalizeTags(parsed.keywords, 30),
+          category: cleanText(parsed.category, 80) || "Entertainment",
+        },
       };
       if (!metadata.title) return json({ error: "ai_returned_empty_metadata" }, 502);
     } else {
@@ -175,6 +182,13 @@ Rules: title <=100 chars; description <=4500 chars; tags <=20 and total tag char
         tags: normalizeTags(body.tags, 100),
         hashtags: normalizeTags(body.hashtags, 30).map((x) => x.replace(/^#+/, "")),
         caption: cleanText(body.caption, 2200),
+        metadata_details: {
+          title_options: normalizeTags(body.metadata_details?.title_options, 5),
+          youtube_caption: cleanText(body.metadata_details?.youtube_caption, 2200),
+          instagram_caption: cleanText(body.metadata_details?.instagram_caption, 2200),
+          keywords: normalizeTags(body.metadata_details?.keywords, 30),
+          category: cleanText(body.metadata_details?.category, 80),
+        },
       };
       if (!metadata.title) return json({ error: "title_required" }, 400);
       const totalTagChars = (metadata.tags as string[]).reduce((n, tag) => n + tag.length, 0);
@@ -190,6 +204,7 @@ Rules: title <=100 chars; description <=4500 chars; tags <=20 and total tag char
       tags: metadata.tags,
       hashtags: metadata.hashtags,
       caption: metadata.caption,
+      metadata_details: metadata.metadata_details ?? {},
       prepared_by: auth.user.id,
       created_at: new Date().toISOString(),
     };
