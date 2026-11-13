@@ -80,7 +80,7 @@ def start_youtube_oauth(tenant_id: str, client: Client) -> str:
 
 
 def start_private_youtube_upload(job_id: str, client: Client) -> dict[str, Any]:
-    """Request an admin-gated server-side upload; Google tokens never reach Streamlit."""
+    """Request an owner-checked server-side upload; Google tokens never reach Streamlit."""
     try:
         session = client.auth.get_session()
         access_token = getattr(session, "access_token", None) if session else None
