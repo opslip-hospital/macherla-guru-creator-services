@@ -230,6 +230,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("tags_must_be_12_to_18_and_within_450_characters", CUSTOMER_SEO_FUNCTION)
         self.assertIn("exactly_5_unique_title_options_required", CUSTOMER_SEO_FUNCTION)
         self.assertIn("do not include hashtags because they are returned separately", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("hashtags: ensureMacherlaGuruHashtag(body.hashtags)", CUSTOMER_SEO_FUNCTION)
 
     def test_schedule_defaults_use_india_local_date(self):
         self.assertIn('datetime.now(ZoneInfo("Asia/Kolkata")).date() + timedelta(days=1)', APP)
