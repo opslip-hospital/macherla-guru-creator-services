@@ -258,6 +258,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("do not include hashtags", CUSTOMER_SEO_FUNCTION)
         self.assertIn("normalizeHashtags", CUSTOMER_SEO_FUNCTION)
         self.assertIn("ensureChannelBrandHashtag", CUSTOMER_SEO_FUNCTION)
+        self.assertIn(r'.replace(/[^\p{L}\p{N}]/gu, "")', CUSTOMER_SEO_FUNCTION)
         self.assertIn(".slice(0, 100)", CUSTOMER_SEO_FUNCTION)
         self.assertIn('one must be the connected channel name as a brand hashtag', CUSTOMER_SEO_FUNCTION)
         self.assertIn("list_tenant_youtube_connections", CUSTOMER_SEO_FUNCTION)
