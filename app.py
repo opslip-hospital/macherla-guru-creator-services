@@ -163,6 +163,67 @@ def refresh_youtube_analytics(tenant_id: str, client: Client) -> dict[str, Any]:
         raise RuntimeError("analytics_refresh_failed") from None
 
 
+def customer_channel_dashboard_request(tenant_id: str, client: Client) -> dict[str, Any]:
+    """Refresh only the authenticated owner's connected YouTube channel and recent uploads."""
+    try:
+        session = client.auth.get_session()
+        access_token = getattr(session, "access_token", None) if session else None
+        if not access_token:
+            raise RuntimeError("missing_session")
+        request = urllib.request.Request(
+            f"{SUPABASE_FUNCTIONS_URL}/customer-channel-dashboard",
+            data=json.dumps({"tenant_id": tenant_id}).encode("utf-8"),
+            headers={"Content-Type": "application/json", "apikey": SUPABASE_PUBLISHABLE_KEY,
+                     "Authorization": f"Bearer {access_token}"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=90) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        if not payload.get("success"):
+            raise RuntimeError(str(payload.get("error") or "dashboard_refresh_failed"))
+        return payload
+    except urllib.error.HTTPError as exc:
+        try:
+            detail = json.loads(exc.read().decode("utf-8")).get("error", "dashboard_refresh_failed")
+        except Exception:
+            detail = "dashboard_refresh_failed"
+        raise RuntimeError(str(detail)) from None
+    except (urllib.error.URLError, TimeoutError, ValueError, AttributeError):
+        raise RuntimeError("dashboard_refresh_failed") from None
+
+
+def customer_content_studio_request(
+    tenant_id: str, kind: str, topic: str, notes: str, client: Client
+) -> str:
+    """Generate customer-owned channel content without exposing the Gemini key."""
+    try:
+        session = client.auth.get_session()
+        access_token = getattr(session, "access_token", None) if session else None
+        if not access_token:
+            raise RuntimeError("missing_session")
+        request = urllib.request.Request(
+            f"{SUPABASE_FUNCTIONS_URL}/customer-content-studio",
+            data=json.dumps({"tenant_id": tenant_id, "kind": kind, "topic": topic,
+                             "notes": notes, "language": "Telugu"}).encode("utf-8"),
+            headers={"Content-Type": "application/json", "apikey": SUPABASE_PUBLISHABLE_KEY,
+                     "Authorization": f"Bearer {access_token}"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=90) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        if not payload.get("success") or not payload.get("draft"):
+            raise RuntimeError(str(payload.get("error") or "content_studio_failed"))
+        return str(payload["draft"])
+    except urllib.error.HTTPError as exc:
+        try:
+            detail = json.loads(exc.read().decode("utf-8")).get("error", "content_studio_failed")
+        except Exception:
+            detail = "content_studio_failed"
+        raise RuntimeError(str(detail)) from None
+    except (urllib.error.URLError, TimeoutError, ValueError, AttributeError):
+        raise RuntimeError("content_studio_failed") from None
+
+
 def customer_youtube_seo_request(
     action: str, job_id: str, client: Client, values: dict[str, Any] | None = None
 ) -> dict[str, Any]:
