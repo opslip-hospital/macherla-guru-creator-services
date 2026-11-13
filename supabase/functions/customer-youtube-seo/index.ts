@@ -190,18 +190,6 @@ Deno.serve(async (req: Request) => {
         const retryAfter = 3600 - (now.getUTCMinutes() * 60 + now.getUTCSeconds());
         return json({ error: "ai_rate_limit_exceeded", stage: "rate_limit", retry_after_seconds: retryAfter }, 429);
       }
-      const consentLog = await admin.from("audit_events").insert({
-        tenant_id: job.tenant_id,
-        actor_user_id: auth.user.id,
-        event_type: "customer_gemini_video_consent_granted",
-        details: {
-          upload_job_id: jobId,
-          provider: "Google Gemini API",
-          data_use_tier_notice: "free_tier_content_may_be_used_to_improve_google_products",
-          consented_at: new Date().toISOString(),
-        },
-      });
-      if (consentLog.error) return json({ error: "consent_record_failed" }, 500);
     }
 
     let metadata: Record<string, unknown>;
@@ -221,6 +209,19 @@ Deno.serve(async (req: Request) => {
       if (!hasExpectedVideoContainer(videoHeader, String(job.mime_type))) {
         return json({ error: "video_container_does_not_match_file_type" }, 415);
       }
+
+      const consentLog = await admin.from("audit_events").insert({
+        tenant_id: job.tenant_id,
+        actor_user_id: auth.user.id,
+        event_type: "customer_gemini_video_consent_granted",
+        details: {
+          upload_job_id: jobId,
+          provider: "Google Gemini API",
+          data_use_tier_notice: "free_tier_content_may_be_used_to_improve_google_products",
+          consented_at: new Date().toISOString(),
+        },
+      });
+      if (consentLog.error) return json({ error: "consent_record_failed" }, 500);
 
       stage = "gemini_file_upload";
       const geminiFile = await uploadVideoToGemini(
