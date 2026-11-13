@@ -56,10 +56,6 @@ Deno.serve(async (req) => {
     const { data: authData, error: authError } = await userClient.auth.getUser(bearer);
     if (authError || !authData.user) return json({ error: "invalid_session" }, 401);
 
-    const { data: profile, error: profileError } = await userClient
-      .from("profiles").select("role").eq("user_id", authData.user.id).maybeSingle();
-    if (profileError || profile?.role !== "admin") return json({ error: "admin_required" }, 403);
-
     const body = await req.json().catch(() => ({}));
     const jobId = typeof body.job_id === "string" ? body.job_id : "";
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId)) {
@@ -169,7 +165,7 @@ Deno.serve(async (req) => {
       status: "uploaded_private",
       youtube_video_id: youtubeVideo.id,
       youtube_url: `https://www.youtube.com/watch?v=${youtubeVideo.id}`,
-      message: "Video uploaded as private. Customer approval is required before publishing.",
+      message: "Video uploaded as private. The channel owner can now publish or schedule it.",
     });
   } catch {
     if (admin && claimedJobId) {
