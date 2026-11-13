@@ -31,7 +31,7 @@
 - Confirm SEO becomes read-only after the YouTube private upload.
 - Use Gemini Content Studio to create a script, idea, Shorts draft, and caption; confirm the output uses the connected channel name and selected language without forcing a fixed character or channel style.
 - Confirm Content Studio and Growth Doctor also require separate explicit consent before sending prompts, notes, or channel metrics to Gemini, and that the corresponding text-consent audit event is recorded.
-- Confirm the server-side hourly fair-use limits: 5 video-SEO generations and 12 Content Studio generations per customer workspace; the next request should return a clear retry-after message without exposing rate-limit records.
+- Confirm the server-side hourly fair-use limits: 5 video-SEO generations and 12 Content Studio generations per customer workspace; the next request should return a clear retry-after message without exposing rate-limit records. Confirm missing/oversized/unsupported video files are rejected before consuming an SEO generation.
 - Confirm the customer upload/SEO/publish workflow contains no thumbnail prompt, thumbnail generation, or thumbnail upload controls.
 
 ## 5. YouTube upload and publishing
