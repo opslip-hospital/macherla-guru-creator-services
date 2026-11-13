@@ -27,7 +27,7 @@ This deployment is for the separate `macherla-guru-creator-services` repository 
 
 ## Google YouTube OAuth setup
 
-The repository contains two deployed Edge Functions in the dedicated Creator Services Supabase project:
+The repository contains the customer OAuth and YouTube worker Edge Functions deployed in the dedicated Creator Services Supabase project:
 
 - Start: `https://gigthhrovhktrpghpnya.supabase.co/functions/v1/youtube-oauth-start`
 - Callback: `https://gigthhrovhktrpghpnya.supabase.co/functions/v1/youtube-oauth-callback`
@@ -49,7 +49,7 @@ In the Supabase project's **Edge Functions > Secrets**, set:
 - `APP_BASE_URL` — the exact deployed Streamlit Creator Services URL, including https
 - `TOKEN_ENCRYPTION_KEY` — base64 encoding of 32 random bytes (generate locally with `openssl rand -base64 32`; never send it in chat)
 
-The project-provided `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are read inside Edge Functions. Never copy the service-role key into Streamlit or GitHub.
+The project-provided Supabase URL and server credentials are read inside Edge Functions. Never copy the service-role/secret key into Streamlit or GitHub. The Streamlit app uses only the publishable key.
 
 ## AI YouTube SEO generation
 
@@ -69,4 +69,4 @@ The OAuth flow requests `youtube.upload`, `youtube.readonly`, and `youtube.force
 
 ## Current limitations
 
-OAuth endpoints and the customer connection entry point are deployed, but Google credentials and the encryption key still need to be configured. Do not treat OAuth as live until a real test account connects and the channel appears in the customer workspace. The AI SEO and customer self-service upload/publish code is deployed, but live Gemini generation and real YouTube upload/publish actions are not verified until the Gemini secret is set and a valid YouTube channel completes end-to-end testing. Billing/payment processing is not enabled.
+The application, database workflows, and Edge Functions are deployed. Deployment status alone does not prove that Google OAuth, Gemini video analysis, or YouTube publishing works end to end. Confirm that the listed OAuth, encryption, and Gemini secrets are present in the dedicated Supabase project's Edge Function Secrets without copying their values into chat or GitHub. A real test Google account must connect a channel before live OAuth is considered verified. Gemini video SEO, private upload, Publish now, Schedule, analytics refresh, and admin/customer flows remain pending the final authorized test pass. Supabase Auth leaked-password protection is currently reported disabled by Security Advisor; enable it in the project's Authentication password/security settings before onboarding real customers. Billing is administrative status tracking only; payment processing and automatic charges are not enabled.
