@@ -174,6 +174,11 @@ Deno.serve(async (req: Request) => {
     );
     const channelName = cleanText(uploadConnection?.channel_title, 120);
     if (!channelName) return json({ error: "youtube_upload_connection_required", stage: "youtube_connection" }, 409);
+    // Metadata is editable only before the private YouTube upload. Later edits
+    // would otherwise change the dashboard record without updating YouTube.
+    if (job.status !== "received") {
+      return json({ error: "metadata_locked_after_private_upload" }, 409);
+    }
     if (action === "generate") {
       const consentLog = await admin.from("audit_events").insert({
         tenant_id: job.tenant_id,
@@ -187,11 +192,6 @@ Deno.serve(async (req: Request) => {
         },
       });
       if (consentLog.error) return json({ error: "consent_record_failed" }, 500);
-    }
-    // Metadata is editable only before the private YouTube upload. Later edits
-    // would otherwise change the dashboard record without updating YouTube.
-    if (job.status !== "received") {
-      return json({ error: "metadata_locked_after_private_upload" }, 409);
     }
 
     let metadata: Record<string, unknown>;
