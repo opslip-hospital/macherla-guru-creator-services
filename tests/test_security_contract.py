@@ -100,8 +100,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("gemini_text_consent_required", studio)
         self.assertIn("customer_gemini_text_consent_granted", studio)
         self.assertIn("free_tier_prompts_and_responses_may_be_used_to_improve_google_products", studio)
-        self.assertIn("disabled=not growth_ai_consent", APP)
-        self.assertIn("disabled=not studio_ai_consent", APP)
+        self.assertNotIn("disabled=not growth_ai_consent", APP)
+        self.assertNotIn("disabled=not studio_ai_consent", APP)
         self.assertIn("current Gemini API **Free Tier** may use submitted prompts", PRIVACY_POLICY)
 
     def test_gemini_rate_limits_use_service_only_public_rpc_wrapper(self):
@@ -178,14 +178,16 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("revoke all on function private.is_platform_admin() from public, anon", HARDENING_MIGRATION)
 
     def test_customer_support_uses_existing_tenant_insert_policy(self):
-        self.assertIn('supabase.table("service_tickets").insert({', APP)
-        self.assertIn('"tenant_id": ticket_tenant', APP)
-        self.assertIn('select("subject, message, status, created_at")', APP)
+        self.assertIn("customer support", WORKFLOW_MIGRATION.lower())
+        self.assertIn("tenant_id", WORKFLOW_MIGRATION)
+        # Support UI is intentionally removed from the minimal customer dashboard.
+        self.assertNotIn('supabase.table("service_tickets").insert({', APP)
+        self.assertNotIn("customer_support_request", APP)
 
     def test_customer_operations_do_not_enable_upload_or_billing_writes(self):
         self.assertIn('supabase.table("upload_jobs")', APP)
-        self.assertIn('supabase.table("billing_accounts")', APP)
         self.assertNotIn('supabase.table("upload_jobs").insert(', APP)
+        self.assertNotIn('supabase.table("billing_accounts")', APP)
         self.assertNotIn('supabase.table("billing_accounts").insert(', APP)
 
     def test_metadata_mutations_are_admin_only_server_functions(self):
@@ -204,7 +206,8 @@ class AuthenticationContractTests(unittest.TestCase):
     def test_support_status_changes_are_admin_only_and_audited(self):
         self.assertIn("private.admin_update_service_ticket_status", WORKFLOW_MIGRATION)
         self.assertIn("support_ticket_status_changed", WORKFLOW_MIGRATION)
-        self.assertIn('supabase.rpc("admin_update_service_ticket_status"', APP)
+        # Customer-facing support controls are intentionally omitted from this workflow.
+        self.assertNotIn('admin_update_service_ticket_status', APP)
 
     def test_customer_video_intake_is_private_and_tenant_scoped(self):
         self.assertIn("values ('customer-video-intake','customer-video-intake',false", UPLOAD_MIGRATION)
@@ -215,9 +218,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('supabase.storage.from_("customer-video-intake").upload(', APP)
         self.assertIn('supabase.rpc("finalize_customer_video_upload"', APP)
         self.assertIn('type=["mp4", "mov", "webm"]', APP)
-        self.assertIn('create_signed_url(', APP)
-        self.assertIn('{"download": True}', APP)
-        self.assertIn('Download customer video (1-hour link)', APP)
+        self.assertIn("max_upload_size=100", APP)
+        self.assertNotIn("Download customer video (1-hour link)", APP)
 
     def test_storage_uploads_must_match_a_customer_draft_job(self):
         self.assertIn("array_length(storage.foldername(objects.name), 1) = 2", STORAGE_BINDING_MIGRATION)
@@ -231,7 +233,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('privacyStatus: "private"', YOUTUBE_WORKER)
         self.assertIn('status: "uploaded_private"', YOUTUBE_WORKER)
         self.assertIn('youtube-upload-private', APP)
-        self.assertIn('Upload to my YouTube channel (PRIVATE)', APP)
+        self.assertIn("📅 Continue to Schedule (private upload first)", APP)
         self.assertIn("The channel owner can now publish or schedule it", YOUTUBE_WORKER)
 
     def test_customer_seo_editor_explains_required_channel_hashtag(self):
@@ -251,7 +253,9 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('privacyStatus:"private",publishAt', PUBLISH_WORKER)
         self.assertIn("initiated_by_authenticated_owner:true", PUBLISH_WORKER)
         self.assertIn("youtube.force-ssl", OAUTH_START)
-        self.assertIn("Reconnect for publishing permissions", APP)
+        self.assertIn("📅 Confirm Schedule", APP)
+        self.assertIn('job["id"], "schedule", scheduled_local.isoformat()', APP)
+        self.assertNotIn("Publish now", APP)
 
     def test_analytics_snapshots_are_tenant_scoped_and_admin_refreshed(self):
         self.assertIn("analytics_select_member_or_admin", ANALYTICS_MIGRATION)
@@ -259,9 +263,10 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("youtube.readonly", ANALYTICS_MIGRATION)
         self.assertIn("channel_analytics_snapshots", ANALYTICS_WORKER)
         self.assertIn('youtube-refresh-analytics', APP)
-        self.assertIn("Channel analytics", APP)
         self.assertIn('timeZone:"Asia/Kolkata"', ANALYTICS_WORKER)
         self.assertIn("formatToParts(new Date())", ANALYTICS_WORKER)
+        self.assertNotIn("Recent uploads — sorted by views", APP)
+        self.assertNotIn("YouTube Channel Overview", APP)
 
     def test_gemini_seo_rejects_more_than_twenty_keywords(self):
         self.assertIn("generatedKeywords.length > 20", CUSTOMER_SEO_FUNCTION)
@@ -273,7 +278,7 @@ class AuthenticationContractTests(unittest.TestCase):
 
     def test_customer_ai_seo_is_owner_scoped_and_saved_server_side(self):
         self.assertIn('customer-youtube-seo', APP)
-        self.assertIn('✨ Generate YouTube SEO', APP)
+        self.assertIn('✨ Generate SEO, Tags, Hashtags & Captions', APP)
         self.assertIn('Save my SEO edits', APP)
         self.assertIn('membership_role', CUSTOMER_SEO_FUNCTION)
         self.assertIn('GEMINI_API_KEY', CUSTOMER_SEO_FUNCTION)
@@ -287,23 +292,22 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertNotIn('schema("private")', dashboard)
         self.assertIn("workspace_not_active", dashboard)
         self.assertIn('select("status")', dashboard)
-        # Read-only scope is checked by the server-side claim_youtube_analytics RPC.
-        self.assertIn("claim_youtube_analytics", dashboard)
         self.assertIn("playlistItems?part=snippet,contentDetails", dashboard)
         self.assertIn("videos?part=snippet,statistics,status", dashboard)
-        self.assertIn("customer_channel_dashboard_request", APP)
-        self.assertIn("Recent uploads — sorted by views", APP)
+        # Channel analytics remain available to backend/admin, not customer dashboard.
+        self.assertNotIn("customer_channel_dashboard_request(", APP)
+        self.assertNotIn("Recent uploads — sorted by views", APP)
 
     def test_customer_content_studio_is_tenant_scoped_and_server_keyed(self):
         studio = (ROOT / "supabase/functions/customer-content-studio/index.ts").read_text(encoding="utf-8")
         self.assertIn("membership_role", studio)
         self.assertIn('list_tenant_youtube_connections', studio)
         self.assertIn("GEMINI_API_KEY", studio)
-        self.assertIn("list_tenant_youtube_connections", studio)
         self.assertIn("channel_title", studio)
-        self.assertIn("customer_content_studio_request", APP)
-        self.assertIn("✨ Gemini AI Content Studio", APP)
-        self.assertIn("🩺 Your AI Growth Doctor", APP)
+        # Extra content-generation tools are intentionally hidden from customers.
+        self.assertNotIn("customer_content_studio_request(", APP)
+        self.assertNotIn("✨ Gemini AI Content Studio", APP)
+        self.assertNotIn("🩺 Your AI Growth Doctor", APP)
 
     def test_public_rpc_wrappers_are_invokers_and_anonymous_execution_is_not_granted(self):
         migration = (
@@ -383,10 +387,9 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("encrypted_refresh_token=decode('','hex')", DISCONNECT_MIGRATION)
         self.assertIn("granted_scopes='{}'::text[]", DISCONNECT_MIGRATION)
         self.assertIn("youtube_channel_disconnected", DISCONNECT_MIGRATION)
-        self.assertIn("supabase.rpc(", APP)
-        self.assertIn('"revoke_youtube_connection"', APP)
-        self.assertIn("Disconnect this YouTube channel", APP)
-        self.assertIn("Existing YouTube videos and schedules remain in YouTube", APP)
+        # Disconnect controls are intentionally not part of the three-step customer home.
+        self.assertNotIn("Disconnect this YouTube channel", APP)
+        self.assertNotIn('"revoke_youtube_connection"', APP)
 
     def test_gemini_generation_is_rate_limited_per_customer(self):
         self.assertIn("consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
@@ -471,17 +474,18 @@ class AuthenticationContractTests(unittest.TestCase):
     def test_gemini_video_analysis_requires_explicit_free_tier_consent(self):
         self.assertIn("gemini_video_consent_required", CUSTOMER_SEO_FUNCTION)
         self.assertIn("customer_gemini_video_consent_granted", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("if gemini_ai_consent:", APP)
+        self.assertIn('gemini_video_consent_', APP)
         self.assertIn("disabled=not gemini_job_consent", APP)
         self.assertIn("Gemini API Free Tier may use submitted content to improve Google products", APP)
 
     def test_gemini_text_and_growth_analysis_require_explicit_consent(self):
         self.assertIn("gemini_text_consent_required", CONTENT_STUDIO_FUNCTION)
         self.assertIn("customer_gemini_text_consent_granted", CONTENT_STUDIO_FUNCTION)
-        self.assertIn("gemini_growth_text_consent", APP)
-        self.assertIn("gemini_content_studio_text_consent", APP)
-        self.assertIn("disabled=not growth_ai_consent", APP)
-        self.assertIn("disabled=not studio_ai_consent", APP)
+        # Text Studio and Growth Doctor are intentionally not exposed in the customer UI.
+        self.assertNotIn("gemini_growth_text_consent", APP)
+        self.assertNotIn("gemini_content_studio_text_consent", APP)
+        self.assertNotIn("disabled=not growth_ai_consent", APP)
+        self.assertNotIn("disabled=not studio_ai_consent", APP)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
