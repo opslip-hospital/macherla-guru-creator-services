@@ -138,7 +138,7 @@ if not st.session_state.get("_creator_user_id"):
                         {
                             "email": new_email,
                             "password": new_password,
-                            "options": {"data": {"display_name": display_name.strip()}},
+                            "options": {"data": {"name": display_name.strip()}},
                         }
                     )
                 except Exception as exc:
