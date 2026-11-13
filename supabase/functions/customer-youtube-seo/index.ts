@@ -128,6 +128,10 @@ Deno.serve(async (req: Request) => {
     if (!membership) return json({ error: "workspace_owner_required" }, 403);
     const { data: tenantStatus } = await admin.from("tenants").select("status").eq("id", job.tenant_id).maybeSingle();
     if (tenantStatus?.status !== "active") return json({ error: "workspace_not_active" }, 403);
+    const { data: channelConnection } = await admin.schema("private").from("youtube_connections")
+      .select("channel_title").eq("tenant_id", job.tenant_id).is("revoked_at", null)
+      .order("connected_at", { ascending: false }).limit(1).maybeSingle();
+    const channelName = cleanText(channelConnection?.channel_title, 120) || "the creator's YouTube channel";
     if (!["received", "uploaded_private", "awaiting_approval", "approved"].includes(job.status)) {
       return json({ error: "video_not_ready_for_metadata" }, 409);
     }
@@ -152,7 +156,7 @@ Deno.serve(async (req: Request) => {
       await waitForGeminiFile(geminiKey, geminiFileName);
       const language = cleanText(body.language, 40) || "Telugu";
       const prompt = `You are an expert YouTube SEO editor. Watch and listen to the attached complete video. Identify the actual scenes, actions, spoken dialogue, language, mood, subject and context. Base every metadata field on what is genuinely visible or audible; do not invent events or claims. Produce engaging, searchable metadata for the creator's own YouTube channel.
-Output language/script: ${language}.
+Channel identity: ${channelName}. Use the channel name naturally when it improves branding, but do not force it into every title or tag.\nOutput language/script: ${language}.
 Return JSON only with this exact shape:
 {"title":"best YouTube title","title_options":["five different title options"],"description":"SEO-friendly description up to 4500 characters; do not include hashtags because they are returned separately","tags":["12 to 18 short relevant YouTube search tags"],"hashtags":["exactly 5 relevant hashtags without #"],"caption":"short social caption","youtube_caption":"YouTube caption","instagram_caption":"Instagram caption","keywords":["SEO keywords"],"category":"YouTube category"}
 Rules: return exactly 5 distinct title_options; title <=100 chars; description <=4500 chars and must not contain hashtags; tags 12–18 and total tag characters <=450; exactly 5 hashtags in the separate hashtags array; caption, youtube_caption and instagram_caption <=1000 chars each; keywords <=20; category must be a valid YouTube category label. Use the requested language/script. Tags are concise search phrases, not hashtag strings. Hashtags must be relevant, avoid generic spam. Do not claim you heard dialogue unless it is audible.`;
