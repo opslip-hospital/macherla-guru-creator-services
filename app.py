@@ -7,7 +7,10 @@ This app intentionally performs no privileged writes.
 """
 from __future__ import annotations
 
+import json
 import os
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +23,7 @@ load_dotenv(Path(__file__).parent / ".env")
 APP_NAME = os.getenv("APP_NAME", "Macherla Guru Creator Services")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", "").strip()
+SUPABASE_FUNCTIONS_URL = f"{SUPABASE_URL.rstrip('/')}/functions/v1" if SUPABASE_URL else ""
 
 st.set_page_config(
     page_title=APP_NAME,
@@ -43,6 +47,33 @@ def get_session_client() -> Client:
         client = create_client(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
         st.session_state["_creator_supabase_client"] = client
     return client
+
+
+def start_youtube_oauth(tenant_id: str, client: Client) -> str:
+    """Ask the authenticated Edge Function for a one-time Google authorization URL."""
+    try:
+        session = client.auth.get_session()
+        access_token = getattr(session, "access_token", None) if session else None
+        if not access_token:
+            raise RuntimeError("missing_session")
+        request = urllib.request.Request(
+            f"{SUPABASE_FUNCTIONS_URL}/youtube-oauth-start",
+            data=json.dumps({"tenant_id": tenant_id}).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "apikey": SUPABASE_PUBLISHABLE_KEY,
+                "Authorization": f"Bearer {access_token}",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        authorization_url = payload.get("authorization_url", "")
+        if not authorization_url.startswith("https://accounts.google.com/"):
+            raise RuntimeError("invalid_authorization_url")
+        return authorization_url
+    except (urllib.error.URLError, TimeoutError, ValueError, RuntimeError, AttributeError):
+        raise RuntimeError("youtube_oauth_start_failed") from None
 
 
 def clear_session() -> None:
@@ -281,9 +312,9 @@ if role == "admin":
     except Exception:
         st.error("Admin access could not be verified for the workspace list.")
     st.info(
-        "Approval creates the customer workspace, owner membership, and audit event "
-        "in one database transaction. YouTube OAuth, uploads, SEO, scheduling, and "
-        "billing remain disabled until their separate controls are implemented."
+        "Customer approval is active. Google OAuth connection endpoints are deployed; "
+        "uploads, SEO operations, scheduling, and billing remain disabled until their "
+        "separate workflows are implemented and tested."
     )
 else:
     st.header("Customer Dashboard")
@@ -314,12 +345,62 @@ else:
         )
         tenant_rows = tenant_result.data or []
         for tenant in tenant_rows:
+            tenant_id = tenant["id"]
             st.subheader(tenant.get("business_name") or "Your YouTube workspace")
             st.caption(f"Workspace status: {tenant.get('status', 'pending')}")
+            try:
+                connections = (
+                    supabase.rpc(
+                        "list_tenant_youtube_connections",
+                        {"target_tenant": tenant_id},
+                    ).execute().data or []
+                )
+            except Exception:
+                connections = []
+                st.warning("YouTube connection status is temporarily unavailable.")
+
+            if connections:
+                for connection in connections:
+                    st.success(
+                        f"Connected channel: {connection.get('channel_title') or 'YouTube channel'}"
+                    )
+                    st.caption(f"Channel ID: {connection.get('channel_id', 'Unavailable')}")
+            else:
+                st.caption("No YouTube channel is connected yet.")
+                if tenant.get("status") == "active":
+                    if st.button(
+                        "Connect YouTube channel",
+                        key=f"connect_youtube_{tenant_id}",
+                        type="primary",
+                    ):
+                        try:
+                            google_url = start_youtube_oauth(tenant_id, supabase)
+                        except RuntimeError:
+                            st.error(
+                                "Google connection is not configured yet. "
+                                "Please contact the service administrator."
+                            )
+                        else:
+                            st.link_button(
+                                "Continue securely with Google",
+                                google_url,
+                                type="primary",
+                            )
+                else:
+                    st.info("Your workspace must be active before connecting YouTube.")
+        callback_status = st.query_params.get("youtube_oauth")
+        if callback_status:
+            if callback_status == "connected":
+                st.success("Google returned to the app. The channel connection is saved if it appears above.")
+            else:
+                st.warning(
+                    "Google connection did not complete. Check the Google consent setup "
+                    "or ask the service administrator for help."
+                )
         st.info(
-            "Your workspace is connected. Video upload, private-first approval, "
-            "SEO delivery, scheduling, and reports will appear here as each workflow "
-            "passes its security checks."
+            "Channel connection uses Google OAuth. The service never asks for your "
+            "Google password. Video uploads and public/scheduled publishing are not "
+            "enabled yet; customer approval will be required before publishing."
         )
 
 st.caption(
