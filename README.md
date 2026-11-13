@@ -115,10 +115,10 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 
 - `youtube-oauth-start`: v11 ACTIVE
 - `youtube-oauth-callback`: v11 ACTIVE
-- `youtube-upload-private`: v18 ACTIVE
+- `youtube-upload-private`: v19 ACTIVE
 - `youtube-publish-approved`: v8 ACTIVE
 - `youtube-refresh-analytics`: v5 ACTIVE
-- `customer-youtube-seo`: v31 ACTIVE
+- `customer-youtube-seo`: v32 ACTIVE
 - `customer-channel-dashboard`: v5 ACTIVE
 - `customer-content-studio`: v5 ACTIVE
 
@@ -135,3 +135,4 @@ These are deployment-state checks only, not successful end-to-end tests. Databas
 - The publish worker treats an interrupted request or YouTube 5xx response as an ambiguous outcome and leaves the job in a non-retryable `publishing` state until YouTube Studio is checked. Clear 4xx rejection and pre-request failures remain safely retryable from PRIVATE.
 - The database upload-claim function independently enforces completed SEO before it will claim a private YouTube upload: 12–18 unique tags within 450 characters, exactly five unique hashtags including `MacherlaGuru`, and five distinct title options. This prevents bypassing the dashboard's SEO-first workflow by calling the RPC directly.
 - Publish requests with no response from YouTube are now held in the `publishing` state instead of being reset to private, so the UI cannot accidentally repeat a possibly accepted schedule/publish action.
+- Latest final hardening clarifies that any interrupted upload transfer is an unknown outcome, not a confirmed failure. The upload job stays locked as `upload_unknown`; a pre-transfer failure returns it to `received` for safe retry. The upload worker is ACTIVE v19. The SEO worker's whitespace normalization fix is deployed ACTIVE v32. The admin upload monitor explicitly flags unknown uploads as do-not-retry.
