@@ -188,6 +188,14 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("grant execute on function private.claim_youtube_upload_job", migration)
         self.assertIn("grant execute on function private.admin_update_tenant_status", migration)
 
+    def test_youtube_sync_errors_warn_against_unsafe_retries(self):
+        self.assertIn("youtube_upload_status_sync_failed", APP)
+        self.assertIn("do not upload the video again yet", APP)
+        self.assertIn("publish_status_sync_failed", APP)
+        self.assertIn("Check YouTube Studio before retrying", APP)
+        self.assertIn("youtube_upload_status_sync_failed", YOUTUBE_WORKER)
+        self.assertIn("publish_status_sync_failed", PUBLISH_WORKER)
+
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
         self.assertNotIn("youtube.com/@macherlaguru", APP)
