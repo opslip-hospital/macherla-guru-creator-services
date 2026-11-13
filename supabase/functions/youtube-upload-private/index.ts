@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
     let tagLength = 0;
     for (const tag of rawTags) {
       const nextLength = tagLength + tag.length + (tags.length ? 1 : 0);
-      if (nextLength > 500) continue;
+      if (nextLength > 450) continue;
       tags.push(tag);
       tagLength = nextLength;
     }
