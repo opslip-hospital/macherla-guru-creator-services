@@ -22,6 +22,9 @@ WORKFLOW_MIGRATION = (
 UPLOAD_MIGRATION = (
     ROOT / "supabase/migrations/20261113180000_customer_video_intake_storage.sql"
 ).read_text(encoding="utf-8")
+STORAGE_BINDING_MIGRATION = (
+    ROOT / "supabase/migrations/20261113167000_bind_storage_uploads_to_draft_jobs.sql"
+).read_text(encoding="utf-8")
 YOUTUBE_WORKER_MIGRATION = (
     ROOT / "supabase/migrations/20261113190000_youtube_private_upload_worker.sql"
 ).read_text(encoding="utf-8")
@@ -124,6 +127,11 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('type=["mp4", "mov", "webm"]', APP)
         self.assertIn('create_signed_url(', APP)
         self.assertIn('Download customer video (1-hour link)', APP)
+
+    def test_storage_uploads_must_match_a_customer_draft_job(self):
+        self.assertIn("array_length(storage.foldername(objects.name), 1) = 2", STORAGE_BINDING_MIGRATION)
+        self.assertIn("j.original_filename = storage.filename(objects.name)", STORAGE_BINDING_MIGRATION)
+        self.assertIn("j.status = 'draft'", STORAGE_BINDING_MIGRATION)
 
     def test_private_youtube_upload_is_customer_owner_scoped_and_private_first(self):
         self.assertIn("private.claim_youtube_upload_job", SELF_SERVICE_MIGRATION)
