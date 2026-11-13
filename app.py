@@ -651,10 +651,36 @@ else:
             if connections:
                 primary_connection = connections[0]
                 for connection in connections:
+                    channel_id = str(connection.get("channel_id") or "")
                     st.success(
                         f"Connected channel: {connection.get('channel_title') or 'YouTube channel'}"
                     )
-                    st.caption(f"Channel ID: {connection.get('channel_id', 'Unavailable')}")
+                    st.caption(f"Channel ID: {channel_id or 'Unavailable'}")
+                    disconnect_confirmed = st.checkbox(
+                        "I understand this clears the service's saved YouTube access for this channel",
+                        value=False,
+                        key=f"disconnect_confirm_{tenant_id}_{channel_id}",
+                    )
+                    if st.button(
+                        "Disconnect this YouTube channel",
+                        key=f"disconnect_youtube_{tenant_id}_{channel_id}",
+                        disabled=not disconnect_confirmed or not channel_id,
+                    ):
+                        try:
+                            disconnected = supabase.rpc(
+                                "revoke_youtube_connection",
+                                {"p_tenant_id": tenant_id, "p_channel_id": channel_id},
+                            ).execute().data
+                        except Exception:
+                            st.error("YouTube access could not be cleared. Please contact support.")
+                        else:
+                            if disconnected:
+                                st.success("Saved YouTube refresh-token access was cleared.")
+                                st.info("Existing YouTube videos and schedules remain in YouTube. Reconnect this channel to upload or publish again.")
+                                st.rerun()
+                            else:
+                                st.info("This YouTube connection is already disconnected.")
+                    st.caption("For complete Google account revocation, also remove this app's access in your Google Account security settings.")
                 required_scopes = {
                     "https://www.googleapis.com/auth/youtube.upload",
                     "https://www.googleapis.com/auth/youtube.readonly",
