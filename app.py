@@ -1105,6 +1105,7 @@ else:
                     key=f"generate_seo_{job['id']}",
                     type="primary",
                     use_container_width=True,
+                    disabled=job.get("status") != "received",
                 ):
                     with st.spinner("Gemini is watching your video and preparing SEO..."):
                         try:
