@@ -261,7 +261,7 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
       const savedTags = metadata.tags as string[];
       const savedHashtags = metadata.hashtags as string[];
       const savedTitles = (metadata.metadata_details as Record<string, unknown>).title_options as string[];
-      const totalTagChars = savedTags.reduce((n, tag) => n + tag.length, 0);
+      const totalTagChars = savedTags.reduce((n, tag) => n + tag.length, 0) + Math.max(0, savedTags.length - 1);
       if (savedTags.length < 12 || savedTags.length > 18 || totalTagChars > 450) {
         return json({ error: "tags_must_be_12_to_18_and_within_450_characters" }, 400);
       }
