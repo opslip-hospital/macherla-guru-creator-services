@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -539,10 +540,54 @@ else:
         if not own_tenant_ids:
             st.info("Your video jobs will appear here after your workspace is activated.")
         else:
+            st.subheader("Upload a video for the service team")
+            st.caption("Private file intake only. MP4, MOV or WebM • Maximum 100 MB. This does not upload to YouTube or publish your video.")
+            with st.form("customer_video_intake", clear_on_submit=True):
+                upload_tenant = st.selectbox("Workspace", own_tenant_ids)
+                upload_title = st.text_input("Video title", max_chars=100)
+                video_file = st.file_uploader("Choose video file", type=["mp4", "mov", "webm"])
+                submit_video = st.form_submit_button("Send video securely", type="primary")
+            if submit_video:
+                if not upload_title.strip() or video_file is None:
+                    st.warning("Enter a video title and choose a video file.")
+                else:
+                    safe_filename = re.sub(r"[^A-Za-z0-9._-]", "_", Path(video_file.name).name)[:255]
+                    file_bytes = video_file.getvalue()
+                    mime_type = video_file.type or ""
+                    if len(file_bytes) > 104857600:
+                        st.error("This file is larger than 100 MB.")
+                    elif mime_type not in {"video/mp4", "video/quicktime", "video/webm"}:
+                        st.error("Use an MP4, MOV or WebM video file.")
+                    else:
+                        try:
+                            created = supabase.rpc("create_customer_upload_job", {
+                                "p_tenant": upload_tenant,
+                                "p_title": upload_title.strip(),
+                                "p_filename": safe_filename,
+                                "p_mime": mime_type,
+                                "p_size": len(file_bytes),
+                            }).execute()
+                            job_id = str(created.data)
+                            object_path = f"{upload_tenant}/{job_id}/{safe_filename}"
+                            supabase.storage.from_("customer-video-intake").upload(
+                                object_path,
+                                file_bytes,
+                                file_options={"content-type": mime_type, "upsert": "false"},
+                            )
+                            supabase.rpc("finalize_customer_video_upload", {
+                                "p_job": job_id,
+                                "p_object_path": object_path,
+                            }).execute()
+                        except Exception:
+                            st.error("Secure upload did not complete. Please retry or contact support; no YouTube publishing was started.")
+                        else:
+                            st.success("Video file received securely. The service team can now review it.")
+                            st.rerun()
+            st.divider()
             try:
                 own_jobs = (
                     supabase.table("upload_jobs")
-                    .select("id, tenant_id, video_title, status, youtube_video_id, scheduled_for, created_at")
+                    .select("id, tenant_id, video_title, status, youtube_video_id, scheduled_for, original_filename, file_size_bytes, created_at")
                     .in_("tenant_id", own_tenant_ids)
                     .order("created_at", desc=True)
                     .limit(50)
@@ -554,7 +599,9 @@ else:
                     with st.container(border=True):
                         st.write(f"**{job.get('video_title') or 'Your video'}**")
                         st.caption(f"Status: {job.get('status', 'draft')}")
-                        if job.get("status") in {"uploaded_private", "awaiting_approval"}:
+                        if job.get("status") == "received":
+                            st.info("Your video file was received privately. The service team must process it before any YouTube upload.")
+                        elif job.get("status") in {"uploaded_private", "awaiting_approval"}:
                             st.warning("This video is private. Review it before approving public publishing.")
                             if st.button("Approve public publishing", key=f"approve_video_{job['id']}", type="primary"):
                                 try:
