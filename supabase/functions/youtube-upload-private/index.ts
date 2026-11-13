@@ -38,6 +38,7 @@ Deno.serve(async (req) => {
 
   let claimedJobId: string | null = null;
   let uploadedVideoId: string | null = null;
+  let youtubeUploadAccepted = false;
   let admin: ReturnType<typeof createClient> | null = null;
   try {
     const supabaseUrl = secret("SUPABASE_URL");
@@ -175,6 +176,7 @@ Deno.serve(async (req) => {
       body: videoBytes,
     });
     if (!uploaded.ok) throw new Error("youtube_private_upload_failed");
+    youtubeUploadAccepted = true;
     const youtubeVideo = await uploaded.json();
     if (!youtubeVideo.id) throw new Error("youtube_video_id_missing");
     uploadedVideoId = String(youtubeVideo.id);
@@ -207,6 +209,12 @@ Deno.serve(async (req) => {
           youtube_video_id: uploadedVideoId,
           updated_at: new Date().toISOString(),
         }).eq("id", claimedJobId).eq("status", "processing");
+      } else if (youtubeUploadAccepted) {
+        // The API accepted the upload but returned no usable video ID. Never make this job retryable.
+        await admin.from("upload_jobs").update({
+          status: "upload_unknown",
+          updated_at: new Date().toISOString(),
+        }).eq("id", claimedJobId).eq("status", "processing");
       } else {
         await admin.from("upload_jobs").update({
           status: "failed",
@@ -215,11 +223,13 @@ Deno.serve(async (req) => {
       }
     }
     return json({
-      error: uploadedVideoId ? "youtube_upload_status_sync_failed" : "private_youtube_upload_failed",
+      error: uploadedVideoId ? "youtube_upload_status_sync_failed" : youtubeUploadAccepted ? "youtube_upload_status_unknown" : "private_youtube_upload_failed",
       ...(uploadedVideoId ? { youtube_video_id: uploadedVideoId, youtube_url: `https://www.youtube.com/watch?v=${uploadedVideoId}` } : {}),
       message: uploadedVideoId
         ? "YouTube received the private video, but dashboard status sync needs attention. Check the video in YouTube Studio before retrying."
-        : "The private YouTube upload could not be completed. Check the channel connection and retry after reviewing the job.",
+        : youtubeUploadAccepted
+          ? "YouTube accepted the upload request but did not return a usable video ID. The job is locked against automatic retry; check YouTube Studio before taking any further action."
+          : "The private YouTube upload could not be completed. Check the channel connection and retry after reviewing the job.",
     }, 502);
   }
 });
