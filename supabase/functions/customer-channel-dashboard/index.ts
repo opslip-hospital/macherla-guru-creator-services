@@ -27,6 +27,8 @@ Deno.serve(async(req)=>{
   const {data:membership}=await user.from("tenant_memberships").select("membership_role").eq("tenant_id",tenant).eq("user_id",auth.user.id).maybeSingle();
   if(membership?.membership_role!=="owner")return json({error:"workspace_owner_required"},403);
   const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {data:tenantStatus,error:tenantError}=await admin.from("tenants").select("status").eq("id",tenant).maybeSingle();
+  if(tenantError||tenantStatus?.status!=="active")return json({error:"workspace_not_active"},403);
   const {data:connections,error:connError}=await admin.schema("private").from("youtube_connections")
    .select("id,channel_id,channel_title,encrypted_refresh_token,granted_scopes")
    .eq("tenant_id",tenant).is("revoked_at",null).order("connected_at",{ascending:false}).limit(5);
