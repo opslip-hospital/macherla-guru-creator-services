@@ -30,7 +30,7 @@ YouTube uploads are initially made **Private**. A video is made Public or schedu
 
 When a customer connects a YouTube channel, the service requests the YouTube permissions shown on Google's consent screen. The service uses the resulting authorization only to provide the channel connection, upload, customer-controlled publish/schedule, and analytics features the customer requests.
 
-The service does not sell Google user data or use it for unrelated advertising. Google API data is handled in accordance with the applicable Google API Services User Data Policy and Limited Use requirements. Customers can revoke the service's Google access from their Google Account security settings; the service owner must also provide a support process for deleting stored connection records and encrypted tokens.
+The service does not sell Google user data or use it for unrelated advertising. Google API data is handled in accordance with the applicable Google API Services User Data Policy and Limited Use requirements. Customers can disconnect a YouTube channel inside the service; this marks the connection revoked and clears the stored encrypted refresh token and granted scopes. Customers may also revoke the app's Google access from their Google Account security settings. Disconnecting does not cancel videos or schedules already held by YouTube. Historical channel identity and audit records may remain subject to the retention schedule; deletion requests for those records can be sent to [Public support/privacy email].
 
 ## 4. Gemini video analysis, text generation, and customer consent
 
