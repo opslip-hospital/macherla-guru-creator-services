@@ -22,8 +22,8 @@ Deno.serve(async(req)=>{
   const user=createClient(url,pub,{global:{headers:{Authorization:`Bearer ${bearer}`}},auth:{persistSession:false,autoRefreshToken:false}});
   const {data:auth,error:authError}=await user.auth.getUser(bearer);
   if(authError||!auth.user)return json({error:"invalid_session"},401);
-  const {data:profile}=await user.from("profiles").select("role").eq("user_id",auth.user.id).maybeSingle();
-  if(profile?.role!=="admin")return json({error:"admin_required"},403);
+  // Authorization is enforced by claim_youtube_analytics: platform admins
+  // may refresh a tenant, and customer owners may refresh only their own tenant.
   const body=await req.json().catch(()=>({})),tenant=typeof body.tenant_id==="string"?body.tenant_id:"";
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tenant))return json({error:"invalid_workspace"},400);
   const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
