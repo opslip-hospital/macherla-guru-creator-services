@@ -272,6 +272,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("youtube_upload_status_sync_failed", APP)
         self.assertIn("publish_status_sync_failed", APP)
         self.assertIn("youtube_upload_status_unknown", APP)
+        self.assertIn('str(exc).startswith("youtube_upload_status_unknown")', APP)
         self.assertIn("publish_status_unknown", APP)
         self.assertIn('job.get("status") == "upload_unknown"', APP)
         self.assertIn('job.get("status") == "publishing"', APP)
