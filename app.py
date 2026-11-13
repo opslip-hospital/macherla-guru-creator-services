@@ -625,16 +625,21 @@ else:
                 st.warning("YouTube connection status is temporarily unavailable.")
 
             if connections:
+                primary_connection = connections[0]
                 for connection in connections:
                     st.success(
                         f"Connected channel: {connection.get('channel_title') or 'YouTube channel'}"
                     )
                     st.caption(f"Channel ID: {connection.get('channel_id', 'Unavailable')}")
-                if tenant.get("status") == "active":
-                    st.caption(
-                        "YouTube needs permission to upload videos and update their visibility for publishing/scheduling. "
-                        "Google will show the requested permissions before you grant access."
-                    )
+                required_scopes = {
+                    "https://www.googleapis.com/auth/youtube.upload",
+                    "https://www.googleapis.com/auth/youtube.readonly",
+                    "https://www.googleapis.com/auth/youtube.force-ssl",
+                }
+                granted_scopes = set(primary_connection.get("granted_scopes") or [])
+                missing_scopes = required_scopes - granted_scopes
+                if missing_scopes and tenant.get("status") == "active":
+                    st.warning("This connection is missing upload or publishing permission. Reconnect and accept the requested Google permissions.")
                     if st.button(
                         "Reconnect for publishing permissions",
                         key=f"reconnect_youtube_{tenant_id}",
@@ -645,6 +650,10 @@ else:
                             st.error("Google connection could not be started. Please contact support.")
                         else:
                             st.link_button("Continue securely with Google", google_url)
+                elif not missing_scopes:
+                    st.success("Your channel is connected and ready for private uploads and customer-controlled publishing/scheduling.")
+                    if "https://www.googleapis.com/auth/yt-analytics.readonly" not in granted_scopes:
+                        st.caption("Channel statistics are available. Reconnect later with YouTube Analytics permission to enable the 15-day performance comparison.")
             else:
                 st.caption("No YouTube channel is connected yet.")
                 if tenant.get("status") == "active":
