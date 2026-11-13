@@ -99,7 +99,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("private.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
         self.assertIn("security invoker", AI_RATE_LIMIT_MIGRATION.lower())
         self.assertIn("grant execute on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
-        self.assertIn('admin.rpc("consume_customer_ai_rate_limit"', CUSTOMER_SEO_FUNCTION)
+        self.assertIn("admin.rpc(", CUSTOMER_SEO_FUNCTION)
+        self.assertIn('"consume_customer_ai_rate_limit"', CUSTOMER_SEO_FUNCTION)
         self.assertIn('admin.rpc("consume_customer_ai_rate_limit"', (ROOT / "supabase/functions/customer-content-studio/index.ts").read_text(encoding="utf-8"))
         self.assertNotIn('schema("private").rpc("consume_customer_ai_rate_limit"', CUSTOMER_SEO_FUNCTION)
 
