@@ -3,7 +3,7 @@ const hash=async(s:string)=>[...new Uint8Array(await crypto.subtle.digest("SHA-2
 const hex=(b:Uint8Array)=>[...b].map(x=>x.toString(16).padStart(2,"0")).join("");
 function redirect(status:string){const base=Deno.env.get("APP_BASE_URL");if(!base)return new Response("OAuth callback is not configured.",{status:503});const u=new URL(base);u.searchParams.set("youtube_oauth",status);return Response.redirect(u.toString(),303)}
 async function adminRpc(url:string,key:string,name:string,body:unknown){
- const r=await fetch(`${url}/rest/v1/rpc/${name}`,{method:"POST",headers:{"apikey":key,"Content-Type":"application/json"},body:JSON.stringify(body)});
+ const r=await fetch(`${url}/rest/v1/rpc/${name}`,{method:"POST",headers:{"apikey":key,"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify(body)});
  if(!r.ok)throw new Error("admin_rpc_failed");
  return await r.json().catch(()=>null);
 }
