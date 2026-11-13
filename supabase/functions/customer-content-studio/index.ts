@@ -14,7 +14,8 @@ Deno.serve(async(req)=>{
   const user=createClient(url,pub,{global:{headers:{Authorization:`Bearer ${bearer}`}},auth:{persistSession:false,autoRefreshToken:false}});
   const {data:auth,error}=await user.auth.getUser(bearer);if(error||!auth.user)return json({error:"invalid_session"},401);
   const body=await req.json().catch(()=>({})),tenant=clean(body.tenant_id,64),kind=clean(body.kind,60),topic=clean(body.topic,500),notes=clean(body.notes,1000),language=clean(body.language,40)||"Telugu";
-  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tenant)||!topic)return json({error:"topic_required"},400);
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(tenant)||!topic)return json({error:"topic_required"},400);
+  if(body.ai_consent!==true)return json({error:"gemini_text_consent_required"},400);
   const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data:membership}=await admin.from("tenant_memberships").select("tenant_id").eq("tenant_id",tenant).eq("user_id",auth.user.id).eq("membership_role","owner").maybeSingle();
   if(!membership)return json({error:"workspace_owner_required"},403);
@@ -29,6 +30,11 @@ Deno.serve(async(req)=>{
    const retryAfter=3600-(now.getUTCMinutes()*60+now.getUTCSeconds());
    return json({error:"ai_rate_limit_exceeded",retry_after_seconds:retryAfter},429);
   }
+  const consentLog=await admin.from("audit_events").insert({
+   tenant_id:tenant,actor_user_id:auth.user.id,event_type:"customer_gemini_text_consent_granted",
+   details:{provider:"Google Gemini API",data_use_tier_notice:"free_tier_prompts_and_responses_may_be_used_to_improve_google_products",kind,consented_at:new Date().toISOString()},
+  });
+  if(consentLog.error)return json({error:"consent_record_failed"},500);
   const {data:connections}=await user.rpc("list_tenant_youtube_connections",{target_tenant:tenant});
   const {data:channelSnapshot}=await admin.from("channel_analytics_snapshots").select("channel_title")
    .eq("tenant_id",tenant).order("captured_at",{ascending:false}).limit(1).maybeSingle();
