@@ -1,10 +1,9 @@
 name: Creator Services CI
 
+# Manual only: the owner requested that the complete test suite run at the end
+# of development, not on every intermediate commit.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
