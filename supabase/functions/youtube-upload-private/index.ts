@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
       }
     }
     return json({
-      error: "private_youtube_upload_failed",
+      error: uploadedVideoId ? "youtube_upload_status_sync_failed" : "private_youtube_upload_failed",
       message: uploadedVideoId
         ? "YouTube received the private video, but dashboard status sync needs attention. Check the video in YouTube Studio before retrying."
         : "The private YouTube upload could not be completed. Check the channel connection and retry after reviewing the job.",
