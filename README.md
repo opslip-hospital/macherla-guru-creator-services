@@ -27,7 +27,7 @@ Migrations are in `supabase/migrations/`:
 - GitHub Actions CI compiles the app and runs static security-contract tests on pushes and pull requests.
 - The admin workspace appears only when the database profile has the trusted `admin` role.
 - Customer workspace activation and trusted admin provisioning are handled by the Master Admin approval workflow.
-- YouTube OAuth start/callback Edge Functions and encrypted refresh-token storage are deployed. The callback now stores only scopes explicitly returned by Google and refuses to record a connection when upload/read permissions are absent; a real Google test-account connection is still pending.
+- YouTube OAuth start/callback Edge Functions and encrypted refresh-token storage are deployed. The callback now stores only scopes explicitly returned by Google and refuses to record a connection unless upload, read-only, and publishing permissions are present; Analytics read-only is optional. The customer UI displays actionable OAuth completion messages. A real Google test-account connection is still pending.
 - Customers can submit support tickets; the Master Admin can view tickets and update their status with an audited admin-only RPC.
 - The Master Admin can prepare title, description, tags, hashtags and captions for existing upload jobs through an admin-only audited RPC.
 - Customers explicitly initiate Publish Now or Schedule after a private upload exists; the authenticated workspace owner is checked and the action is audited. No separate Master Admin approval is required for an individual video.
@@ -76,3 +76,7 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - Customer analytics claims now require an active tenant for workspace owners; platform admins retain the administrative refresh path.
 - Inactive customer workspaces have the channel refresh control disabled in the customer UI.
 - These are development changes, not a substitute for the deferred final test pass. Validate migrations, OAuth, tenant isolation, Gemini video analysis, YouTube private upload, publish/schedule, and admin actions before onboarding real customers.
+
+
+- Customer SEO bearer-token parsing was corrected so authenticated customer requests are recognized by the SEO Edge Function.
+- Generated SEO output is checked before saving: 12–18 YouTube tags within the character budget, exactly five unique hashtags, and five title options. Invalid/incomplete AI output is rejected for retry rather than silently saved.
