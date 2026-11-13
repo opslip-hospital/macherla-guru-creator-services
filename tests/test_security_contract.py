@@ -27,6 +27,9 @@ UPLOAD_MIGRATION = (
 UPLOAD_OUTCOME_MIGRATION = (
     ROOT / "supabase/migrations/20261113168000_preserve_unknown_youtube_upload_outcomes.sql"
 ).read_text(encoding="utf-8")
+MACHERLA_BRAND_CANONICALIZATION_MIGRATION = (
+    ROOT / "supabase/migrations/20261113294000_canonicalize_macherla_guru_brand_hashtag.sql"
+).read_text(encoding="utf-8")
 CHANNEL_BRAND_GUARD_MIGRATION = (
     ROOT / "supabase/migrations/20261113293000_validate_connected_channel_brand_hashtag.sql"
 ).read_text(encoding="utf-8")
@@ -80,8 +83,8 @@ class AuthenticationContractTests(unittest.TestCase):
         versions = [path.name[:14] for path in migration_dir.glob("*.sql")]
         self.assertEqual(len(versions), len(set(versions)))
         self.assertGreater(
+            "20261113294000_canonicalize_macherla_guru_brand_hashtag.sql",
             "20261113293000_validate_connected_channel_brand_hashtag.sql",
-            "20261113292000_finalize_complete_seo_upload_guard.sql",
         )
         self.assertIn("connected channel brand", CHANNEL_BRAND_GUARD_MIGRATION)
 
@@ -263,6 +266,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("do not include hashtags", CUSTOMER_SEO_FUNCTION)
         self.assertIn("normalizeHashtags", CUSTOMER_SEO_FUNCTION)
         self.assertIn("ensureChannelBrandHashtag", CUSTOMER_SEO_FUNCTION)
+        self.assertIn('brand.toLocaleLowerCase() === "macherlaguru"', CUSTOMER_SEO_FUNCTION)
+        self.assertIn("MacherlaGuru", MACHERLA_BRAND_CANONICALIZATION_MIGRATION)
         self.assertIn(r'.replace(/[^\p{L}\p{N}]/gu, "")', CUSTOMER_SEO_FUNCTION)
         self.assertIn(".slice(0, 100)", CUSTOMER_SEO_FUNCTION)
         self.assertIn('one must be the connected channel name as a brand hashtag', CUSTOMER_SEO_FUNCTION)
