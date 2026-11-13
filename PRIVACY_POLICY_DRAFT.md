@@ -15,7 +15,7 @@ Depending on the features a customer uses, the service may process:
 - YouTube channel details such as channel ID/title, granted OAuth scopes, recent video information, channel statistics, and YouTube Analytics metrics when authorized.
 - OAuth refresh tokens, encrypted before storage and used only by the service's server-side YouTube integration.
 - Video files customers upload to the service's private video-intake storage.
-- AI-generated or customer-edited titles, descriptions, tags, hashtags, captions, keywords, and category metadata.
+- AI-generated or customer-edited titles, descriptions, tags, hashtags, captions, keywords, and category metadata; customer-entered Content Studio topics/instructions; and selected channel metrics used for Growth Doctor suggestions.
 - Support messages, workspace/billing-status records, security events, and audit logs.
 
 The service does not collect payment-card details and does not process card payments or automatic charges.
@@ -32,9 +32,9 @@ When a customer connects a YouTube channel, the service requests the YouTube per
 
 The service does not sell Google user data or use it for unrelated advertising. Google API data is handled in accordance with the applicable Google API Services User Data Policy and Limited Use requirements. Customers can revoke the service's Google access from their Google Account security settings; the service owner must also provide a support process for deleting stored connection records and encrypted tokens.
 
-## 4. Gemini video analysis and customer consent
+## 4. Gemini video analysis, text generation, and customer consent
 
-AI video SEO is optional. The service sends a customer's video to the Google Gemini API only after the customer gives explicit per-video consent in the app.
+AI video SEO is optional. The service sends a customer's video to the Google Gemini API only after the customer gives explicit per-video consent in the app. Content Studio topics/instructions and selected YouTube channel metrics are sent to Gemini only after a separate explicit text-generation consent in the app.
 
 The current Gemini API **Free Tier** may use submitted prompts, responses, and files (including videos) to improve Google products. The service displays this notice before analysis. Google's Paid Tier has different data-use terms and states that submitted content is not used to improve Google products. The service owner must verify the active billing tier and Google's current terms before making any privacy promise.
 
