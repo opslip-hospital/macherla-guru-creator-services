@@ -112,12 +112,14 @@ Deno.serve(async (req) => {
       }
     }
     let description = String(claimed.description ?? "");
-    const existingHashtags = new Set(
-      (description.match(/#[\p{L}\p{N}_]+/gu) ?? []).map((tag: string) => tag.slice(1).toLowerCase()),
-    );
-    const missingHashtags = hashtags.filter((tag: string) => !existingHashtags.has(tag.toLowerCase()));
-    const hashtagLine = missingHashtags.map((tag: string) => `#${tag}`).join(" ");
-    const baseDescription = description.trim();
+    // Keep the AI hashtag list authoritative: remove stray hashtags from the
+    // generated description, then append the unique saved list exactly once.
+    const baseDescription = description
+      .replace(/#[\p{L}\p{N}_]+/gu, "")
+      .replace(/[ \t]{2,}/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    const hashtagLine = hashtags.map((tag: string) => `#${tag}`).join(" ");
     if (hashtagLine) {
       const separator = baseDescription ? "\n\n" : "";
       const availableBaseLength = Math.max(0, 5000 - separator.length - hashtagLine.length);
@@ -130,9 +132,10 @@ Deno.serve(async (req) => {
     const tags: string[] = [];
     let tagLength = 0;
     for (const tag of rawTags) {
-      if (tagLength + tag.length > 500) continue;
+      const nextLength = tagLength + tag.length + (tags.length ? 1 : 0);
+      if (nextLength > 500) continue;
       tags.push(tag);
-      tagLength += tag.length;
+      tagLength = nextLength;
     }
     const title = String(claimed.video_title ?? "Creator video").slice(0, 100);
     const categoryName = String(claimed.metadata_details?.category ?? "").toLowerCase();
