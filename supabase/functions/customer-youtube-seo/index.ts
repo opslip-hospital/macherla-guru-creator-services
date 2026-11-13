@@ -18,7 +18,17 @@ function cleanText(value: unknown, max: number): string {
 }
 function normalizeTags(value: unknown, max: number): string[] {
   if (!Array.isArray(value)) return [];
-  return [...new Set(value.map((x) => String(x).trim()).filter(Boolean))].slice(0, max);
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of value) {
+    const tag = String(item).replace(/\\s+/g, " ").trim();
+    const key = tag.toLocaleLowerCase();
+    if (!tag || seen.has(key)) continue;
+    seen.add(key);
+    result.push(tag);
+    if (result.length >= max) break;
+  }
+  return result;
 }
 function normalizeHashtags(value: unknown, max: number): string[] {
   if (!Array.isArray(value)) return [];
@@ -188,7 +198,7 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
         hashtags: normalizeHashtags(parsed.hashtags, 5),
         caption: cleanText(parsed.caption, 2200),
         metadata_details: {
-          title_options: normalizeTags(parsed.title_options, 5),
+          title_options: normalizeTags(parsed.title_options, 5).map((title) => cleanText(title, 100)),
           youtube_caption: cleanText(parsed.youtube_caption, 2200) || cleanText(parsed.caption, 2200),
           instagram_caption: cleanText(parsed.instagram_caption, 2200),
           keywords: normalizeTags(parsed.keywords, 30),
@@ -217,7 +227,7 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
         hashtags: normalizeHashtags(body.hashtags, 30),
         caption: cleanText(body.caption, 2200),
         metadata_details: {
-          title_options: normalizeTags(body.metadata_details?.title_options, 5),
+          title_options: normalizeTags(body.metadata_details?.title_options, 5).map((title) => cleanText(title, 100)),
           youtube_caption: cleanText(body.metadata_details?.youtube_caption, 2200),
           instagram_caption: cleanText(body.metadata_details?.instagram_caption, 2200),
           keywords: normalizeTags(body.metadata_details?.keywords, 30),
