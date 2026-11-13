@@ -231,7 +231,7 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
       const generatedTags = metadata.tags as string[];
       const generatedHashtags = metadata.hashtags as string[];
       const generatedTitles = (metadata.metadata_details as Record<string, unknown>).title_options as string[];
-      const generatedTagLength = generatedTags.reduce((total, tag) => total + tag.length, 0);
+      const generatedTagLength = generatedTags.reduce((total, tag) => total + tag.length, 0) + Math.max(0, generatedTags.length - 1);
       const uniqueHashtags = new Set(generatedHashtags.map((tag) => tag.toLowerCase()));
       const uniqueTitles = new Set(generatedTitles.map((title) => title.toLowerCase()));
       if (!metadata.title) return json({ error: "ai_returned_empty_metadata" }, 502);
