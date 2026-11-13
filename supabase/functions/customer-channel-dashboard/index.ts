@@ -17,7 +17,7 @@ Deno.serve(async(req)=>{
   const url=required("SUPABASE_URL"),pub=Deno.env.get("SUPABASE_PUBLISHABLE_KEY")??Deno.env.get("SUPABASE_ANON_KEY"),
    service=Deno.env.get("SUPABASE_SECRET_KEY")??Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if(!pub||!service)throw new Error("missing_configuration");
-  const bearer=(req.headers.get("Authorization")??"").match(/^Bearer\\s+(.+)$/i)?.[1];
+  const bearer=(req.headers.get("Authorization")??"").match(/^Bearer\s+(.+)$/i)?.[1];
   if(!bearer)return json({error:"authentication_required"},401);
   const user=createClient(url,pub,{global:{headers:{Authorization:`Bearer ${bearer}`}},auth:{persistSession:false,autoRefreshToken:false}});
   const {data:auth,error:authError}=await user.auth.getUser(bearer);
