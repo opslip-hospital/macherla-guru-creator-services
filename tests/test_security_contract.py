@@ -231,6 +231,14 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("exactly_5_unique_title_options_required", CUSTOMER_SEO_FUNCTION)
         self.assertIn("do not include hashtags because they are returned separately", CUSTOMER_SEO_FUNCTION)
 
+    def test_schedule_defaults_use_india_local_date(self):
+        self.assertIn('datetime.now(ZoneInfo("Asia/Kolkata")).date() + timedelta(days=1)', APP)
+        self.assertIn('min_value=datetime.now(ZoneInfo("Asia/Kolkata")).date()', APP)
+
+    def test_seo_title_options_are_limited_to_youtube_title_length(self):
+        self.assertIn('normalizeTags(parsed.title_options, 5).map((title) => cleanText(title, 100))', SEO_FUNCTION)
+        self.assertIn('normalizeTags(body.metadata_details?.title_options, 5).map((title) => cleanText(title, 100))', SEO_FUNCTION)
+
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
         self.assertNotIn("youtube.com/@macherlaguru", APP)
