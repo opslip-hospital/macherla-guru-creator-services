@@ -115,10 +115,10 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 
 - `youtube-oauth-start`: v11 ACTIVE
 - `youtube-oauth-callback`: v11 ACTIVE
-- `youtube-upload-private`: v19 ACTIVE
-- `youtube-publish-approved`: v8 ACTIVE
-- `youtube-refresh-analytics`: v5 ACTIVE
-- `customer-youtube-seo`: v32 ACTIVE
+- `youtube-upload-private`: v22 ACTIVE
+- `youtube-publish-approved`: v9 ACTIVE
+- `youtube-refresh-analytics`: v7 ACTIVE
+- `customer-youtube-seo`: v35 ACTIVE
 - `customer-channel-dashboard`: v5 ACTIVE
 - `customer-content-studio`: v5 ACTIVE
 
@@ -139,6 +139,6 @@ These are deployment-state checks only, not successful end-to-end tests. Databas
 - YouTube tag-length validation now counts comma separators and enforces a 450-character cap consistently in Gemini SEO generation, customer-edited metadata, and the final private-upload worker.
 - The admin's read-only upload monitor flags both uncertain private uploads and publish/schedule requests still in progress as `Check YouTube — do not retry`; the admin can inspect the record without taking over the customer's publishing decision.
 - Streamlit's per-widget `max_upload_size` option requires a newer Streamlit release; the app dependency is now `streamlit>=1.53` and project config sets the global upload cap to 100 MB, matching the private storage bucket and database limits.
-- A final ordered migration `20261113290000_require_complete_seo_before_private_upload.sql` now reapplies the complete SEO validation inside the upload-claim transaction after all workflow migrations. This ensures a fresh database replay cannot overwrite the requirement for 12–18 unique tags, five unique hashtags including `MacherlaGuru`, and five unique title options. It is applied to the live Supabase project and committed in the repository.
+- A final ordered migration `20261113291000_finalize_tag_separator_seo_guard.sql` now reapplies the complete SEO validation inside the upload-claim transaction after all workflow migrations. This ensures a fresh database replay cannot overwrite the requirement for 12–18 unique tags, five unique hashtags including `MacherlaGuru`, and five unique title options. It is applied to the live Supabase project and committed in the repository.
 - SEO tag-length validation now counts the comma separators included in YouTube's tag string, not just the characters inside each tag. Both the customer SEO save endpoint and the database upload-claim guard use the same 450-character budget; SEO Edge Function is deployed ACTIVE (version 35).
 - The final private-upload database claim now enforces the complete metadata contract server-side: 12–18 unique tags within 450 characters (including separators), exactly five unique hashtags including `#MacherlaGuru`, five unique title options, a valid title/description length, and no more than 20 keywords. This guard is mirrored in the committed final migration so clean database setup retains the same rule.
