@@ -117,8 +117,8 @@ class AuthenticationContractTests(unittest.TestCase):
         versions = [path.name[:14] for path in migration_dir.glob("*.sql")]
         self.assertEqual(len(versions), len(set(versions)))
         self.assertGreater(
+            "20261113296000_server_only_ai_rate_limit_rpc.sql",
             "20261113295000_customer_ai_rate_limits.sql",
-            "20261113294000_canonicalize_macherla_guru_brand_hashtag.sql",
         )
         self.assertIn("connected channel brand", CHANNEL_BRAND_GUARD_MIGRATION)
 
@@ -368,6 +368,12 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
         self.assertIn("revoke all on table private.customer_ai_rate_limits from public, anon, authenticated", AI_RATE_LIMIT_MIGRATION)
         self.assertIn("grant execute on function private.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
+        self.assertIn("revoke all on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
+        self.assertIn("grant execute on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
+        self.assertIn('admin.rpc("consume_customer_ai_rate_limit"', CUSTOMER_SEO_FUNCTION)
+        self.assertIn('admin.rpc("consume_customer_ai_rate_limit"', CONTENT_STUDIO_FUNCTION)
+        self.assertNotIn('schema("private")', CUSTOMER_SEO_FUNCTION)
+        self.assertNotIn('schema("private")', CONTENT_STUDIO_FUNCTION)
         self.assertIn('p_action: "youtube_seo", p_limit: 5', CUSTOMER_SEO_FUNCTION)
         self.assertIn('p_action:"content_studio",p_limit:12', CONTENT_STUDIO_FUNCTION)
         self.assertIn("AI generation limit reached", APP)
