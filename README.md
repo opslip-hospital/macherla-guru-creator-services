@@ -56,3 +56,12 @@ Never commit `.env`, Google OAuth client secrets, access/refresh tokens, databas
 ## Protected boundary
 
 Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-agent`. The existing Macherla Guru YouTube AI Manager remains separate and untouched.
+
+## Admin operations and customer-owned publishing
+
+- Master Admin can approve or reject customer access requests and provision isolated workspaces.
+- Admin can activate, suspend, or close a workspace through audited database functions.
+- Admin can assign a plan code and subscription status for internal billing administration. This is not a payment processor; no card data or automatic charges are collected.
+- Admin upload activity is a read-only monitor. Customer workspace owners alone can initiate private uploads and publish/schedule their own videos.
+- Database claim functions verify the authenticated caller matches the session and owns the target tenant before returning YouTube credentials to the server-side worker.
+- Workspace status and billing changes create audit events.
