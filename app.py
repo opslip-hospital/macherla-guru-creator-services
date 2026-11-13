@@ -636,6 +636,8 @@ else:
                 else:
                     st.info("Your workspace must be active before connecting YouTube.")
         callback_status = st.query_params.get("youtube_oauth")
+        if callback_status:
+            st.query_params.pop("youtube_oauth", None)
         if callback_status == "connected":
             st.success("YouTube channel connected successfully. Your channel now appears above; refresh channel analytics to load its statistics.")
         elif callback_status == "required_permissions_missing":
