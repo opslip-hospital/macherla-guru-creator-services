@@ -13,6 +13,7 @@ declare
   v_hashtag_count integer;
   v_title_count integer;
   v_keyword_count integer;
+  v_brand_hashtag text;
 begin
   if auth.uid() is null or p_admin_user_id is distinct from auth.uid() then
     raise exception 'authenticated customer required' using errcode='42501';
@@ -37,6 +38,11 @@ begin
   if not found then
     raise exception 'connected YouTube upload permission not found' using errcode='P0002';
   end if;
+  v_brand_hashtag := left(
+    regexp_replace(normalize(coalesce(v_connection.channel_title,''), NFKC), '[^[:alnum:]]', '', 'g'),
+    60
+  );
+  if v_brand_hashtag = '' then v_brand_hashtag := 'YouTubeCreator'; end if;
   select * into v_metadata from public.content_metadata
     where upload_job_id=p_job_id and tenant_id=v_job.tenant_id
     order by created_at desc limit 1;
@@ -56,9 +62,9 @@ begin
   if v_hashtag_count<>5 or cardinality(coalesce(v_metadata.hashtags,'{}'::text[]))<>5
      or not exists(
        select 1 from unnest(coalesce(v_metadata.hashtags,'{}'::text[])) as x
-       where lower(x)='macherlaguru'
+       where lower(x)=lower(v_brand_hashtag)
      ) then
-    raise exception 'SEO metadata requires five unique hashtags including MacherlaGuru' using errcode='22023';
+    raise exception 'SEO metadata requires five unique hashtags including the connected channel brand' using errcode='22023';
   end if;
   if jsonb_typeof(coalesce(v_metadata.metadata_details,'{}'::jsonb)->'title_options')<>'array'
      or jsonb_array_length(coalesce(v_metadata.metadata_details,'{}'::jsonb)->'title_options')<>5 then
