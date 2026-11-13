@@ -73,3 +73,6 @@ The application, database workflows, and Edge Functions are deployed. Deployment
 ## Streamlit upload configuration
 
 The app requires Streamlit 1.53 or newer for the per-widget `max_upload_size` setting. The repository pins `streamlit>=1.53,<2.0` and includes `.streamlit/config.toml` with a 100 MB global upload cap. Keep this aligned with the private Supabase bucket and database upload limit.
+## Google OAuth production readiness
+
+The Google OAuth consent screen must not remain in **Testing** for real customer use. Google's official OAuth documentation states that external apps in Testing are limited to 100 test users and refresh tokens expire after 7 days when non-basic scopes such as YouTube scopes are requested. Before onboarding real customers, switch the consent screen to **In production** and complete Google's verification process for any sensitive/restricted scopes required by the YouTube integration. Keep a test account in the test-user list while developing. See Google's [OAuth 2.0 refresh-token expiration guidance](https://developers.google.com/identity/protocols/oauth2#expiration) and [OAuth verification policies](https://developers.google.com/identity/protocols/oauth2/policies).
