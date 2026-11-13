@@ -12,6 +12,7 @@ declare
   v_tag_chars integer;
   v_hashtag_count integer;
   v_title_count integer;
+  v_keyword_count integer;
 begin
   if auth.uid() is null or p_admin_user_id is distinct from auth.uid() then
     raise exception 'authenticated customer required' using errcode='42501';
@@ -65,8 +66,15 @@ begin
   end if;
   select count(distinct lower(value)) into v_title_count
     from jsonb_array_elements_text(v_metadata.metadata_details->'title_options') as value;
-  if v_title_count<>5 or length(btrim(coalesce(v_metadata.title,'')))<1 then
-    raise exception 'SEO title options are incomplete' using errcode='22023';
+  if v_title_count<>5 or length(btrim(coalesce(v_metadata.title,'')))<1
+     or length(coalesce(v_metadata.description,''))>5000 then
+    raise exception 'SEO title options or description are invalid' using errcode='22023';
+  end if;
+  if jsonb_typeof(coalesce(v_metadata.metadata_details,'{}'::jsonb)->'keywords')='array' then
+    v_keyword_count:=jsonb_array_length(v_metadata.metadata_details->'keywords');
+    if v_keyword_count>20 then
+      raise exception 'SEO metadata allows at most 20 keywords' using errcode='22023';
+    end if;
   end if;
   update public.upload_jobs set status='processing',connection_id=v_connection.id,updated_at=now()
     where id=p_job_id;
