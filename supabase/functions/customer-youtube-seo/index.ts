@@ -165,8 +165,11 @@ Deno.serve(async (req: Request) => {
     const { data: channelConnections } = await userClient.rpc("list_tenant_youtube_connections", {
       target_tenant: job.tenant_id,
     });
-    const channelName = cleanText(channelConnections?.[0]?.channel_title, 120);
-    if (!channelName) return json({ error: "youtube_channel_not_connected" }, 409);
+    const uploadConnection = (channelConnections ?? []).find((connection: {granted_scopes?: string[]}) =>
+      (connection.granted_scopes ?? []).includes("https://www.googleapis.com/auth/youtube.upload"),
+    );
+    const channelName = cleanText(uploadConnection?.channel_title, 120);
+    if (!channelName) return json({ error: "youtube_upload_connection_required", stage: "youtube_connection" }, 409);
     // Metadata is editable only before the private YouTube upload. Later edits
     // would otherwise change the dashboard record without updating YouTube.
     if (job.status !== "received") {
