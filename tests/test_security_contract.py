@@ -25,6 +25,9 @@ UPLOAD_MIGRATION = (
 UPLOAD_OUTCOME_MIGRATION = (
     ROOT / "supabase/migrations/20261113168000_preserve_unknown_youtube_upload_outcomes.sql"
 ).read_text(encoding="utf-8")
+UPLOAD_UNKNOWN_MIGRATION = (
+    ROOT / "supabase/migrations/20261113168000_preserve_unknown_youtube_upload_outcomes.sql"
+).read_text(encoding="utf-8")
 STORAGE_BINDING_MIGRATION = (
     ROOT / "supabase/migrations/20261113287000_bind_storage_uploads_to_draft_jobs.sql"
 ).read_text(encoding="utf-8")
@@ -225,7 +228,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('status: "upload_unknown"', YOUTUBE_WORKER)
         self.assertIn('status: "received"', YOUTUBE_WORKER)
         self.assertIn("youtubeUploadStarted", YOUTUBE_WORKER)
-        self.assertIn("upload_unknown", STORAGE_BINDING_MIGRATION if "upload_unknown" in STORAGE_BINDING_MIGRATION else YOUTUBE_WORKER_MIGRATION)
+        self.assertIn("upload_unknown", UPLOAD_UNKNOWN_MIGRATION)
 
     def test_youtube_sync_errors_warn_against_unsafe_retries(self):
         self.assertIn("youtube_upload_status_sync_failed", APP)
