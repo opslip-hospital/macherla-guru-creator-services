@@ -842,7 +842,7 @@ else:
                     if job.get("status") == "received":
                         if saved_meta:
                             if st.button(
-                                "⬆️ Continue — upload privately for scheduling",
+                                "📅 Continue to Schedule (private upload first)",
                                 key=f"customer_upload_youtube_{job['id']}",
                                 type="primary", use_container_width=True,
                             ):
@@ -866,61 +866,60 @@ else:
                         else:
                             st.info("Generate and save SEO first. The private YouTube upload button appears after that.")
                     if job.get("status") in {"uploaded_private", "approved"}:
-                        st.success("Video is PRIVATE on YouTube. Choose when to publish.")
+                        st.success("Video is PRIVATE on YouTube. Choose your schedule time below.")
                         with st.form(f"customer_publish_action_{job['id']}"):
-                            customer_publish_mode = st.radio(
-                                "Publishing option", ["Publish now", "Schedule"],
-                                horizontal=True, key=f"customer_publish_mode_{job['id']}",
+                            customer_schedule_date = st.date_input(
+                                "Schedule date (IST)",
+                                value=datetime.now(ZoneInfo("Asia/Kolkata")).date() + timedelta(days=1),
+                                min_value=datetime.now(ZoneInfo("Asia/Kolkata")).date(),
+                                key=f"customer_schedule_date_{job['id']}",
                             )
-                            if customer_publish_mode == "Schedule":
-                                customer_schedule_date = st.date_input(
-                                    "Schedule date (IST)", value=datetime.now(ZoneInfo("Asia/Kolkata")).date() + timedelta(days=1),
-                                    min_value=datetime.now(ZoneInfo("Asia/Kolkata")).date(), key=f"customer_schedule_date_{job['id']}",
-                                )
-                                hour_12 = st.selectbox("Hour", list(range(1, 13)), index=8, key=f"schedule_hour_{job['id']}")
-                                minute = st.selectbox("Minutes", [f"{m:02d}" for m in range(60)], index=0, key=f"schedule_minute_{job['id']}")
-                                am_pm = st.selectbox("AM / PM", ["AM", "PM"], index=0, key=f"schedule_ampm_{job['id']}")
+                            hour_12 = st.selectbox(
+                                "Hour", list(range(1, 13)), index=8,
+                                key=f"schedule_hour_{job['id']}",
+                            )
+                            minute = st.selectbox(
+                                "Minutes", [f"{m:02d}" for m in range(60)], index=0,
+                                key=f"schedule_minute_{job['id']}",
+                            )
+                            am_pm = st.selectbox(
+                                "AM / PM", ["AM", "PM"], index=0,
+                                key=f"schedule_ampm_{job['id']}",
+                            )
+                            customer_publish_submit = st.form_submit_button(
+                                "📅 Confirm Schedule", type="primary",
+                            )
+                        if customer_publish_submit and customer_schedule_date:
+                            hour_24 = (int(hour_12) % 12) + (12 if am_pm == "PM" else 0)
+                            selected_time = time(hour_24, int(minute))
+                            scheduled_local = datetime.combine(
+                                customer_schedule_date, selected_time,
+                                tzinfo=ZoneInfo("Asia/Kolkata"),
+                            )
+                            if scheduled_local < datetime.now(ZoneInfo("Asia/Kolkata")) + timedelta(minutes=15):
+                                st.error("Choose a schedule time at least 15 minutes in the future (IST).")
                             else:
-                                customer_schedule_date = None
-                                hour_12, minute, am_pm = 9, "00", "AM"
-                            customer_publish_submit = st.form_submit_button("Confirm publish / schedule", type="primary")
-                        if customer_publish_submit:
-                            customer_publish_at = None
-                            if customer_publish_mode == "Schedule" and customer_schedule_date:
-                                hour_24 = (int(hour_12) % 12) + (12 if am_pm == "PM" else 0)
-                                selected_time = time(hour_24, int(minute))
-                                scheduled_local = datetime.combine(
-                                    customer_schedule_date, selected_time,
-                                    tzinfo=ZoneInfo("Asia/Kolkata"),
-                                )
-                                if scheduled_local < datetime.now(ZoneInfo("Asia/Kolkata")) + timedelta(minutes=15):
-                                    st.error("Choose a schedule time at least 15 minutes in the future (IST).")
-                                else:
-                                    customer_publish_at = scheduled_local.isoformat()
-                            if customer_publish_mode == "Publish now" or customer_publish_at:
                                 try:
                                     result = publish_approved_video(
-                                        job["id"],
-                                        "schedule" if customer_publish_mode == "Schedule" else "now",
-                                        customer_publish_at, supabase,
+                                        job["id"], "schedule", scheduled_local.isoformat(), supabase,
                                     )
                                 except RuntimeError as exc:
                                     if str(exc).startswith("publish_status_sync_failed"):
-                                        st.warning("YouTube accepted the publish or schedule action, but the dashboard could not confirm it. Check YouTube Studio before retrying.")
+                                        st.warning("YouTube accepted the schedule action, but the dashboard could not confirm it. Check YouTube Studio before retrying.")
                                         video_id = str(exc).partition(":")[2]
                                         if video_id:
                                             st.link_button("Open YouTube video", f"https://www.youtube.com/watch?v={video_id}")
                                     elif str(exc) == "publish_status_unknown":
-                                        st.warning("The publish/schedule response was interrupted. YouTube may already have accepted it. Check YouTube Studio before retrying; do not repeat the action.")
+                                        st.warning("The scheduling response was interrupted. YouTube may already have accepted it. Check YouTube Studio before retrying; do not repeat the action.")
                                         existing_video_id = str(job.get("youtube_video_id") or "")
                                         if re.fullmatch(r"[A-Za-z0-9_-]{6,20}", existing_video_id):
                                             st.link_button("Open YouTube video to check status", f"https://www.youtube.com/watch?v={existing_video_id}")
                                     else:
-                                        st.error("YouTube could not complete this action. Your video remains private; check publishing permissions and schedule time.")
+                                        st.error("YouTube could not schedule this video. It remains private; check scheduling permissions and selected time.")
                                 else:
-                                    st.success(result.get("message", "YouTube action completed."))
+                                    st.success(result.get("message", "Your video has been scheduled."))
                                     if result.get("youtube_url"):
-                                        st.link_button("Open YouTube video", result["youtube_url"])
+                                        st.link_button("Open scheduled YouTube video", result["youtube_url"])
                                     st.rerun()
                     elif job.get("status") == "scheduled":
                         scheduled_text = format_scheduled_time(job.get("scheduled_for"))
