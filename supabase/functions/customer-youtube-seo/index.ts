@@ -187,16 +187,6 @@ Deno.serve(async (req: Request) => {
           Number(job.file_size_bytes) > 104857600) {
         return json({ error: "video_file_unavailable_or_unsupported" }, 409);
       }
-      const { data: rateAllowed, error: rateError } = await admin.rpc(
-        "consume_customer_ai_rate_limit",
-        { p_user_id: auth.user.id, p_tenant_id: job.tenant_id, p_action: "youtube_seo", p_limit: 5 },
-      );
-      if (rateError) return json({ error: "ai_rate_limit_check_failed", stage: "rate_limit" }, 503);
-      if (!rateAllowed) {
-        const now = new Date();
-        const retryAfter = 3600 - (now.getUTCMinutes() * 60 + now.getUTCSeconds());
-        return json({ error: "ai_rate_limit_exceeded", stage: "rate_limit", retry_after_seconds: retryAfter }, 429);
-      }
       stage = "video_storage_download";
       const { data: videoBlob, error: storageError } = await admin.storage
         .from("customer-video-intake").download(job.storage_object_path);
@@ -207,6 +197,17 @@ Deno.serve(async (req: Request) => {
       const videoHeader = new Uint8Array(await videoBlob.slice(0, 12).arrayBuffer());
       if (!hasExpectedVideoContainer(videoHeader, String(job.mime_type))) {
         return json({ error: "video_container_does_not_match_file_type" }, 415);
+      }
+
+      const { data: rateAllowed, error: rateError } = await admin.rpc(
+        "consume_customer_ai_rate_limit",
+        { p_user_id: auth.user.id, p_tenant_id: job.tenant_id, p_action: "youtube_seo", p_limit: 5 },
+      );
+      if (rateError) return json({ error: "ai_rate_limit_check_failed", stage: "rate_limit" }, 503);
+      if (!rateAllowed) {
+        const now = new Date();
+        const retryAfter = 3600 - (now.getUTCMinutes() * 60 + now.getUTCSeconds());
+        return json({ error: "ai_rate_limit_exceeded", stage: "rate_limit", retry_after_seconds: retryAfter }, 429);
       }
 
       const consentLog = await admin.from("audit_events").insert({
