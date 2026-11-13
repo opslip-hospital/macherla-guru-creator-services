@@ -42,8 +42,18 @@ if st.session_state.pop("_creator_clear_all_state", False):
     for _session_key in list(st.session_state.keys()):
         st.session_state.pop(_session_key, None)
 
-st.title("🎬 Macherla Guru — YouTube AI Manager")
-st.caption("Free-first channel dashboard • Telugu AI entertainment")
+st.title("🎬 Macherla Guru Creator Services")
+st.caption("Customer YouTube workspaces • AI-assisted SEO • Customer-controlled publishing")
+st.markdown(
+    "Connect your own YouTube channel, review AI-generated titles, descriptions, tags and hashtags, "
+    "upload videos privately, then choose Publish now or Schedule. Each customer workspace is isolated. "
+    "AI suggestions are drafts; you remain in control of every publishing action."
+)
+legal_left, legal_right = st.columns(2)
+with legal_left:
+    st.page_link("pages/Privacy_Policy.py", label="Privacy Policy")
+with legal_right:
+    st.page_link("pages/Terms_of_Service.py", label="Terms of Service")
 
 
 def get_session_client() -> Client:
