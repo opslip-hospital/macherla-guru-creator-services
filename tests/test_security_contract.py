@@ -387,6 +387,11 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("greatest(cardinality", SEO_TAG_SEPARATOR_GUARD)
         self.assertIn("Math.max(0, savedTags.length - 1)", CUSTOMER_SEO_FUNCTION)
 
+    def test_customer_video_workflow_does_not_add_thumbnail_features(self):
+        self.assertNotIn("thumbnail", APP.lower())
+        self.assertNotIn("thumbnail_prompt", CUSTOMER_SEO_FUNCTION.lower())
+        self.assertNotIn("thumbnail", YOUTUBE_WORKER.lower())
+
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
         self.assertNotIn("youtube.com/@macherlaguru", APP)
