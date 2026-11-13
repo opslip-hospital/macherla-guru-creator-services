@@ -426,6 +426,21 @@ else:
                         f"Connected channel: {connection.get('channel_title') or 'YouTube channel'}"
                     )
                     st.caption(f"Channel ID: {connection.get('channel_id', 'Unavailable')}")
+                if tenant.get("status") == "active":
+                    st.caption(
+                        "Managed publishing needs permission to upload videos and update video visibility. "
+                        "Google will show the requested permissions before you approve."
+                    )
+                    if st.button(
+                        "Reconnect for publishing permissions",
+                        key=f"reconnect_youtube_{tenant_id}",
+                    ):
+                        try:
+                            google_url = start_youtube_oauth(tenant_id, supabase)
+                        except RuntimeError:
+                            st.error("Google connection could not be started. Please contact support.")
+                        else:
+                            st.link_button("Continue securely with Google", google_url)
             else:
                 st.caption("No YouTube channel is connected yet.")
                 if tenant.get("status") == "active":
