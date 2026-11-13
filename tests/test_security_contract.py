@@ -19,6 +19,9 @@ HARDENING_MIGRATION = (
 WORKFLOW_MIGRATION = (
     ROOT / "supabase/migrations/20261113171000_creator_service_workflows.sql"
 ).read_text(encoding="utf-8")
+UPLOAD_MIGRATION = (
+    ROOT / "supabase/migrations/20261113180000_customer_video_intake_storage.sql"
+).read_text(encoding="utf-8")
 
 
 class AuthenticationContractTests(unittest.TestCase):
@@ -81,6 +84,16 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("private.admin_update_service_ticket_status", WORKFLOW_MIGRATION)
         self.assertIn("support_ticket_status_changed", WORKFLOW_MIGRATION)
         self.assertIn('supabase.rpc("admin_update_service_ticket_status"', APP)
+
+    def test_customer_video_intake_is_private_and_tenant_scoped(self):
+        self.assertIn("values ('customer-video-intake','customer-video-intake',false", UPLOAD_MIGRATION)
+        self.assertIn("private.create_customer_upload_job", UPLOAD_MIGRATION)
+        self.assertIn("private.finalize_customer_video_upload", UPLOAD_MIGRATION)
+        self.assertIn("customer video intake insert own tenant", UPLOAD_MIGRATION)
+        self.assertIn("customer video intake read own tenant or admin", UPLOAD_MIGRATION)
+        self.assertIn('supabase.storage.from_("customer-video-intake").upload(', APP)
+        self.assertIn('supabase.rpc("finalize_customer_video_upload"', APP)
+        self.assertIn('type=["mp4", "mov", "webm"]', APP)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
