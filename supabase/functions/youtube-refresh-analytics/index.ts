@@ -62,7 +62,7 @@ Deno.serve(async(req)=>{
    }
   }
   // Analytics windows use India-local calendar dates, matching the dashboard's IST schedule display.
-  const todayParts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"})
+  const todayParts:any=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"})
    .formatToParts(new Date()).reduce((parts:any,item)=>{if(item.type!=="literal")parts[item.type]=item.value;return parts;},{});
   const todayUtc=new Date(Date.UTC(Number(todayParts.year),Number(todayParts.month)-1,Number(todayParts.day)));
   const dateKey=(d:Date)=>d.toISOString().slice(0,10);
