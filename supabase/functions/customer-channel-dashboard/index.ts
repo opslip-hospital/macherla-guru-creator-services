@@ -2,7 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const headers={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const json=(v:unknown,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 function required(n:string){const v=Deno.env.get(n);if(!v)throw new Error("missing_configuration");return v;}
-function hexBytes(v:string){if(!/^(?:[0-9a-f]{2})+$/i.test(v))throw new Error("invalid_token");return new Uint8Array(v.match(/.{2}/g)!.map(x=>parseInt(x,16)));}
+function hexBytes(v:string){v=v.replace(/^\\\\x/i,"");if(!/^(?:[0-9a-f]{2})+$/i.test(v))throw new Error("invalid_token");return new Uint8Array(v.match(/.{2}/g)!.map(x=>parseInt(x,16)));}
 async function decrypt(v:string,b64:string){
  const packed=hexBytes(v),raw=Uint8Array.from(atob(b64),(c)=>c.charCodeAt(0));
  if(packed.length<29||raw.length!==32)throw new Error("invalid_key");
