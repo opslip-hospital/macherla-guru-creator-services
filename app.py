@@ -43,11 +43,11 @@ if st.session_state.pop("_creator_clear_all_state", False):
         st.session_state.pop(_session_key, None)
 
 st.title("🎬 Macherla Guru Creator Services")
-st.caption("Customer YouTube workspaces • Video upload • Gemini SEO • Scheduled publishing")
+st.caption("One video • Gemini SEO • Private YouTube upload • IST scheduling")
 st.markdown(
-    "Connect your own YouTube channel, review AI-generated titles, descriptions, tags and hashtags, "
-    "upload videos privately, then choose an IST date and AM/PM schedule. Each customer workspace is isolated. "
-    "AI suggestions are drafts; you remain in control of every publishing action."
+    "Upload one video first. Gemini prepares your SEO title, description, tags, five hashtags and captions. "
+    "You can do this before connecting a YouTube channel; connect later for private upload and IST scheduling. "
+    "Review and save every AI suggestion before continuing."
 )
 legal_left, legal_right = st.columns(2)
 with legal_left:
@@ -683,7 +683,7 @@ else:
                         )
                     except RuntimeError as exc:
                         if ("youtube_channel_not_connected" in str(exc) or "youtube_upload_connection_required" in str(exc)):
-                            st.info("Connect your YouTube channel above before generating SEO. The required brand hashtag is based on your connected channel.")
+                            st.info("SEO can be prepared with your workspace brand before connecting YouTube. Connect your channel to continue with private upload and scheduling.")
                         elif "ai_rate_limit_exceeded" in str(exc):
                             st.warning("This workspace has reached its hourly AI SEO limit. Please try again after the limit resets.")
                         else:
@@ -711,7 +711,7 @@ else:
                     edit_description = st.text_area("SEO Description", value=saved_meta.get("description") or "", max_chars=5000)
                     edit_tags = st.text_area("YouTube SEO tags", value=", ".join(saved_meta.get("tags") or []))
                     edit_hashtags = st.text_input("5 Hashtags", value=", ".join("#" + x.lstrip("#") for x in (saved_meta.get("hashtags") or [])))
-                    st.caption("Include one hashtag based on your connected YouTube channel name; use the other four for this video topic.")
+                    st.caption("One hashtag uses your workspace brand until a YouTube channel is connected; after connecting, regenerate SEO to use the channel name. The other four hashtags match the video topic.")
                     edit_caption = st.text_area("YouTube caption", value=details.get("youtube_caption") or saved_meta.get("caption") or "", max_chars=2200)
                     edit_instagram_caption = st.text_area("Instagram caption", value=details.get("instagram_caption") or "", max_chars=2200)
                     edit_keywords = st.text_area("Extra SEO keywords", value=", ".join(details.get("keywords") or []))
