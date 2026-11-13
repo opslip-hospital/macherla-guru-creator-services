@@ -86,6 +86,15 @@ SEO_TAG_SEPARATOR_GUARD = (
 
 
 class AuthenticationContractTests(unittest.TestCase):
+    def test_gemini_text_prompts_require_free_tier_data_use_consent(self):
+        studio = (ROOT / "supabase/functions/customer-content-studio/index.ts").read_text(encoding="utf-8")
+        self.assertIn("gemini_text_consent_required", studio)
+        self.assertIn("customer_gemini_text_consent_granted", studio)
+        self.assertIn("free_tier_prompts_and_responses_may_be_used_to_improve_google_products", studio)
+        self.assertIn("disabled=not growth_ai_consent", APP)
+        self.assertIn("disabled=not studio_ai_consent", APP)
+        self.assertIn("current Gemini API **Free Tier** may use submitted prompts", PRIVACY_POLICY)
+
     def test_gemini_rate_limits_use_service_only_public_rpc_wrapper(self):
         self.assertIn("private.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
         self.assertIn("security invoker", AI_RATE_LIMIT_MIGRATION.lower())
