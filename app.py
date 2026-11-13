@@ -235,7 +235,8 @@ def customer_channel_dashboard_request(tenant_id: str, client: Client) -> dict[s
 
 
 def customer_content_studio_request(
-    tenant_id: str, kind: str, topic: str, notes: str, client: Client
+    tenant_id: str, kind: str, topic: str, notes: str, client: Client,
+    ai_consent: bool = False,
 ) -> str:
     """Generate customer-owned channel content without exposing the Gemini key."""
     try:
@@ -246,7 +247,7 @@ def customer_content_studio_request(
         request = urllib.request.Request(
             f"{SUPABASE_FUNCTIONS_URL}/customer-content-studio",
             data=json.dumps({"tenant_id": tenant_id, "kind": kind, "topic": topic,
-                             "notes": notes, "language": "Telugu"}).encode("utf-8"),
+                             "notes": notes, "language": "Telugu", "ai_consent": ai_consent}).encode("utf-8"),
             headers={"Content-Type": "application/json", "apikey": SUPABASE_PUBLISHABLE_KEY,
                      "Authorization": f"Bearer {access_token}"},
             method="POST",
@@ -1404,7 +1405,12 @@ else:
             for item in ranked[:3]:
                 st.write(f"• {item.get('title')} — {int(item.get('views') or 0):,} views")
             st.caption("Recommendations are based on public recent-upload views/likes/comments only, not private CTR or retention.")
-            if st.button("✨ Generate AI growth suggestions", key="customer_growth_suggestions", type="primary"):
+            st.info("This sends your channel metrics and prompt to Google Gemini. On the current Gemini API Free Tier, submitted content may be used to improve Google products.")
+            growth_ai_consent = st.checkbox(
+                "I consent to send my channel metrics to Gemini for AI growth suggestions.",
+                value=False, key="gemini_growth_text_consent",
+            )
+            if st.button("✨ Generate AI growth suggestions", key="customer_growth_suggestions", type="primary", disabled=not growth_ai_consent):
                 growth_summary = "\n".join(
                     f"- {v.get('title')} | views {v.get('views')} | likes {v.get('likes')} | comments {v.get('comments')}"
                     for v in ranked[:20]
@@ -1425,7 +1431,7 @@ else:
                             active_tenant_ids[0], "YouTube AI Growth Doctor",
                             f"Analyze these recent public YouTube video metrics. Average views: {avg_recent_views}.",
                             growth_summary + "\nGive practical next-video ideas, opening-hook improvements, and repeatable formats. Clearly state limits of public metrics.",
-                            supabase,
+                            supabase, ai_consent=True,
                         )
                     except RuntimeError as exc:
                         st.error("AI growth analysis could not be generated: " + str(exc)[:100])
@@ -1441,6 +1447,7 @@ else:
         if not active_tenant_ids:
             st.info("Content Studio is available after your workspace is active.")
         else:
+            st.info("Your topic and instructions are sent to Google Gemini. On the current Gemini API Free Tier, submitted prompts and responses may be used to improve Google products. Do not enter confidential information.")
             with st.form("customer_content_studio_form"):
                 studio_kind = st.selectbox("What should Gemini create?", [
                     "Comedy script", "Video idea / topic", "YouTube Shorts script",
@@ -1448,7 +1455,11 @@ else:
                 ])
                 studio_topic = st.text_area("Video idea / topic", placeholder="ఉదా: ఊహించని అతిథి ఇంటికి వచ్చాడు…", max_chars=500)
                 studio_notes = st.text_area("Additional instructions (optional)", placeholder="ఉదా: 15 seconds, fast comedy, Telugu dialogue", max_chars=1000)
-                studio_submit = st.form_submit_button("✨ Generate with Gemini", type="primary", use_container_width=True)
+                studio_ai_consent = st.checkbox(
+                    "I consent to send this topic and instructions to Gemini for content generation.",
+                    value=False, key="gemini_content_studio_text_consent",
+                )
+                studio_submit = st.form_submit_button("✨ Generate with Gemini", type="primary", use_container_width=True, disabled=not studio_ai_consent)
             if studio_submit:
                 if not studio_topic.strip():
                     st.warning("Enter a topic for Gemini.")
@@ -1456,7 +1467,8 @@ else:
                     with st.spinner("Gemini is preparing your content..."):
                         try:
                             studio_result = customer_content_studio_request(
-                                active_tenant_ids[0], studio_kind, studio_topic, studio_notes, supabase
+                                active_tenant_ids[0], studio_kind, studio_topic, studio_notes,
+                                supabase, ai_consent=True,
                             )
                         except RuntimeError as exc:
                             st.error("AI Content Studio error: " + str(exc)[:100])
