@@ -169,6 +169,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('supabase.rpc("finalize_customer_video_upload"', APP)
         self.assertIn('type=["mp4", "mov", "webm"]', APP)
         self.assertIn('create_signed_url(', APP)
+        self.assertIn('{"download": True}', APP)
         self.assertIn('Download customer video (1-hour link)', APP)
 
     def test_storage_uploads_must_match_a_customer_draft_job(self):
