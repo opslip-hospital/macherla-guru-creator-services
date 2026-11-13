@@ -221,6 +221,12 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("5000 - separator.length - hashtagLine.length", upload_worker)
         self.assertIn("nextLength = tagLength + tag.length + (tags.length ? 1 : 0)", upload_worker)
 
+    def test_upload_unknown_is_locked_but_pretransfer_failure_is_retryable(self):
+        self.assertIn('status: "upload_unknown"', YOUTUBE_WORKER)
+        self.assertIn('status: "received"', YOUTUBE_WORKER)
+        self.assertIn("youtubeUploadStarted", YOUTUBE_WORKER)
+        self.assertIn("upload_unknown", STORAGE_BINDING_MIGRATION if "upload_unknown" in STORAGE_BINDING_MIGRATION else YOUTUBE_WORKER_MIGRATION)
+
     def test_youtube_sync_errors_warn_against_unsafe_retries(self):
         self.assertIn("youtube_upload_status_sync_failed", APP)
         self.assertIn("job is locked against automatic retry", APP)
