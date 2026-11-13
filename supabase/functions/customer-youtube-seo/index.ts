@@ -58,7 +58,7 @@ function normalizeHashtags(value: unknown, max: number): string[] {
 }
 function channelBrandHashtag(channelName: string): string {
   const brand = channelName.normalize("NFKC")
-    .replace(/[^\\p{L}\\p{N}]/gu, "")
+    .replace(/[^\p{L}\p{N}]/gu, "")
     .slice(0, 60);
   return brand || "YouTubeCreator";
 }
