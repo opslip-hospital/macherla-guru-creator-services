@@ -341,6 +341,15 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("SEO metadata uploaded to YouTube (read-only)", APP)
         self.assertIn("locked after private upload", APP)
 
+    def test_video_uploads_use_blob_bodies_without_full_arraybuffer_copies(self):
+        self.assertIn("video: Blob", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("body: video,", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("videoBlob.slice(0, 12).arrayBuffer()", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("videoBlob.slice(0, 12).arrayBuffer()", YOUTUBE_WORKER)
+        self.assertIn("body: videoBlob", YOUTUBE_WORKER)
+        self.assertNotIn("new Uint8Array(await videoBlob.arrayBuffer())", CUSTOMER_SEO_FUNCTION)
+        self.assertNotIn("new Uint8Array(await videoBlob.arrayBuffer())", YOUTUBE_WORKER)
+
     def test_video_container_signatures_are_checked_before_ai_or_youtube_upload(self):
         self.assertIn("hasExpectedVideoContainer", CUSTOMER_SEO_FUNCTION)
         self.assertIn("video_container_does_not_match_file_type", CUSTOMER_SEO_FUNCTION)
