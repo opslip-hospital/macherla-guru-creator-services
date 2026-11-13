@@ -520,7 +520,26 @@ if role == "admin":
         tenants = tenants_result.data or []
         st.metric("Customer workspaces", len(tenants))
         if tenants:
-            st.dataframe(tenants, use_container_width=True, hide_index=True)
+            for tenant_row in tenants:
+                with st.container(border=True):
+                    st.write(f"**{tenant_row.get('business_name') or 'Customer workspace'}**")
+                    st.caption(f"Workspace ID: {tenant_row['id']} • Created: {tenant_row.get('created_at')}")
+                    status_values = ["pending", "active", "suspended", "closed"]
+                    current_status = tenant_row.get("status") if tenant_row.get("status") in status_values else "pending"
+                    with st.form(f"workspace_status_{tenant_row['id']}"):
+                        next_status = st.selectbox("Workspace access", status_values, index=status_values.index(current_status))
+                        update_workspace = st.form_submit_button("Save workspace status")
+                    if update_workspace and next_status != current_status:
+                        try:
+                            supabase.rpc("admin_update_tenant_status", {
+                                "p_tenant": tenant_row["id"], "p_status": next_status
+                            }).execute()
+                        except Exception:
+                            st.error("Workspace status could not be updated.")
+                        else:
+                            st.success(f"Workspace status changed to {next_status}.")
+                            st.rerun()
+                    st.caption("Active = customer can use the service • Suspended = access paused • Closed = workspace closed")
         else:
             st.info("No customer workspaces have been provisioned yet.")
     except Exception:
@@ -650,129 +669,30 @@ if role == "admin":
         try:
             rows = (
                 supabase.table("upload_jobs")
-                .select("id, tenant_id, video_title, status, youtube_video_id, scheduled_for, storage_object_path, original_filename, file_size_bytes, created_at")
+                .select("id, tenant_id, video_title, status, youtube_video_id, scheduled_for, original_filename, file_size_bytes, created_at")
                 .order("created_at", desc=True)
                 .limit(100)
                 .execute().data or []
             )
-            st.caption("Monitor customer uploads, metadata, private uploads and publishing activity. Customers can publish or schedule their own videos; live Google OAuth testing is still pending.")
+            st.caption("Read-only operations monitor. Customers control their own SEO, private upload, Publish now and Schedule actions. Admin does not approve or publish individual customer videos.")
             if rows:
-                for job in rows:
-                    with st.container(border=True):
-                        st.write(f"**{job.get('video_title') or 'Untitled video'}**")
-                        st.caption(f"Job: {job['id']} • Status: {job.get('status', 'draft')} • Workspace: {job.get('tenant_id', '')}")
-                        if job.get("status") == "received":
-                            if st.button("Upload privately to connected YouTube channel", key=f"private_youtube_upload_{job['id']}", type="primary"):
-                                try:
-                                    upload_result = start_private_youtube_upload(job["id"], supabase)
-                                except RuntimeError:
-                                    st.error("Private YouTube upload failed. Check the customer's Google channel connection and OAuth permissions before retrying.")
-                                else:
-                                    st.success("YouTube accepted the video as PRIVATE. The customer can publish or schedule it from their dashboard.")
-                                    if upload_result.get("youtube_url"):
-                                        st.link_button("Open private YouTube video", upload_result["youtube_url"])
-                        if job.get("status") in {"uploaded_private", "approved"}:
-                            with st.form(f"publish_action_{job['id']}"):
-                                publish_mode = st.radio(
-                                    "Publishing action",
-                                    ["Publish now", "Schedule"],
-                                    horizontal=True,
-                                    key=f"publish_mode_{job['id']}",
-                                )
-                                if publish_mode == "Schedule":
-                                    schedule_date = st.date_input(
-                                        "Schedule date (IST)",
-                                        value=date.today() + timedelta(days=1),
-                                        min_value=date.today(),
-                                        key=f"schedule_date_{job['id']}",
-                                    )
-                                    schedule_time = st.time_input(
-                                        "Schedule time (IST)",
-                                        value=time(9, 0),
-                                        key=f"schedule_time_{job['id']}",
-                                    )
-                                else:
-                                    schedule_date = None
-                                    schedule_time = None
-                                execute_publish = st.form_submit_button(
-                                    "Confirm publish action", type="primary"
-                                )
-                            if execute_publish:
-                                publish_at = None
-                                if publish_mode == "Schedule" and schedule_date and schedule_time:
-                                    publish_at = datetime.combine(
-                                        schedule_date, schedule_time,
-                                        tzinfo=ZoneInfo("Asia/Kolkata"),
-                                    ).isoformat()
-                                try:
-                                    publish_result = publish_approved_video(
-                                        job["id"],
-                                        "schedule" if publish_mode == "Schedule" else "now",
-                                        publish_at,
-                                        supabase,
-                                    )
-                                except RuntimeError:
-                                    st.error("Publish action failed. The video remains private; verify the customer's new YouTube publishing permission.")
-                                else:
-                                    st.success(publish_result.get("message", "Publish action completed."))
-                                    if publish_result.get("youtube_url"):
-                                        st.link_button("Open YouTube video", publish_result["youtube_url"])
-                        if job.get("status") == "publishing":
-                            st.info("Publishing request is processing.")
-                        elif job.get("status") == "scheduled":
-                            st.info(f"Scheduled for: {job.get('scheduled_for')}")
-                        elif job.get("status") == "published":
-                            st.success("Public on YouTube.")
-                        if job.get("storage_object_path"):
-                            try:
-                                signed = supabase.storage.from_("customer-video-intake").create_signed_url(
-                                    job["storage_object_path"], 3600
-                                )
-                                signed_url = signed.get("signedURL") or signed.get("signedUrl")
-                                if signed_url:
-                                    st.link_button("Download customer video (1-hour link)", signed_url)
-                            except Exception:
-                                st.caption("Private video download link is temporarily unavailable.")
-                        elif job.get("original_filename"):
-                            st.caption(f"Customer file: {job.get('original_filename')} — upload intake not finalized.")
-                        try:
-                            existing_meta = (
-                                supabase.table("content_metadata")
-                                .select("title, description, tags, hashtags, caption, metadata_details")
-                                .eq("upload_job_id", job["id"])
-                                .order("created_at", desc=True)
-                                .limit(1)
-                                .execute().data or []
-                            )
-                            meta = existing_meta[0] if existing_meta else {}
-                        except Exception:
-                            meta = {}
-                        with st.form(f"seo_metadata_{job['id']}"):
-                            seo_title = st.text_input("SEO title", value=meta.get("title") or job.get("video_title") or "", max_chars=100)
-                            seo_description = st.text_area("Description", value=meta.get("description") or "", max_chars=5000)
-                            seo_tags = st.text_input("Tags (comma separated)", value=", ".join(meta.get("tags") or []))
-                            seo_hashtags = st.text_input("Hashtags (comma separated)", value=" ".join(meta.get("hashtags") or []))
-                            seo_caption = st.text_area("Caption", value=meta.get("caption") or "", max_chars=2200)
-                            save_seo = st.form_submit_button("Save SEO metadata")
-                        if save_seo:
-                            try:
-                                supabase.rpc("admin_save_content_metadata", {
-                                    "p_upload_job": job["id"],
-                                    "p_title": seo_title.strip(),
-                                    "p_description": seo_description,
-                                    "p_tags": [x.strip() for x in seo_tags.split(",") if x.strip()],
-                                    "p_hashtags": [x.strip().lstrip("#") for x in seo_hashtags.split() if x.strip()],
-                                    "p_caption": seo_caption,
-                                }).execute()
-                            except Exception:
-                                st.error("SEO metadata could not be saved. Check the title and try again.")
-                            else:
-                                st.success("SEO metadata saved.")
-                                st.rerun()
+                st.dataframe(
+                    [{
+                        "Video": row.get("video_title") or "Untitled video",
+                        "Workspace": row.get("tenant_id"),
+                        "Status": row.get("status"),
+                        "YouTube video ID": row.get("youtube_video_id"),
+                        "Scheduled (IST)": format_scheduled_time(row.get("scheduled_for")) if row.get("scheduled_for") else "—",
+                        "Filename": row.get("original_filename"),
+                        "Size (MB)": round((row.get("file_size_bytes") or 0) / (1024 * 1024), 1),
+                        "Created": row.get("created_at"),
+                    } for row in rows],
+                    use_container_width=True, hide_index=True,
+                )
             else:
-                st.info("No upload jobs have been submitted yet.")
+                st.info("No customer uploads have been submitted yet.")
         except Exception:
-            st.error("Upload queue could not be loaded.")
+            st.error("Upload activity could not be loaded.")
     with op_support:
         try:
             tickets = (
@@ -819,7 +739,30 @@ if role == "admin":
                 st.dataframe(billing, use_container_width=True, hide_index=True)
             else:
                 st.info("No billing accounts have been provisioned. Billing is not active.")
-            st.caption("This is a status view only. No payments are collected or subscriptions changed here.")
+            billing_tenant_rows = (
+                supabase.table("tenants").select("id, business_name")
+                .order("created_at", desc=True).limit(100).execute().data or []
+            )
+            if billing_tenant_rows:
+                billing_labels = {row["id"]: row.get("business_name") or row["id"] for row in billing_tenant_rows}
+                with st.form("admin_billing_update"):
+                    selected_billing_tenant = st.selectbox("Customer workspace", list(billing_labels), format_func=lambda value: billing_labels.get(value, value))
+                    selected_plan = st.selectbox("Plan", ["trial", "starter", "creator", "pro", "custom"])
+                    selected_subscription = st.selectbox("Subscription status", ["pending", "trialing", "active", "past_due", "cancelled"])
+                    save_billing = st.form_submit_button("Save plan and billing status", type="primary")
+                if save_billing:
+                    try:
+                        supabase.rpc("admin_update_billing_account", {
+                            "p_tenant": selected_billing_tenant,
+                            "p_plan_code": selected_plan,
+                            "p_subscription_status": selected_subscription,
+                        }).execute()
+                    except Exception:
+                        st.error("Billing status could not be saved.")
+                    else:
+                        st.success("Plan and billing status updated.")
+                        st.rerun()
+            st.caption("Admin can assign plan/status only. No card payments or automatic charges are enabled.")
         except Exception:
             st.error("Billing overview could not be loaded.")
     with op_analytics:
