@@ -161,6 +161,23 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('customer_ai_seo_generated', CUSTOMER_SEO_FUNCTION)
         self.assertNotIn('GEMINI_API_KEY', APP)
 
+    def test_customer_channel_dashboard_is_owner_scoped(self):
+        dashboard = (ROOT / "supabase/functions/customer-channel-dashboard/index.ts").read_text(encoding="utf-8")
+        self.assertIn("workspace_owner_required", dashboard)
+        self.assertIn("youtube.readonly", dashboard)
+        self.assertIn("playlistItems?part=snippet,contentDetails", dashboard)
+        self.assertIn("videos?part=snippet,statistics,status", dashboard)
+        self.assertIn("customer_channel_dashboard_request", APP)
+        self.assertIn("Recent uploads — sorted by views", APP)
+
+    def test_customer_content_studio_is_tenant_scoped_and_server_keyed(self):
+        studio = (ROOT / "supabase/functions/customer-content-studio/index.ts").read_text(encoding="utf-8")
+        self.assertIn("membership_role", studio)
+        self.assertIn("GEMINI_API_KEY", studio)
+        self.assertIn("customer_content_studio_request", APP)
+        self.assertIn("✨ Gemini AI Content Studio", APP)
+        self.assertIn("🩺 Your AI Growth Doctor", APP)
+
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
         self.assertNotIn("youtube.com/@macherlaguru", APP)
