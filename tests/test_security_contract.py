@@ -104,6 +104,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('"consume_customer_ai_rate_limit"', CUSTOMER_SEO_FUNCTION)
         self.assertIn('admin.rpc("consume_customer_ai_rate_limit"', (ROOT / "supabase/functions/customer-content-studio/index.ts").read_text(encoding="utf-8"))
         self.assertNotIn('schema("private").rpc("consume_customer_ai_rate_limit"', CUSTOMER_SEO_FUNCTION)
+        self.assertLess(CUSTOMER_SEO_FUNCTION.index("video_file_unavailable_or_unsupported"), CUSTOMER_SEO_FUNCTION.index("consume_customer_ai_rate_limit"))
 
     def test_public_homepage_links_to_privacy_and_terms(self):
         self.assertIn("Connect your own YouTube channel", APP)
