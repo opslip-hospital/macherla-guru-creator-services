@@ -58,7 +58,7 @@ SELF_SERVICE_MIGRATION = (
     ROOT / "supabase/migrations/20261113220000_customer_self_service_youtube_workflow.sql"
 ).read_text(encoding="utf-8")
 SEO_REQUIRED_MIGRATION = (
-    ROOT / "supabase/migrations/20261113290000_require_complete_seo_before_private_upload.sql"
+    ROOT / "supabase/migrations/20261113291000_finalize_seo_upload_validation.sql"
 ).read_text(encoding="utf-8")
 CUSTOMER_SEO_FUNCTION = (
     ROOT / "supabase/functions/customer-youtube-seo/index.ts"
@@ -176,6 +176,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("five unique hashtags including MacherlaGuru", SEO_REQUIRED_MIGRATION)
         self.assertIn("five title options", SEO_REQUIRED_MIGRATION)
         self.assertIn("at most 20 keywords", SEO_REQUIRED_MIGRATION)
+        self.assertIn("v_keyword_count>20", SEO_REQUIRED_MIGRATION)
 
     def test_customer_publish_is_explicit_and_tenant_scoped(self):
         self.assertIn("v_job.status not in ('uploaded_private','approved')", SELF_SERVICE_MIGRATION)
