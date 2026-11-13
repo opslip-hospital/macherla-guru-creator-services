@@ -165,8 +165,8 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
       metadata = {
         title: cleanText(parsed.title, 100),
         description: cleanText(parsed.description, 5000),
-        tags: normalizeTags(parsed.tags, 20),
-        hashtags: normalizeTags(parsed.hashtags, 5).map((x) => x.replace(/^#+/, "")),
+        tags: normalizeTags(parsed.tags, 18),
+        hashtags: [...new Set(normalizeTags(parsed.hashtags, 5).map((x) => x.replace(/^#+/, "").trim()).filter(Boolean))],
         caption: cleanText(parsed.caption, 2200),
         metadata_details: {
           title_options: normalizeTags(parsed.title_options, 5),
@@ -176,7 +176,17 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
           category: cleanText(parsed.category, 80) || "Entertainment",
         },
       };
+      const generatedTags = metadata.tags as string[];
+      const generatedHashtags = metadata.hashtags as string[];
+      const generatedTitles = (metadata.metadata_details as Record<string, unknown>).title_options as string[];
+      const generatedTagLength = generatedTags.reduce((total, tag) => total + tag.length, 0);
       if (!metadata.title) return json({ error: "ai_returned_empty_metadata" }, 502);
+      if (generatedTags.length < 12 || generatedTagLength > 450) {
+        return json({ error: "ai_returned_invalid_tags" }, 502);
+      }
+      if (generatedHashtags.length !== 5 || generatedTitles.length !== 5) {
+        return json({ error: "ai_returned_incomplete_metadata" }, 502);
+      }
     } else {
       metadata = {
         title: cleanText(body.title, 100),
