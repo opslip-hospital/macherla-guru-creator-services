@@ -713,7 +713,7 @@ if role == "admin":
                     [{
                         "Video": row.get("video_title") or "Untitled video",
                         "Workspace": row.get("tenant_id"),
-                        "Status": row.get("status"),
+                        "Status": "Check YouTube — do not retry" if row.get("status") == "upload_unknown" else row.get("status"),
                         "YouTube video ID": row.get("youtube_video_id"),
                         "Scheduled (IST)": format_scheduled_time(row.get("scheduled_for")) if row.get("scheduled_for") else "—",
                         "Filename": row.get("original_filename"),
