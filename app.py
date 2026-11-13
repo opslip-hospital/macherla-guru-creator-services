@@ -1438,7 +1438,10 @@ else:
                             supabase, ai_consent=True,
                         )
                     except RuntimeError as exc:
-                        st.error("AI growth analysis could not be generated: " + str(exc)[:100])
+                        if "ai_rate_limit_exceeded" in str(exc):
+                            st.warning("The workspace's hourly Gemini text-generation limit has been reached. Please try again after the limit resets.")
+                        else:
+                            st.error("AI growth analysis could not be generated: " + str(exc)[:100])
                     else:
                         st.session_state["creator_growth_report"] = growth_text
             if st.session_state.get("creator_growth_report"):
@@ -1476,7 +1479,10 @@ else:
                                 supabase, ai_consent=True,
                             )
                         except RuntimeError as exc:
-                            st.error("AI Content Studio error: " + str(exc)[:100])
+                            if "ai_rate_limit_exceeded" in str(exc):
+                                st.warning("The workspace's hourly Gemini text-generation limit has been reached. Please try again after the limit resets.")
+                            else:
+                                st.error("AI Content Studio error: " + str(exc)[:100])
                         else:
                             st.session_state["creator_studio_result"] = studio_result
             if st.session_state.get("creator_studio_result"):
