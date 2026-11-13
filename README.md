@@ -28,9 +28,11 @@ Migrations are in `supabase/migrations/`:
 - The admin workspace appears only when the database profile has the trusted `admin` role.
 - Customer workspace activation and trusted admin provisioning are handled by the Master Admin approval workflow.
 - YouTube OAuth start/callback Edge Functions and encrypted refresh-token storage are deployed, but a real Google test-account connection is still pending.
-- Customers can submit support tickets; the Master Admin can view the support inbox.
-- Customer and admin dashboards include read-only upload-queue and billing-status views.
-- Actual video file intake, YouTube private upload execution, editable SEO metadata, customer publish approval, scheduling execution, ticket resolution controls, payment processing, and end-to-end channel tests are not yet implemented.
+- Customers can submit support tickets; the Master Admin can view tickets and update their status with an audited admin-only RPC.
+- The Master Admin can prepare title, description, tags, hashtags and captions for existing upload jobs through an admin-only audited RPC.
+- Customers can explicitly approve a video for public publishing after a private upload exists; owner membership is checked and consent is audited.
+- Customer and admin dashboards include upload-queue and billing-status views.
+- Actual video file intake, YouTube private upload execution, automated AI SEO generation, publish/schedule execution, payment processing, and end-to-end channel tests are not yet implemented.
 
 Do not use the app with real customer channels until provisioning, OAuth, upload, publishing approval, audit logging, and live end-to-end security tests are complete. The current CI checks are static guardrails, not a penetration test or live authentication test.
 
