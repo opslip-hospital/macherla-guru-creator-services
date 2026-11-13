@@ -376,7 +376,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("revoke all on table private.customer_ai_rate_limits from public, anon, authenticated", AI_RATE_LIMIT_MIGRATION)
         self.assertIn("grant execute on function private.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
         self.assertIn("revoke all on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_RPC_MIGRATION)
-        self.assertIn("grant execute on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
+        self.assertIn("grant execute on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_RPC_MIGRATION)
         self.assertIn('admin.rpc("consume_customer_ai_rate_limit"', CUSTOMER_SEO_FUNCTION)
         self.assertIn('admin.rpc("consume_customer_ai_rate_limit"', CONTENT_STUDIO_FUNCTION)
         self.assertNotIn('schema("private")', CUSTOMER_SEO_FUNCTION)
