@@ -30,7 +30,7 @@ Migrations are in `supabase/migrations/`:
 - YouTube OAuth start/callback Edge Functions and encrypted refresh-token storage are deployed. The callback now stores only scopes explicitly returned by Google and refuses to record a connection unless upload, read-only, and publishing permissions are present; Analytics read-only is optional. The customer UI displays actionable OAuth completion messages. A real Google test-account connection is still pending.
 - Customers can submit support tickets; the Master Admin can view tickets and update their status with an audited admin-only RPC.
 - Customer workspace owners generate, edit and save their own video's SEO metadata through the Gemini-backed customer workflow. The Master Admin does not approve or edit individual customer videos.
-- Customers explicitly initiate Publish Now or Schedule after a private upload exists; the authenticated workspace owner is checked and the action is audited. No separate Master Admin approval is required for an individual video.
+- Customers explicitly initiate Schedule after a private upload exists; the authenticated workspace owner is checked and the action is audited. The customer-facing workflow does not expose Publish Now.
 - Customer and admin dashboards include upload-queue and billing-status views.
 - Customers can submit MP4, MOV, or WebM files up to 100 MB into a private tenant-scoped Supabase Storage bucket. Upload intake is not a YouTube upload.
 - The Master Admin can access submitted files through temporary one-hour signed download links; the bucket itself remains private.
@@ -107,7 +107,7 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - Gemini SEO prompts now keep hashtags separate from the description, and the private-upload worker appends only hashtags missing from the edited description while reserving space under YouTube's 5,000-character description limit.
 - Storage intake inserts are now bound to a real draft upload job: the path must contain exactly tenant/job/file segments, the tenant must be active and owned by the caller, and the job's stored filename must match. This prevents customers from filling the private bucket with arbitrary orphaned objects.
 - Sign-out and expired-session handling now schedule a full Streamlit session-state clear at the beginning of the next run, before widgets are recreated. This prevents password fields, form inputs, AI drafts, and prior customer widget values from carrying into another login in the same browser session.
-- AI SEO now incorporates the connected channel's stored title as a branding hint when one is available, while retaining a safe generic fallback when the customer has not connected a channel yet.
+- AI SEO uses the connected channel title for its brand hashtag when available. If the customer has not connected a channel, it uses the tenant workspace/business name so SEO drafts remain available before OAuth; after connecting, customers regenerate SEO to align the hashtag with their channel.
 - Customer SEO and channel-dashboard Edge Functions no longer query the non-exposed `private` schema through PostgREST. They use guarded public RPCs: channel metadata listing for SEO and the server-only analytics claim RPC for the encrypted credential needed by the channel refresh worker.
 - The final database hardening migrations are ordered after the schema, workflow, storage, and worker migrations so a clean project replay creates the target functions/tables/policies before applying global grants, function lockdown, indexes, and the final storage policy.
 
@@ -118,7 +118,7 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - `youtube-upload-private`: v23 ACTIVE
 - `youtube-publish-approved`: v9 ACTIVE
 - `youtube-refresh-analytics`: v7 ACTIVE
-- `customer-youtube-seo`: v51 ACTIVE
+- `customer-youtube-seo`: v52 ACTIVE
 - `customer-channel-dashboard`: v5 ACTIVE
 - `customer-content-studio`: v11 ACTIVE
 
@@ -173,3 +173,14 @@ These are deployment-state checks only, not successful end-to-end tests. The liv
 - Gemini generation is rate-limited per customer workspace: up to 5 video-SEO generations and 12 Content Studio generations per hour. The counters live in a private RLS-enabled table; only the server-side service role can invoke the guarded rate-limit function. The customer UI reports when the hourly limit resets.
 - The same Gemini Free Tier disclosure and separate consent gate also cover Content Studio prompts/instructions and Growth Doctor channel metrics. Those requests are not sent to Gemini until the customer checks the corresponding consent box; the consent events are recorded in the audit log.
 - Customers can disconnect a connected YouTube channel from their own workspace. The owner-checked RPC marks the connection revoked, clears the stored encrypted refresh token and granted scopes, and records an audit event; existing YouTube videos and schedules remain in YouTube. The change is applied in migration `20261113298000_customer_disconnect_youtube_channel.sql`.
+
+
+## Customer-facing flow (current)
+
+1. Sign in to an active customer workspace.
+2. Upload one MP4, MOV, or WebM video (maximum 100 MB) into the private intake bucket.
+3. Give explicit consent to send the video to Gemini, then generate and review five title options, description, 12–18 tags, exactly five hashtags, and captions. A channel connection is not required for this draft step; the workspace name supplies the brand hashtag until a YouTube channel is connected.
+4. Connect/reconnect YouTube with upload permission, regenerate SEO so the brand hashtag matches the connected channel, and save the draft.
+5. Upload privately to YouTube, then choose an IST date and AM/PM time to schedule. The customer UI has no Publish Now action.
+
+Live Gemini video analysis and real Google OAuth/upload/scheduling remain end-to-end checks for the final authorized test pass. Deployment/version status alone does not prove those live actions succeed.
