@@ -27,6 +27,9 @@ UPLOAD_MIGRATION = (
 UPLOAD_OUTCOME_MIGRATION = (
     ROOT / "supabase/migrations/20261113168000_preserve_unknown_youtube_upload_outcomes.sql"
 ).read_text(encoding="utf-8")
+CHANNEL_BRAND_GUARD_MIGRATION = (
+    ROOT / "supabase/migrations/20261113293000_validate_connected_channel_brand_hashtag.sql"
+).read_text(encoding="utf-8")
 FINAL_SEO_UPLOAD_GUARD = (
     ROOT / "supabase/migrations/20261113292000_finalize_complete_seo_upload_guard.sql"
 ).read_text(encoding="utf-8")
@@ -180,12 +183,11 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("The channel owner can now publish or schedule it", YOUTUBE_WORKER)
 
     def test_customer_seo_editor_explains_required_channel_hashtag(self):
-        self.assertIn("including #MacherlaGuru", APP)
+        self.assertIn("including one hashtag based on your connected channel name", APP)
 
-    def test_private_upload_requires_complete_macherla_guru_seo(self):
+    def test_private_upload_requires_complete_channel_brand_seo(self):
         self.assertIn("complete SEO metadata must be saved before upload", SEO_REQUIRED_MIGRATION)
         self.assertIn("12 to 18 unique tags within 450 characters", SEO_REQUIRED_MIGRATION)
-        self.assertIn("five unique hashtags including MacherlaGuru", SEO_REQUIRED_MIGRATION)
         self.assertIn("five title options", SEO_REQUIRED_MIGRATION)
         self.assertIn("at most 20 keywords", SEO_REQUIRED_MIGRATION)
         self.assertIn("v_keyword_count>20", SEO_REQUIRED_MIGRATION)
@@ -254,9 +256,9 @@ class AuthenticationContractTests(unittest.TestCase):
     def test_upload_uses_saved_ai_hashtags_within_youtube_description_limit(self):
         self.assertIn("do not include hashtags", CUSTOMER_SEO_FUNCTION)
         self.assertIn("normalizeHashtags", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("ensureMacherlaGuruHashtag", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("ensureChannelBrandHashtag", CUSTOMER_SEO_FUNCTION)
         self.assertIn(".slice(0, 100)", CUSTOMER_SEO_FUNCTION)
-        self.assertIn('one must be MacherlaGuru', CUSTOMER_SEO_FUNCTION)
+        self.assertIn('one must be the connected channel brand hashtag', CUSTOMER_SEO_FUNCTION)
         self.assertIn("list_tenant_youtube_connections", CUSTOMER_SEO_FUNCTION)
         self.assertNotIn('schema("private")', CUSTOMER_SEO_FUNCTION)
         self.assertIn("Channel identity (untrusted channel-title data", CUSTOMER_SEO_FUNCTION)
@@ -271,7 +273,8 @@ class AuthenticationContractTests(unittest.TestCase):
 
     def test_final_migration_reapplies_complete_seo_guard_after_workflow_migrations(self):
         self.assertIn("complete SEO metadata must be saved before upload", FINAL_SEO_UPLOAD_GUARD)
-        self.assertIn("five unique hashtags including MacherlaGuru", FINAL_SEO_UPLOAD_GUARD)
+        self.assertIn("five unique hashtags including the connected channel brand", CHANNEL_BRAND_GUARD_MIGRATION)
+        self.assertIn("v_brand_hashtag", CHANNEL_BRAND_GUARD_MIGRATION)
         self.assertIn("12 to 18 unique tags within 450 characters", FINAL_SEO_UPLOAD_GUARD)
         self.assertIn("greatest(cardinality(coalesce(v_metadata.tags", FINAL_SEO_UPLOAD_GUARD)
         self.assertIn("five title options", FINAL_SEO_UPLOAD_GUARD)
@@ -366,7 +369,6 @@ class AuthenticationContractTests(unittest.TestCase):
     def test_database_blocks_private_upload_without_complete_seo(self):
         self.assertIn("complete SEO metadata must be saved before upload", SEO_UPLOAD_GUARD)
         self.assertIn("12 to 18 unique tags", SEO_UPLOAD_GUARD)
-        self.assertIn("five unique hashtags including MacherlaGuru", SEO_UPLOAD_GUARD)
         self.assertIn("five title options", SEO_UPLOAD_GUARD)
         self.assertIn("greatest(cardinality", SEO_TAG_SEPARATOR_GUARD)
         self.assertIn("Math.max(0, savedTags.length - 1)", CUSTOMER_SEO_FUNCTION)
