@@ -35,8 +35,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-st.title("🎬 Macherla Guru Creator Services")
-st.caption("Managed YouTube services • Customer workspace • Master administration")
+st.title("🎬 Macherla Guru — YouTube AI Manager")
+st.caption("Free-first channel dashboard • AI-powered YouTube creator tools")
 st.info(
     "This is a separate service project. The existing Macherla Guru YouTube AI "
     "Manager is not connected to or modified by this application."
