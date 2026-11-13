@@ -236,7 +236,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertNotIn('schema("private")', dashboard)
         self.assertIn("workspace_not_active", dashboard)
         self.assertIn('select("status")', dashboard)
-        self.assertIn("youtube.readonly", dashboard)
+        # Read-only scope is checked by the server-side claim_youtube_analytics RPC.
+        self.assertIn("claim_youtube_analytics", dashboard)
         self.assertIn("playlistItems?part=snippet,contentDetails", dashboard)
         self.assertIn("videos?part=snippet,statistics,status", dashboard)
         self.assertIn("customer_channel_dashboard_request", APP)
