@@ -29,13 +29,11 @@ Deno.serve(async(req)=>{
   const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data:tenantStatus,error:tenantError}=await admin.from("tenants").select("status").eq("id",tenant).maybeSingle();
   if(tenantError||tenantStatus?.status!=="active")return json({error:"workspace_not_active"},403);
-  const {data:connections,error:connError}=await admin.schema("private").from("youtube_connections")
-   .select("id,channel_id,channel_title,encrypted_refresh_token,granted_scopes")
-   .eq("tenant_id",tenant).is("revoked_at",null).order("connected_at",{ascending:false}).limit(5);
-  if(connError)throw new Error("connection_lookup_failed");
-  const connection=(connections??[]).find((x:any)=>Array.isArray(x.granted_scopes)&&x.granted_scopes.includes("https://www.googleapis.com/auth/youtube.readonly"));
-  if(!connection)return json({error:"youtube_readonly_connection_required"},409);
-  const refresh=await decrypt(connection.encrypted_refresh_token,required("TOKEN_ENCRYPTION_KEY"));
+  const {data:connection,error:connectionError}=await admin.rpc("claim_youtube_analytics",{
+   p_tenant:tenant,p_admin_user_id:auth.user.id,
+  });
+  if(connectionError||!connection)return json({error:"youtube_readonly_connection_required"},409);
+  const refresh=await decrypt(connection.encrypted_refresh_token_hex,required("TOKEN_ENCRYPTION_KEY"));
   const tr=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
    body:new URLSearchParams({client_id:required("GOOGLE_CLIENT_ID"),client_secret:required("GOOGLE_CLIENT_SECRET"),refresh_token:refresh,grant_type:"refresh_token"})});
   if(!tr.ok)throw new Error("google_refresh_failed");
