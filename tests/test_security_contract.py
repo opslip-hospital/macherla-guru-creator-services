@@ -58,6 +58,9 @@ SELF_SERVICE_MIGRATION = (
 CUSTOMER_SEO_FUNCTION = (
     ROOT / "supabase/functions/customer-youtube-seo/index.ts"
 ).read_text(encoding="utf-8")
+SEO_UPLOAD_GUARD = (
+    ROOT / "supabase/migrations/20261113169000_require_complete_seo_before_private_upload.sql"
+).read_text(encoding="utf-8")
 
 
 class AuthenticationContractTests(unittest.TestCase):
@@ -287,6 +290,12 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("outcomeUnknown=youtubeUpdateStarted&&!youtubeUpdateResponded", PUBLISH_WORKER)
         self.assertIn("!outcomeUnknown", PUBLISH_WORKER)
         self.assertIn("held to prevent an unsafe retry", PUBLISH_WORKER)
+
+    def test_database_blocks_private_upload_without_complete_seo(self):
+        self.assertIn("complete SEO metadata must be saved before upload", SEO_UPLOAD_GUARD)
+        self.assertIn("12 to 18 unique tags", SEO_UPLOAD_GUARD)
+        self.assertIn("five unique hashtags including MacherlaGuru", SEO_UPLOAD_GUARD)
+        self.assertIn("five title options", SEO_UPLOAD_GUARD)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
