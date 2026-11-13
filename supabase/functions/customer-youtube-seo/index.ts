@@ -96,7 +96,7 @@ async function uploadVideoToGemini(apiKey: string, bytes: Uint8Array, mime: stri
   return { name: String(file.name), uri: String(file.uri), state: String(file.state ?? "PROCESSING") };
 }
 async function waitForGeminiFile(apiKey: string, fileName: string) {
-  for (let attempt = 0; attempt < 30; attempt++) {
+  for (let attempt = 0; attempt < 20; attempt++) {
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/" + fileName,
       { headers: { "x-goog-api-key": apiKey } },
@@ -106,7 +106,7 @@ async function waitForGeminiFile(apiKey: string, fileName: string) {
     const state = String(payload.state ?? payload.file?.state ?? "");
     if (state === "ACTIVE") return;
     if (state === "FAILED") throw new Error("gemini_video_processing_failed");
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
   }
   throw new Error("gemini_video_processing_timeout");
 }
