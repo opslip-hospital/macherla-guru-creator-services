@@ -65,7 +65,7 @@ Keep this key only in Supabase Edge Function secrets. Do not add it to Streamlit
 
 Customers can upload their own video to their connected YouTube channel as **PRIVATE**, then choose **Publish now** or **Schedule** from their dashboard. The publish/schedule button is the customer's explicit action; there is no separate platform-admin video approval. Google OAuth publishing permission is still required for changing video visibility or scheduling. Customers must reconnect their channel if the requested publishing scope was not granted.
 
-The OAuth flow requests only `youtube.upload` and `youtube.readonly`. A short-lived, one-use state is stored as a hash. The refresh token is encrypted with AES-256-GCM before it is stored in the private schema. Only the channel identity and granted scopes are returned to the customer UI.
+The OAuth flow requests `youtube.upload`, `youtube.readonly`, and `youtube.force-ssl`; the last permission is needed to publish or schedule a video after the customer chooses that action. A short-lived, one-use state is stored as a hash. The refresh token is encrypted with AES-256-GCM before it is stored in the private schema. Only the channel identity and granted scopes are returned to the customer UI.
 
 ## Current limitations
 
