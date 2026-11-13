@@ -50,6 +50,8 @@ Deno.serve(async (req) => {
   let claimedJobId: string | null = null;
   let uploadedVideoId: string | null = null;
   let youtubeUploadStarted = false;
+  let youtubeUploadResponded = false;
+  let youtubeUploadOutcomeUnknown = false;
   let admin: ReturnType<typeof createClient> | null = null;
   try {
     const supabaseUrl = secret("SUPABASE_URL");
@@ -190,7 +192,11 @@ Deno.serve(async (req) => {
       headers: { "Content-Type": String(claimed.mime_type), "Content-Length": String(videoBytes.byteLength) },
       body: videoBytes,
     });
-    if (!uploaded.ok) throw new Error("youtube_private_upload_failed");
+    youtubeUploadResponded = true;
+    if (!uploaded.ok) {
+      if (uploaded.status >= 500) youtubeUploadOutcomeUnknown = true;
+      throw new Error("youtube_private_upload_failed");
+    }
     // A successful response confirms YouTube accepted the upload.
     const youtubeVideo = await uploaded.json();
     if (!youtubeVideo.id) throw new Error("youtube_video_id_missing");
@@ -224,15 +230,14 @@ Deno.serve(async (req) => {
           youtube_video_id: uploadedVideoId,
           updated_at: new Date().toISOString(),
         }).eq("id", claimedJobId).eq("status", "processing");
-      } else if (youtubeUploadStarted) {
-        // The API accepted the upload but returned no usable video ID. Never make this job retryable.
+      } else if (youtubeUploadStarted && (!youtubeUploadResponded || youtubeUploadOutcomeUnknown)) {
+        // No definitive response or a server error: never make this job retryable.
         await admin.from("upload_jobs").update({
           status: "upload_unknown",
           updated_at: new Date().toISOString(),
         }).eq("id", claimedJobId).eq("status", "processing");
       } else {
-        // No YouTube upload transfer was started, so the customer can safely retry
-        // this same received job after fixing a connection/configuration issue.
+        // The upload transfer did not start, or YouTube definitively rejected it.
         await admin.from("upload_jobs").update({
           status: "received",
           updated_at: new Date().toISOString(),
@@ -240,13 +245,13 @@ Deno.serve(async (req) => {
       }
     }
     return json({
-      error: uploadedVideoId ? "youtube_upload_status_sync_failed" : youtubeUploadStarted ? "youtube_upload_status_unknown" : "private_youtube_upload_failed",
+      error: uploadedVideoId ? "youtube_upload_status_sync_failed" : youtubeUploadStarted && (!youtubeUploadResponded || youtubeUploadOutcomeUnknown) ? "youtube_upload_status_unknown" : "private_youtube_upload_failed",
       ...(uploadedVideoId ? { youtube_video_id: uploadedVideoId, youtube_url: `https://www.youtube.com/watch?v=${uploadedVideoId}` } : {}),
       message: uploadedVideoId
         ? "YouTube received the private video, but dashboard status sync needs attention. Check the video in YouTube Studio before retrying."
-        : youtubeUploadStarted
-          ? "YouTube accepted the upload request but did not return a usable video ID. The job is locked against automatic retry; check YouTube Studio before taking any further action."
-          : "The private YouTube upload could not be completed. Check the channel connection and retry after reviewing the job.",
+        : youtubeUploadStarted && (!youtubeUploadResponded || youtubeUploadOutcomeUnknown)
+          ? "YouTube may have accepted the upload request but its final outcome could not be confirmed. The job is locked against automatic retry; check YouTube Studio before taking any further action."
+          : "YouTube definitively rejected or did not start the upload. The job is ready for a safe retry after reviewing the channel connection.",
     }, 502);
   }
 });
