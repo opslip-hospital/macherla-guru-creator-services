@@ -231,8 +231,10 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString(),
         }).eq("id", claimedJobId).eq("status", "processing");
       } else {
+        // No YouTube upload transfer was started, so the customer can safely retry
+        // this same received job after fixing a connection/configuration issue.
         await admin.from("upload_jobs").update({
-          status: "failed",
+          status: "received",
           updated_at: new Date().toISOString(),
         }).eq("id", claimedJobId).eq("status", "processing");
       }
