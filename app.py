@@ -163,6 +163,41 @@ def refresh_youtube_analytics(tenant_id: str, client: Client) -> dict[str, Any]:
         raise RuntimeError("analytics_refresh_failed") from None
 
 
+def customer_youtube_seo_request(
+    action: str, job_id: str, client: Client, values: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Generate or save a customer's SEO metadata through an owner-checked Edge Function."""
+    try:
+        session = client.auth.get_session()
+        access_token = getattr(session, "access_token", None) if session else None
+        if not access_token:
+            raise RuntimeError("missing_session")
+        payload = {"action": action, "job_id": job_id, **(values or {})}
+        request = urllib.request.Request(
+            f"{SUPABASE_FUNCTIONS_URL}/customer-youtube-seo",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "apikey": SUPABASE_PUBLISHABLE_KEY,
+                "Authorization": f"Bearer {access_token}",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=90) as response:
+            result = json.loads(response.read().decode("utf-8"))
+        if not result.get("success"):
+            raise RuntimeError(str(result.get("error") or "seo_request_failed"))
+        return result
+    except urllib.error.HTTPError as exc:
+        try:
+            detail = json.loads(exc.read().decode("utf-8")).get("error", "seo_request_failed")
+        except Exception:
+            detail = "seo_request_failed"
+        raise RuntimeError(str(detail)) from None
+    except (urllib.error.URLError, TimeoutError, ValueError, AttributeError):
+        raise RuntimeError("seo_request_failed") from None
+
+
 def clear_session() -> None:
     """Clear this browser session's auth client and identity."""
     client = st.session_state.get("_creator_supabase_client")
@@ -750,7 +785,7 @@ if role == "admin":
 else:
     st.divider()
     st.header("Your service")
-    customer_uploads, customer_tickets, customer_billing, customer_analytics = st.tabs(["Videos & approvals", "Support", "Plan & billing", "Channel analytics"])
+    customer_uploads, customer_tickets, customer_billing, customer_analytics = st.tabs(["My videos & AI SEO", "Support", "Plan & billing", "Channel analytics"])
     try:
         own_memberships = (
             supabase.table("tenant_memberships")
@@ -766,8 +801,8 @@ else:
         if not own_tenant_ids:
             st.info("Your video jobs will appear here after your workspace is activated.")
         else:
-            st.subheader("Upload a video for the service team")
-            st.caption("Private file intake only. MP4, MOV or WebM • Maximum 100 MB. This does not upload to YouTube or publish your video.")
+            st.subheader("Upload a video to your YouTube workspace")
+            st.caption("Upload MP4, MOV or WebM • Maximum 100 MB. Generate your title, description, tags and hashtags after upload.")
             with st.form("customer_video_intake", clear_on_submit=True):
                 upload_tenant = st.selectbox("Workspace", own_tenant_ids)
                 upload_title = st.text_input("Video title", max_chars=100)
@@ -807,7 +842,7 @@ else:
                         except Exception:
                             st.error("Secure upload did not complete. Please retry or contact support; no YouTube publishing was started.")
                         else:
-                            st.success("Video file received securely. The service team can now review it.")
+                            st.success("Video received securely. Generate your YouTube SEO below.")
                             st.rerun()
             st.divider()
             try:
@@ -826,25 +861,90 @@ else:
                         st.write(f"**{job.get('video_title') or 'Your video'}**")
                         st.caption(f"Status: {job.get('status', 'draft')}")
                         if job.get("status") == "received":
-                            st.info("Your video file was received privately. The service team must process it before any YouTube upload.")
-                        elif job.get("status") in {"uploaded_private", "awaiting_approval"}:
-                            st.warning("This video is private. Review it before approving public publishing.")
-                            if st.button("Approve public publishing", key=f"approve_video_{job['id']}", type="primary"):
-                                try:
-                                    supabase.rpc("customer_approve_upload", {"p_upload_job": job["id"]}).execute()
-                                except Exception:
-                                    st.error("Approval could not be recorded. Please contact support.")
-                                else:
-                                    st.success("Your approval has been recorded.")
-                                    st.rerun()
-                        elif job.get("status") == "approved":
-                            st.info("Your approval is recorded. The service team may now publish or schedule this private video.")
+                            st.info("Video received securely. Generate your YouTube SEO below.")
+                        try:
+                            saved_rows = (
+                                supabase.table("content_metadata")
+                                .select("title, description, tags, hashtags, caption")
+                                .eq("upload_job_id", job["id"])
+                                .order("created_at", desc=True)
+                                .limit(1)
+                                .execute().data or []
+                            )
+                            saved_meta = saved_rows[0] if saved_rows else {}
+                        except Exception:
+                            saved_meta = {}
+                        with st.expander("🤖 AI Title, Tags, Hashtags & SEO", expanded=not bool(saved_meta)):
+                            seo_context = st.text_area(
+                                "What happens in this video? (helps AI create accurate SEO)",
+                                key=f"seo_context_{job['id']}",
+                                max_chars=1500,
+                                placeholder="Example: Telugu comedy short where a village man argues with Yama about his mobile phone...",
+                            )
+                            seo_language = st.selectbox(
+                                "Output language",
+                                ["Telugu", "Telugu + English", "English", "Hindi"],
+                                key=f"seo_language_{job['id']}",
+                            )
+                            if st.button(
+                                "✨ Generate YouTube SEO",
+                                key=f"generate_seo_{job['id']}",
+                                type="primary",
+                                use_container_width=True,
+                            ):
+                                with st.spinner("AI is preparing your title, description, tags and hashtags..."):
+                                    try:
+                                        customer_youtube_seo_request(
+                                            "generate", job["id"], supabase,
+                                            {
+                                                "title": job.get("video_title") or "",
+                                                "context": seo_context,
+                                                "language": seo_language,
+                                            },
+                                        )
+                                    except RuntimeError as exc:
+                                        if str(exc) == "ai_not_configured":
+                                            st.error("AI SEO is not configured yet. The service administrator must add the Gemini API key in Supabase Edge Function secrets.")
+                                        elif str(exc) == "ai_temporarily_busy":
+                                            st.warning("AI is temporarily busy. Please try again in a little while.")
+                                        else:
+                                            st.error("AI SEO could not be generated. Check the video topic and try again.")
+                                    else:
+                                        st.success("AI generated your YouTube SEO. Review and edit it below.")
+                                        st.rerun()
+                            if saved_meta:
+                                with st.form(f"customer_seo_edit_{job['id']}"):
+                                    edit_title = st.text_input("YouTube title", value=saved_meta.get("title") or "", max_chars=100)
+                                    edit_description = st.text_area("Description", value=saved_meta.get("description") or "", max_chars=5000)
+                                    edit_tags = st.text_area("Tags (comma separated)", value=", ".join(saved_meta.get("tags") or []))
+                                    edit_hashtags = st.text_input("Hashtags (comma separated)", value=", ".join(saved_meta.get("hashtags") or []))
+                                    edit_caption = st.text_area("Viral caption", value=saved_meta.get("caption") or "", max_chars=2200)
+                                    save_customer_seo = st.form_submit_button("Save my SEO edits", type="primary")
+                                if save_customer_seo:
+                                    try:
+                                        customer_youtube_seo_request(
+                                            "save", job["id"], supabase,
+                                            {
+                                                "title": edit_title,
+                                                "description": edit_description,
+                                                "tags": [x.strip() for x in edit_tags.split(",") if x.strip()],
+                                                "hashtags": [x.strip().lstrip("#") for x in edit_hashtags.split(",") if x.strip()],
+                                                "caption": edit_caption,
+                                            },
+                                        )
+                                    except RuntimeError:
+                                        st.error("Your SEO edits could not be saved. Check the title and tag limits.")
+                                    else:
+                                        st.success("Your SEO edits are saved.")
+                                        st.rerun()
+                        if job.get("status") in {"uploaded_private", "awaiting_approval", "approved"}:
+                            st.info("Your video is uploaded privately. Self-service publish/schedule is the next workflow being enabled.")
                         elif job.get("status") == "scheduled":
                             st.info(f"Your video is scheduled for {job.get('scheduled_for')}.")
                         elif job.get("status") == "published":
                             st.success("Published video.")
                         elif job.get("status") == "failed":
-                            st.error("This job needs service-team attention.")
+                            st.error("This job needs attention. Please contact support.")
             except Exception:
                 st.warning("Your video list is temporarily unavailable.")
 
