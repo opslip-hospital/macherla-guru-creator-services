@@ -864,7 +864,7 @@ else:
             st.caption("Choose one MP4, MOV or WebM file. Gemini watches the video and prepares its SEO automatically.")
             with st.form("customer_video_intake", clear_on_submit=True):
                 upload_tenant = st.selectbox("Workspace", own_tenant_ids)
-                video_file = st.file_uploader("Choose video file", type=["mp4", "mov", "webm"])
+                video_file = st.file_uploader("Choose video file", type=["mp4", "mov", "webm"], max_upload_size=100)
                 submit_video = st.form_submit_button("⬆️ Upload video & generate AI SEO", type="primary", use_container_width=True)
             if submit_video:
                 if video_file is None:
@@ -973,7 +973,7 @@ else:
                         edit_caption = st.text_area("YouTube caption", value=details.get("youtube_caption") or saved_meta.get("caption") or "", max_chars=2200)
                         edit_instagram_caption = st.text_area("Instagram caption", value=details.get("instagram_caption") or "", max_chars=2200)
                         edit_keywords = st.text_area("Extra SEO keywords", value=", ".join(details.get("keywords") or []))
-                        save_customer_seo = st.form_submit_button("Save SEO & prepare YouTube upload", type="primary")
+                        save_customer_seo = st.form_submit_button("Save my SEO edits", type="primary")
                     if save_customer_seo:
                         try:
                             customer_youtube_seo_request(
