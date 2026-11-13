@@ -225,8 +225,22 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
         },
       };
       if (!metadata.title) return json({ error: "title_required" }, 400);
-      const totalTagChars = (metadata.tags as string[]).reduce((n, tag) => n + tag.length, 0);
-      if (totalTagChars > 500) return json({ error: "tags_limit_exceeded" }, 400);
+      const savedTags = metadata.tags as string[];
+      const savedHashtags = metadata.hashtags as string[];
+      const savedTitles = (metadata.metadata_details as Record<string, unknown>).title_options as string[];
+      const totalTagChars = savedTags.reduce((n, tag) => n + tag.length, 0);
+      if (savedTags.length < 12 || savedTags.length > 18 || totalTagChars > 450) {
+        return json({ error: "tags_must_be_12_to_18_and_within_450_characters" }, 400);
+      }
+      if (savedHashtags.length !== 5) {
+        return json({ error: "exactly_5_unique_hashtags_required" }, 400);
+      }
+      if (savedTitles.length !== 5 || new Set(savedTitles.map((x) => x.toLowerCase())).size !== 5) {
+        return json({ error: "exactly_5_unique_title_options_required" }, 400);
+      }
+      if (((metadata.metadata_details as Record<string, unknown>).keywords as string[]).length > 20) {
+        return json({ error: "maximum_20_seo_keywords_allowed" }, 400);
+      }
     }
     const { data: existing } = await admin.from("content_metadata").select("id")
       .eq("upload_job_id", jobId).order("created_at", { ascending: false }).limit(1).maybeSingle();
