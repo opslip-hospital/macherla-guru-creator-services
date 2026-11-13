@@ -99,6 +99,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("private.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
         self.assertIn("security invoker", AI_RATE_LIMIT_MIGRATION.lower())
         self.assertIn("grant execute on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
+        self.assertIn("customer_ai_rate_limits_window_start_idx", (ROOT / "supabase/migrations/20261113297000_index_customer_ai_rate_limit_cleanup.sql").read_text(encoding="utf-8"))
         self.assertIn("admin.rpc(", CUSTOMER_SEO_FUNCTION)
         self.assertIn('"consume_customer_ai_rate_limit"', CUSTOMER_SEO_FUNCTION)
         self.assertIn('admin.rpc("consume_customer_ai_rate_limit"', (ROOT / "supabase/functions/customer-content-studio/index.ts").read_text(encoding="utf-8"))
@@ -118,8 +119,8 @@ class AuthenticationContractTests(unittest.TestCase):
         versions = [path.name[:14] for path in migration_dir.glob("*.sql")]
         self.assertEqual(len(versions), len(set(versions)))
         self.assertGreater(
+            "20261113297000_index_customer_ai_rate_limit_cleanup.sql",
             "20261113296000_server_only_ai_rate_limit_rpc.sql",
-            "20261113295000_customer_ai_rate_limits.sql",
         )
         self.assertIn("connected channel brand", CHANNEL_BRAND_GUARD_MIGRATION)
 
