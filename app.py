@@ -636,14 +636,14 @@ else:
                 else:
                     st.info("Your workspace must be active before connecting YouTube.")
         callback_status = st.query_params.get("youtube_oauth")
-        if callback_status:
-            if callback_status == "connected":
-                st.success("Google returned to the app. The channel connection is saved if it appears above.")
-            else:
-                st.warning(
-                    "Google connection did not complete. Check the Google consent setup "
-                    "or ask the service administrator for help."
-                )
+        if callback_status == "connected":
+            st.success("YouTube channel connected successfully. Your channel now appears above; refresh channel analytics to load its statistics.")
+        elif callback_status == "required_permissions_missing":
+            st.warning("YouTube connection was not saved because upload, read-only, and publishing permissions are required. Reconnect and accept the requested Google permissions.")
+        elif callback_status == "denied":
+            st.info("Google connection was cancelled. You can connect your channel whenever you're ready.")
+        elif callback_status:
+            st.warning("Google could not complete the channel connection. Please retry, or contact the service administrator if the issue continues.")
         st.info(
             "Channel connection uses Google OAuth. The service never asks for your Google password. "
             "After connecting, you can generate SEO, upload privately, and choose Publish now or Schedule. "
