@@ -43,10 +43,10 @@ if st.session_state.pop("_creator_clear_all_state", False):
         st.session_state.pop(_session_key, None)
 
 st.title("🎬 Macherla Guru Creator Services")
-st.caption("Customer YouTube workspaces • AI-assisted SEO • Customer-controlled publishing")
+st.caption("Customer YouTube workspaces • Video upload • Gemini SEO • Scheduled publishing")
 st.markdown(
     "Connect your own YouTube channel, review AI-generated titles, descriptions, tags and hashtags, "
-    "upload videos privately, then choose Publish now or Schedule. Each customer workspace is isolated. "
+    "upload videos privately, then choose an IST date and AM/PM schedule. Each customer workspace is isolated. "
     "AI suggestions are drafts; you remain in control of every publishing action."
 )
 legal_left, legal_right = st.columns(2)
