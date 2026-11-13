@@ -967,7 +967,11 @@ else:
         )
     except Exception:
         own_tenant_ids = []
+        own_tenant_rows = []
+        active_tenant_rows = []
         active_tenant_ids = []
+        workspace_labels = {}
+        selected_active_tenant_id = None
 
     # Channel-first customer home, matching the existing Macherla Guru Manager layout.
     # Every query is scoped to this authenticated customer's tenant memberships.
