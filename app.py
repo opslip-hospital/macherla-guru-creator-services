@@ -179,100 +179,6 @@ def publish_approved_video(
         raise RuntimeError("publish_failed") from None
 
 
-def refresh_youtube_analytics(tenant_id: str, client: Client) -> dict[str, Any]:
-    """Refresh channel statistics in the trusted backend without exposing Google tokens."""
-    try:
-        session = client.auth.get_session()
-        access_token = getattr(session, "access_token", None) if session else None
-        if not access_token:
-            raise RuntimeError("missing_session")
-        request = urllib.request.Request(
-            f"{SUPABASE_FUNCTIONS_URL}/youtube-refresh-analytics",
-            data=json.dumps({"tenant_id": tenant_id}).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "apikey": SUPABASE_PUBLISHABLE_KEY,
-                "Authorization": f"Bearer {access_token}",
-            },
-            method="POST",
-        )
-        with urllib.request.urlopen(request, timeout=60) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-        if not payload.get("success"):
-            raise RuntimeError("analytics_refresh_failed")
-        return payload
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError, RuntimeError, AttributeError):
-        raise RuntimeError("analytics_refresh_failed") from None
-
-
-def customer_channel_dashboard_request(tenant_id: str, client: Client) -> dict[str, Any]:
-    """Refresh only the authenticated owner's connected YouTube channel and recent uploads."""
-    try:
-        session = client.auth.get_session()
-        access_token = getattr(session, "access_token", None) if session else None
-        if not access_token:
-            raise RuntimeError("missing_session")
-        request = urllib.request.Request(
-            f"{SUPABASE_FUNCTIONS_URL}/customer-channel-dashboard",
-            data=json.dumps({"tenant_id": tenant_id}).encode("utf-8"),
-            headers={"Content-Type": "application/json", "apikey": SUPABASE_PUBLISHABLE_KEY,
-                     "Authorization": f"Bearer {access_token}"},
-            method="POST",
-        )
-        with urllib.request.urlopen(request, timeout=90) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-        if not payload.get("success"):
-            raise RuntimeError(str(payload.get("error") or "dashboard_refresh_failed"))
-        return payload
-    except urllib.error.HTTPError as exc:
-        try:
-            detail = json.loads(exc.read().decode("utf-8")).get("error", "dashboard_refresh_failed")
-        except Exception:
-            detail = "dashboard_refresh_failed"
-        raise RuntimeError(str(detail)) from None
-    except (urllib.error.URLError, TimeoutError, ValueError, AttributeError):
-        raise RuntimeError("dashboard_refresh_failed") from None
-
-
-def customer_content_studio_request(
-    tenant_id: str, kind: str, topic: str, notes: str, client: Client,
-    ai_consent: bool = False,
-) -> str:
-    """Generate customer-owned channel content without exposing the Gemini key."""
-    try:
-        session = client.auth.get_session()
-        access_token = getattr(session, "access_token", None) if session else None
-        if not access_token:
-            raise RuntimeError("missing_session")
-        request = urllib.request.Request(
-            f"{SUPABASE_FUNCTIONS_URL}/customer-content-studio",
-            data=json.dumps({"tenant_id": tenant_id, "kind": kind, "topic": topic,
-                             "notes": notes, "language": "Telugu", "ai_consent": ai_consent}).encode("utf-8"),
-            headers={"Content-Type": "application/json", "apikey": SUPABASE_PUBLISHABLE_KEY,
-                     "Authorization": f"Bearer {access_token}"},
-            method="POST",
-        )
-        with urllib.request.urlopen(request, timeout=90) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-        if not payload.get("success") or not payload.get("draft"):
-            raise RuntimeError(str(payload.get("error") or "content_studio_failed"))
-        return str(payload["draft"])
-    except urllib.error.HTTPError as exc:
-        try:
-            body = json.loads(exc.read().decode("utf-8"))
-            detail = str(body.get("error") or "content_studio_failed")
-            retry_after = int(body.get("retry_after_seconds") or 0)
-        except Exception:
-            detail, retry_after = "content_studio_failed", 0
-        if detail == "ai_rate_limit_exceeded":
-            raise RuntimeError(f"AI generation limit reached. Try again in {max(1, (retry_after + 59) // 60)} minutes.") from None
-        if detail == "ai_rate_limit_check_failed":
-            raise RuntimeError("AI usage limit check is temporarily unavailable. Please try again shortly.") from None
-        raise RuntimeError(detail) from None
-    except (urllib.error.URLError, TimeoutError, ValueError, AttributeError):
-        raise RuntimeError("content_studio_failed") from None
-
-
 def customer_youtube_seo_request(
     action: str, job_id: str, client: Client, values: dict[str, Any] | None = None
 ) -> dict[str, Any]:
@@ -643,9 +549,14 @@ else:
             ).execute().data or []
         except Exception:
             channel_connections = []
-        if not channel_connections:
-            st.info("Connect your YouTube channel to enable upload and scheduling.")
-            if st.button("Connect YouTube channel", key="minimal_connect_youtube", type="primary"):
+        upload_scope = "https://www.googleapis.com/auth/youtube.upload"
+        has_upload_permission = any(
+            upload_scope in (row.get("granted_scopes") or [])
+            for row in channel_connections
+        )
+        if not has_upload_permission:
+            st.info("Connect or reconnect your YouTube channel with upload permission to enable this workflow.")
+            if st.button("Connect / reconnect YouTube channel", key="minimal_connect_youtube", type="primary"):
                 try:
                     google_url = start_youtube_oauth(selected_active_tenant_id, supabase)
                 except RuntimeError:
