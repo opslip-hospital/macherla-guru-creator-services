@@ -27,6 +27,7 @@
 - Confirm SEO generation is blocked with a clear message until the customer's own YouTube channel is connected. After connecting, generate SEO and confirm five unique title options, 12–18 unique tags within the 450-character limit including separators, exactly five unique hashtags including the connected channel's brand hashtag (for the Macherla Guru channel, **#MacherlaGuru**), description, captions, keywords, and category.
 - Edit and save metadata; verify invalid tag counts, duplicate hashtags, missing title options, and excessive keywords are rejected.
 - Confirm SEO becomes read-only after the YouTube private upload.
+- Use Gemini Content Studio to create a script, idea, Shorts draft, and caption; confirm the output uses the connected channel name and selected language without forcing a fixed character or channel style.
 
 ## 5. YouTube upload and publishing
 - On the dedicated test channel, upload the sample video and verify YouTube receives the title, description, tags, category, and exactly five saved hashtags in the description, including that test channel's own brand hashtag (not a hardcoded MacherlaGuru hashtag).
