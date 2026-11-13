@@ -67,7 +67,7 @@ SEO_UPLOAD_GUARD = (
     ROOT / "supabase/migrations/20261113169000_require_complete_seo_before_private_upload.sql"
 ).read_text(encoding="utf-8")
 SEO_TAG_SEPARATOR_GUARD = (
-    ROOT / "supabase/migrations/20261113171000_count_tag_separators_before_upload.sql"
+    ROOT / "supabase/migrations/20261113291500_count_tag_separators_before_upload.sql"
 ).read_text(encoding="utf-8")
 
 
