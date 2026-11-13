@@ -37,7 +37,7 @@ Customers must not upload unlawful, infringing, harmful, or otherwise prohibited
 
 AI-generated titles, descriptions, tags, hashtags, captions, scripts, and recommendations may be inaccurate, incomplete, or unsuitable. Customers must review and edit AI outputs before uploading or publishing. The service does not guarantee views, subscribers, revenue, reach, ranking, or any particular YouTube outcome.
 
-AI video analysis is optional and requires per-video consent. The current Gemini API Free Tier may use submitted content to improve Google products, as disclosed in the app. Google's applicable terms govern that processing.
+AI video analysis is optional and requires per-video consent. Content Studio prompts/instructions and channel metrics sent to Growth Doctor also require explicit consent. The current Gemini API Free Tier may use submitted content to improve Google products, as disclosed in the app. Google's applicable terms govern that processing.
 
 ## 6. Analytics
 
