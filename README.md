@@ -33,6 +33,7 @@ Migrations are in `supabase/migrations/`:
 - Customers can explicitly approve a video for public publishing after a private upload exists; owner membership is checked and consent is audited.
 - Customer and admin dashboards include upload-queue and billing-status views.
 - Customers can submit MP4, MOV, or WebM files up to 100 MB into a private tenant-scoped Supabase Storage bucket. Upload intake is not a YouTube upload.
+- The Master Admin can access submitted files through temporary one-hour signed download links; the bucket itself remains private.
 - Actual YouTube private upload execution, automated AI SEO generation, publish/schedule execution, payment processing, and end-to-end channel tests are not yet implemented.
 
 Do not use the app with real customer channels until provisioning, OAuth, upload, publishing approval, audit logging, and live end-to-end security tests are complete. The current CI checks are static guardrails, not a penetration test or live authentication test.
