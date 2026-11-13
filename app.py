@@ -1143,6 +1143,7 @@ else:
                         edit_description = st.text_area("SEO Description", value=saved_meta.get("description") or "", max_chars=5000)
                         edit_tags = st.text_area("YouTube SEO tags", value=", ".join(saved_meta.get("tags") or []))
                         edit_hashtags = st.text_input("5 Hashtags", value=", ".join("#" + x.lstrip("#") for x in (saved_meta.get("hashtags") or [])))
+                        st.caption("Include one hashtag based on your connected YouTube channel name; use the other four for this video topic.")
                         edit_caption = st.text_area("YouTube caption", value=details.get("youtube_caption") or saved_meta.get("caption") or "", max_chars=2200)
                         edit_instagram_caption = st.text_area("Instagram caption", value=details.get("instagram_caption") or "", max_chars=2200)
                         edit_keywords = st.text_area("Extra SEO keywords", value=", ".join(details.get("keywords") or []))
