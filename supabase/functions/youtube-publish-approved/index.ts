@@ -15,6 +15,8 @@ Deno.serve(async(req)=>{
  if(req.method!=="POST")return json({error:"method_not_allowed"},405);
  let admin:ReturnType<typeof createClient>|null=null,jobId:string|null=null;
  let youtubeUpdated=false;
+ let youtubeUpdateStarted=false;
+ let youtubeUpdateResponded=false;
  let youtubeVideoId:string|null=null;
  try{
   const url=required("SUPABASE_URL");
@@ -51,10 +53,12 @@ Deno.serve(async(req)=>{
   if(!tokenResponse.ok)throw new Error("google_token_refresh_failed");
   const tokenData=await tokenResponse.json();if(!tokenData.access_token)throw new Error("google_access_token_missing");
   const status=mode==="now"?{privacyStatus:"public"}:{privacyStatus:"private",publishAt};
+  youtubeUpdateStarted=true;
   const update=await fetch("https://www.googleapis.com/youtube/v3/videos?part=status",{
    method:"PUT",headers:{Authorization:`Bearer ${tokenData.access_token}`,"Content-Type":"application/json"},
    body:JSON.stringify({id:claimed.youtube_video_id,status}),
   });
+  youtubeUpdateResponded=true;
   if(!update.ok)throw new Error("youtube_video_update_failed");
   youtubeUpdated=true;
   const finalStatus=mode==="now"?"published":"scheduled";
@@ -70,13 +74,16 @@ Deno.serve(async(req)=>{
    youtube_url:`https://www.youtube.com/watch?v=${claimed.youtube_video_id}`,
    message:mode==="now"?"Your video is now public.":"Your video is scheduled."});
  }catch{
-  if(admin&&jobId&&!youtubeUpdated)await admin.from("upload_jobs").update({status:"uploaded_private",scheduled_for:null,updated_at:new Date().toISOString()}).eq("id",jobId).eq("status","publishing");
+  const outcomeUnknown=youtubeUpdateStarted&&!youtubeUpdateResponded;
+  if(admin&&jobId&&!youtubeUpdated&&!outcomeUnknown)await admin.from("upload_jobs").update({status:"uploaded_private",scheduled_for:null,updated_at:new Date().toISOString()}).eq("id",jobId).eq("status","publishing");
   return json({
-   error:youtubeUpdated?"publish_status_sync_failed":"publish_or_schedule_failed",
+   error:youtubeUpdated?"publish_status_sync_failed":outcomeUnknown?"publish_status_unknown":"publish_or_schedule_failed",
    ...(youtubeUpdated&&youtubeVideoId?{youtube_video_id:youtubeVideoId,youtube_url:`https://www.youtube.com/watch?v=${youtubeVideoId}`}:{}),
    message:youtubeUpdated
     ?"YouTube accepted the publish or schedule action, but dashboard status sync failed. Check YouTube Studio before retrying."
-    :"Publishing could not be completed. The video remains private; review the channel connection and retry."
+    :outcomeUnknown
+     ?"The YouTube request timed out before a response was received. The job is held to prevent an unsafe retry; check YouTube Studio and contact support if its status is unclear."
+     :"Publishing could not be completed. The video remains private; review the channel connection and retry."
   },502);
  }
 });
