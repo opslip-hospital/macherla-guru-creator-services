@@ -447,8 +447,17 @@ class AuthenticationContractTests(unittest.TestCase):
     def test_gemini_video_analysis_requires_explicit_free_tier_consent(self):
         self.assertIn("gemini_video_consent_required", CUSTOMER_SEO_FUNCTION)
         self.assertIn("customer_gemini_video_consent_granted", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("ai_consent", APP)
+        self.assertIn("if gemini_ai_consent:", APP)
+        self.assertIn("disabled=not gemini_job_consent", APP)
         self.assertIn("Gemini API Free Tier may use submitted content to improve Google products", APP)
+
+    def test_gemini_text_and_growth_analysis_require_explicit_consent(self):
+        self.assertIn("gemini_text_consent_required", CONTENT_STUDIO_FUNCTION)
+        self.assertIn("customer_gemini_text_consent_granted", CONTENT_STUDIO_FUNCTION)
+        self.assertIn("gemini_growth_text_consent", APP)
+        self.assertIn("gemini_content_studio_text_consent", APP)
+        self.assertIn("disabled=not growth_ai_consent", APP)
+        self.assertIn("disabled=not studio_ai_consent", APP)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
