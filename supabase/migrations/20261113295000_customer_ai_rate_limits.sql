@@ -10,6 +10,8 @@ create table if not exists private.customer_ai_rate_limits (
   unique (user_id, tenant_id, action, window_start)
 );
 
+create index if not exists customer_ai_rate_limits_window_start_idx on private.customer_ai_rate_limits(window_start);
+
 alter table private.customer_ai_rate_limits enable row level security;
 revoke all on table private.customer_ai_rate_limits from public, anon, authenticated;
 grant all on table private.customer_ai_rate_limits to service_role;
