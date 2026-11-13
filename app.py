@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 import re
 import urllib.error
 import urllib.request
@@ -101,6 +103,38 @@ def start_private_youtube_upload(job_id: str, client: Client) -> dict[str, Any]:
         return payload
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError, RuntimeError, AttributeError):
         raise RuntimeError("private_upload_failed") from None
+
+
+def publish_approved_video(
+    job_id: str, mode: str, publish_at: str | None, client: Client
+) -> dict[str, Any]:
+    """Execute public publishing or scheduling only through the trusted Edge Function."""
+    try:
+        session = client.auth.get_session()
+        access_token = getattr(session, "access_token", None) if session else None
+        if not access_token:
+            raise RuntimeError("missing_session")
+        request = urllib.request.Request(
+            f"{SUPABASE_FUNCTIONS_URL}/youtube-publish-approved",
+            data=json.dumps({
+                "job_id": job_id,
+                "mode": mode,
+                "publish_at": publish_at,
+            }).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "apikey": SUPABASE_PUBLISHABLE_KEY,
+                "Authorization": f"Bearer {access_token}",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=60) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        if not payload.get("success"):
+            raise RuntimeError("publish_failed")
+        return payload
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError, RuntimeError, AttributeError):
+        raise RuntimeError("publish_failed") from None
 
 
 def clear_session() -> None:
@@ -470,6 +504,58 @@ if role == "admin":
                                     st.success("YouTube accepted the video as PRIVATE. Customer approval is still required before publishing.")
                                     if upload_result.get("youtube_url"):
                                         st.link_button("Open private YouTube video", upload_result["youtube_url"])
+                        if job.get("status") == "approved":
+                            with st.form(f"publish_action_{job['id']}"):
+                                publish_mode = st.radio(
+                                    "Customer-approved action",
+                                    ["Publish now", "Schedule"],
+                                    horizontal=True,
+                                    key=f"publish_mode_{job['id']}",
+                                )
+                                if publish_mode == "Schedule":
+                                    schedule_date = st.date_input(
+                                        "Schedule date (IST)",
+                                        value=date.today() + timedelta(days=1),
+                                        min_value=date.today(),
+                                        key=f"schedule_date_{job['id']}",
+                                    )
+                                    schedule_time = st.time_input(
+                                        "Schedule time (IST)",
+                                        value=time(9, 0),
+                                        key=f"schedule_time_{job['id']}",
+                                    )
+                                else:
+                                    schedule_date = None
+                                    schedule_time = None
+                                execute_publish = st.form_submit_button(
+                                    "Confirm publish action", type="primary"
+                                )
+                            if execute_publish:
+                                publish_at = None
+                                if publish_mode == "Schedule" and schedule_date and schedule_time:
+                                    publish_at = datetime.combine(
+                                        schedule_date, schedule_time,
+                                        tzinfo=ZoneInfo("Asia/Kolkata"),
+                                    ).isoformat()
+                                try:
+                                    publish_result = publish_approved_video(
+                                        job["id"],
+                                        "schedule" if publish_mode == "Schedule" else "now",
+                                        publish_at,
+                                        supabase,
+                                    )
+                                except RuntimeError:
+                                    st.error("Publish action failed. The video remains private; verify the customer's new YouTube publishing permission.")
+                                else:
+                                    st.success(publish_result.get("message", "Publish action completed."))
+                                    if publish_result.get("youtube_url"):
+                                        st.link_button("Open YouTube video", publish_result["youtube_url"])
+                        if job.get("status") == "publishing":
+                            st.info("Publishing request is processing.")
+                        elif job.get("status") == "scheduled":
+                            st.info(f"Scheduled for: {job.get('scheduled_for')}")
+                        elif job.get("status") == "published":
+                            st.success("Public on YouTube.")
                         if job.get("storage_object_path"):
                             try:
                                 signed = supabase.storage.from_("customer-video-intake").create_signed_url(
@@ -662,7 +748,7 @@ else:
                         elif job.get("status") == "approved":
                             st.info("Your approval is recorded. Publishing execution is not enabled yet.")
                         elif job.get("status") == "scheduled":
-                            st.info("This video is marked as scheduled. Live scheduling execution is not enabled yet.")
+                            st.info(f"Your video is scheduled for {job.get('scheduled_for')}.")
                         elif job.get("status") == "published":
                             st.success("Published video.")
                         elif job.get("status") == "failed":
