@@ -5,7 +5,7 @@ const map=(n:string)=>{try{return JSON.parse(Deno.env.get(n)??"{}")}catch{return
 const b64url=(b:Uint8Array)=>{let x="";for(const n of b)x+=String.fromCharCode(n);return btoa(x).replaceAll("+","-").replaceAll("/","_").replaceAll("=","")};
 const hash=async(s:string)=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,"0")).join("");
 async function adminRpc(url:string,key:string,name:string,body:unknown){
- const r=await fetch(`${url}/rest/v1/rpc/${name}`,{method:"POST",headers:{"apikey":key,"Content-Type":"application/json"},body:JSON.stringify(body)});
+ const r=await fetch(`${url}/rest/v1/rpc/${name}`,{method:"POST",headers:{"apikey":key,"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify(body)});
  if(!r.ok)throw new Error("admin_rpc_failed");
  return await r.json().catch(()=>null);
 }
