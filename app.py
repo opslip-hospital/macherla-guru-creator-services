@@ -886,39 +886,31 @@ else:
     # Every query is scoped to this authenticated customer's tenant memberships.
     st.divider()
     st.subheader("📊 YouTube Channel Overview")
-    dashboard_data = st.session_state.get("creator_channel_dashboard", {})
-    dashboard_channel = dashboard_data.get("channel", {}) if isinstance(dashboard_data, dict) else {}
-    recent_uploads = dashboard_data.get("recent_uploads", []) if isinstance(dashboard_data, dict) else []
+    dashboard_snapshot = {}
     if own_tenant_ids:
-        dashboard_tenant = own_tenant_ids[0]
-        refresh_col, info_col = st.columns([1, 3])
-        with refresh_col:
-            if st.button("🔄 Refresh channel & uploads", key="customer_refresh_channel", type="primary"):
-                with st.spinner("Loading your YouTube channel and latest 20 uploads..."):
-                    try:
-                        dashboard_data = customer_channel_dashboard_request(dashboard_tenant, supabase)
-                    except RuntimeError as exc:
-                        st.error("Channel refresh failed: " + str(exc)[:90])
-                    else:
-                        st.session_state["creator_channel_dashboard"] = dashboard_data
-                        st.success("Your YouTube channel data is refreshed.")
-                        st.rerun()
-        with info_col:
-            st.caption("Refresh uses only your connected YouTube channel. The dashboard never displays another customer's channel.")
-    else:
-        st.info("Your channel overview will appear after your workspace is activated and YouTube is connected.")
-    if dashboard_channel:
-        st.markdown(f"### 🎬 {dashboard_channel.get('title') or 'Your YouTube channel'}")
-        if dashboard_channel.get("custom_url"):
-            st.caption("@" + str(dashboard_channel.get("custom_url")).lstrip("@"))
-        st.caption(f"Channel ID: {dashboard_channel.get('id') or 'Unavailable'} • Updated: {dashboard_data.get('captured_at', 'Unknown')}")
+        try:
+            dashboard_rows = (
+                supabase.table("channel_analytics_snapshots")
+                .select("channel_id, channel_title, channel_description, subscriber_count, view_count, video_count, recent_uploads, captured_at")
+                .in_("tenant_id", own_tenant_ids)
+                .order("captured_at", desc=True)
+                .limit(1)
+                .execute().data or []
+            )
+            dashboard_snapshot = dashboard_rows[0] if dashboard_rows else {}
+        except Exception:
+            dashboard_snapshot = {}
+    recent_uploads = dashboard_snapshot.get("recent_uploads") or []
+    if dashboard_snapshot:
+        st.markdown(f"### 🎬 {dashboard_snapshot.get('channel_title') or 'Your YouTube channel'}")
+        st.caption(f"Channel ID: {dashboard_snapshot.get('channel_id') or 'Unavailable'} • Updated: {dashboard_snapshot.get('captured_at', 'Unknown')}")
         home_a, home_b, home_c = st.columns(3)
-        home_a.metric("Subscribers", dashboard_channel.get("subscribers") if dashboard_channel.get("subscribers") is not None else "Hidden")
-        home_b.metric("Total views", dashboard_channel.get("views") if dashboard_channel.get("views") is not None else "Unavailable")
-        home_c.metric("Videos", dashboard_channel.get("videos") if dashboard_channel.get("videos") is not None else "Unavailable")
-        if dashboard_channel.get("description"):
+        home_a.metric("Subscribers", dashboard_snapshot.get("subscriber_count") if dashboard_snapshot.get("subscriber_count") is not None else "Hidden")
+        home_b.metric("Total views", dashboard_snapshot.get("view_count") if dashboard_snapshot.get("view_count") is not None else "Unavailable")
+        home_c.metric("Videos", dashboard_snapshot.get("video_count") if dashboard_snapshot.get("video_count") is not None else "Unavailable")
+        if dashboard_snapshot.get("channel_description"):
             with st.expander("Channel description"):
-                st.write(dashboard_channel.get("description"))
+                st.write(dashboard_snapshot.get("channel_description"))
         st.subheader("Recent uploads — sorted by views")
         if recent_uploads:
             st.caption(f"Loaded {len(recent_uploads)} recent uploads. Showing the top {min(20, len(recent_uploads))} by views.")
@@ -931,9 +923,9 @@ else:
                 column_config={"URL": st.column_config.LinkColumn("URL", display_text="Open video")}
             )
         else:
-            st.info("No public recent uploads were returned by YouTube.")
+            st.info("No recent uploads were included in the last channel refresh.")
     else:
-        st.info("Connect YouTube and tap Refresh channel & uploads to load your channel statistics and recent uploads.")
+        st.info("Your channel overview will appear after the service team refreshes your connected YouTube channel.")
     if own_tenant_ids:
         try:
             home_snapshot_rows = (
