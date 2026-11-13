@@ -4,8 +4,6 @@ name: Creator Services CI
 # of development, not on every intermediate commit.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 permissions:
   contents: read
