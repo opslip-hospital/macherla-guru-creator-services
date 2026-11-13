@@ -1190,6 +1190,8 @@ else:
                         value=False,
                         key=f"gemini_video_consent_{job['id']}",
                     )
+                if job.get("status") == "received":
+                    st.caption("Gemini fair-use limit: up to 5 video SEO generations per workspace per hour.")
                 if job.get("status") == "received" and st.button(
                     "✨ Generate YouTube SEO",
                     key=f"generate_seo_{job['id']}",
@@ -1446,6 +1448,7 @@ else:
     with customer_studio:
         st.subheader("✨ Gemini AI Content Studio")
         st.caption("Generate scripts and fresh ideas for your connected channel. Gemini creates the draft; you decide what to use.")
+        st.caption("Gemini fair-use limit: up to 12 Content Studio generations per workspace per hour.")
         if not active_tenant_ids:
             st.info("Content Studio is available after your workspace is active.")
         else:
