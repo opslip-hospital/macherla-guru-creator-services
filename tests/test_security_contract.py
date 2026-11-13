@@ -30,6 +30,9 @@ UPLOAD_OUTCOME_MIGRATION = (
 UPLOAD_UNKNOWN_MIGRATION = (
     ROOT / "supabase/migrations/20261113168000_preserve_unknown_youtube_upload_outcomes.sql"
 ).read_text(encoding="utf-8")
+FINAL_SEO_UPLOAD_GUARD = (
+    ROOT / "supabase/migrations/20261113290000_require_complete_seo_before_private_upload.sql"
+).read_text(encoding="utf-8")
 STORAGE_BINDING_MIGRATION = (
     ROOT / "supabase/migrations/20261113287000_bind_storage_uploads_to_draft_jobs.sql"
 ).read_text(encoding="utf-8")
@@ -235,6 +238,12 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("nextLength > 450", upload_worker)
         self.assertIn("Math.max(0, generatedTags.length - 1)", CUSTOMER_SEO_FUNCTION)
         self.assertIn("nextLength = tagLength + tag.length + (tags.length ? 1 : 0)", upload_worker)
+
+    def test_final_migration_reapplies_complete_seo_guard_after_workflow_migrations(self):
+        self.assertIn("complete SEO metadata must be saved before upload", FINAL_SEO_UPLOAD_GUARD)
+        self.assertIn("five unique hashtags including MacherlaGuru", FINAL_SEO_UPLOAD_GUARD)
+        self.assertIn("12 to 18 unique tags within 450 characters", FINAL_SEO_UPLOAD_GUARD)
+        self.assertIn("five title options", FINAL_SEO_UPLOAD_GUARD)
 
     def test_upload_unknown_is_locked_but_pretransfer_failure_is_retryable(self):
         self.assertIn('status: "upload_unknown"', YOUTUBE_WORKER)
