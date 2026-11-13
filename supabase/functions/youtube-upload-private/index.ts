@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     const seenHashtags = new Set<string>();
     for (const rawHashtag of Array.isArray(claimed.hashtags) ? claimed.hashtags : []) {
       const tag = String(rawHashtag).replace(/^#+/, "").trim()
-        .replace(/\\s+/g, "_").replace(/[^\\p{L}\\p{N}_]/gu, "");
+        .replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_]/gu, "");
       const key = tag.toLowerCase();
       if (tag && !seenHashtags.has(key)) {
         seenHashtags.add(key);
