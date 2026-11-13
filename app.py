@@ -160,6 +160,8 @@ def publish_approved_video(
             if not re.fullmatch(r"[A-Za-z0-9_-]{6,20}", video_id):
                 video_id = ""
             raise RuntimeError(f"publish_status_sync_failed:{video_id}") from None
+        if error_payload.get("error") == "publish_status_unknown":
+            raise RuntimeError("publish_status_unknown") from None
         raise RuntimeError("publish_failed") from None
     except (urllib.error.URLError, TimeoutError):
         raise RuntimeError("publish_status_unknown") from None
