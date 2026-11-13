@@ -149,8 +149,10 @@ Deno.serve(async (req: Request) => {
       target_tenant: job.tenant_id,
     });
     const channelName = cleanText(channelConnections?.[0]?.channel_title, 120) || "the creator's YouTube channel";
-    if (!["received", "uploaded_private", "awaiting_approval", "approved"].includes(job.status)) {
-      return json({ error: "video_not_ready_for_metadata" }, 409);
+    // Metadata is editable only before the private YouTube upload. Later edits
+    // would otherwise change the dashboard record without updating YouTube.
+    if (job.status !== "received") {
+      return json({ error: "metadata_locked_after_private_upload" }, 409);
     }
 
     let metadata: Record<string, unknown>;
