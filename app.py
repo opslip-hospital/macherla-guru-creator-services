@@ -1164,7 +1164,7 @@ else:
                                 },
                             )
                         except RuntimeError:
-                            st.error("SEO was not saved. Use 12–18 unique tags (450 characters max), exactly 5 unique hashtags, 5 unique title options, and no more than 20 keywords.")
+                            st.error("SEO was not saved. Use 12–18 unique tags (450 characters max), exactly 5 unique hashtags including #MacherlaGuru, 5 unique title options, and no more than 20 keywords.")
                         else:
                             st.success("SEO saved.")
                             st.rerun()
