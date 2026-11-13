@@ -7,6 +7,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = (ROOT / "app.py").read_text(encoding="utf-8")
+REQUIREMENTS = (ROOT / "requirements.txt").read_text(encoding="utf-8")
+STREAMLIT_CONFIG = (ROOT / ".streamlit/config.toml").read_text(encoding="utf-8")
 INITIAL_SCHEMA = (
     ROOT / "supabase/migrations/202611130001_initial_tenant_isolated_schema.sql"
 ).read_text(encoding="utf-8")
@@ -68,6 +70,11 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("SUPABASE_PUBLISHABLE_KEY", APP)
         self.assertNotIn("SUPABASE_SECRET_KEY", APP)
         self.assertNotIn("service_role", APP.lower())
+
+    def test_streamlit_upload_limit_is_supported_and_set_to_100mb(self):
+        self.assertIn("streamlit>=1.53", REQUIREMENTS)
+        self.assertIn("maxUploadSize = 100", STREAMLIT_CONFIG)
+        self.assertIn("max_upload_size=100", APP)
 
     def test_sign_out_clears_all_prior_customer_widget_state(self):
         self.assertIn("_creator_clear_all_state", APP)
