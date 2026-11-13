@@ -100,9 +100,17 @@ Deno.serve(async (req) => {
     }
     const videoBytes = new Uint8Array(await videoBlob.arrayBuffer());
 
-    const hashtags = Array.isArray(claimed.hashtags)
-      ? claimed.hashtags.map((tag: unknown) => String(tag).replace(/^#+/, "").trim()).filter(Boolean)
-      : [];
+    const hashtags: string[] = [];
+    const seenHashtags = new Set<string>();
+    for (const rawHashtag of Array.isArray(claimed.hashtags) ? claimed.hashtags : []) {
+      const tag = String(rawHashtag).replace(/^#+/, "").trim()
+        .replace(/\\s+/g, "_").replace(/[^\\p{L}\\p{N}_]/gu, "");
+      const key = tag.toLowerCase();
+      if (tag && !seenHashtags.has(key)) {
+        seenHashtags.add(key);
+        hashtags.push(tag);
+      }
+    }
     let description = String(claimed.description ?? "");
     const existingHashtags = new Set(
       (description.match(/#[\p{L}\p{N}_]+/gu) ?? []).map((tag: string) => tag.slice(1).toLowerCase()),
