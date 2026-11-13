@@ -165,7 +165,8 @@ Deno.serve(async (req: Request) => {
     const { data: channelConnections } = await userClient.rpc("list_tenant_youtube_connections", {
       target_tenant: job.tenant_id,
     });
-    const channelName = cleanText(channelConnections?.[0]?.channel_title, 120) || "the creator's YouTube channel";
+    const channelName = cleanText(channelConnections?.[0]?.channel_title, 120);
+    if (!channelName) return json({ error: "youtube_channel_not_connected" }, 409);
     // Metadata is editable only before the private YouTube upload. Later edits
     // would otherwise change the dashboard record without updating YouTube.
     if (job.status !== "received") {
