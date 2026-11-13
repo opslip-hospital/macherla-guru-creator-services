@@ -37,6 +37,12 @@ PUBLISH_WORKER = (
 OAUTH_START = (
     ROOT / "supabase/functions/youtube-oauth-start/index.ts"
 ).read_text(encoding="utf-8")
+ANALYTICS_MIGRATION = (
+    ROOT / "supabase/migrations/20261113210000_tenant_channel_analytics_snapshots.sql"
+).read_text(encoding="utf-8")
+ANALYTICS_WORKER = (
+    ROOT / "supabase/functions/youtube-refresh-analytics/index.ts"
+).read_text(encoding="utf-8")
 
 
 class AuthenticationContractTests(unittest.TestCase):
@@ -131,6 +137,14 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("customer_approved:true", PUBLISH_WORKER)
         self.assertIn("youtube.force-ssl", OAUTH_START)
         self.assertIn("Reconnect for publishing permissions", APP)
+
+    def test_analytics_snapshots_are_tenant_scoped_and_admin_refreshed(self):
+        self.assertIn("analytics_select_member_or_admin", ANALYTICS_MIGRATION)
+        self.assertIn("private.claim_youtube_analytics", ANALYTICS_MIGRATION)
+        self.assertIn("youtube.readonly", ANALYTICS_MIGRATION)
+        self.assertIn("channel_analytics_snapshots", ANALYTICS_WORKER)
+        self.assertIn('youtube-refresh-analytics', APP)
+        self.assertIn("Channel analytics", APP)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
