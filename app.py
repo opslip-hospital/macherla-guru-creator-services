@@ -25,7 +25,7 @@ load_dotenv(Path(__file__).parent / ".env")
 
 APP_NAME = os.getenv("APP_NAME", "Macherla Guru Creator Services")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
-SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", "").strip()
+SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", os.getenv("SUPABASE_ANON_KEY", "")).strip()
 SUPABASE_FUNCTIONS_URL = f"{SUPABASE_URL.rstrip('/')}/functions/v1" if SUPABASE_URL else ""
 
 st.set_page_config(
@@ -348,7 +348,7 @@ def safe_error_message(error: Exception) -> str:
 if not SUPABASE_URL or not SUPABASE_PUBLISHABLE_KEY:
     st.warning(
         "Secure sign-in is locked until SUPABASE_URL and "
-        "SUPABASE_PUBLISHABLE_KEY are configured in the deployment secrets."
+        "SUPABASE_PUBLISHABLE_KEY (or legacy SUPABASE_ANON_KEY) is configured in deployment secrets."
     )
     st.stop()
 
