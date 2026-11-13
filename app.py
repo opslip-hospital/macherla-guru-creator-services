@@ -663,7 +663,7 @@ if role == "admin":
                         try:
                             existing_meta = (
                                 supabase.table("content_metadata")
-                                .select("title, description, tags, hashtags, caption")
+                                .select("title, description, tags, hashtags, caption, metadata_details")
                                 .eq("upload_job_id", job["id"])
                                 .order("created_at", desc=True)
                                 .limit(1)
@@ -932,13 +932,53 @@ else:
                                         st.success("AI generated your YouTube SEO. Review and edit it below.")
                                         st.rerun()
                             if saved_meta:
+                                details = saved_meta.get("metadata_details") or {}
+                                title_options = details.get("title_options") or [saved_meta.get("title") or ""]
+                                if len(title_options) > 1:
+                                    st.markdown("**5 AI title options**")
+                                    selected_title = st.radio(
+                                        "Choose your YouTube title",
+                                        title_options,
+                                        index=next((i for i, value in enumerate(title_options) if value == saved_meta.get("title")), 0),
+                                        key=f"title_options_{job['id']}",
+                                    )
+                                else:
+                                    selected_title = saved_meta.get("title") or ""
+                                if details.get("category"):
+                                    st.caption(f"YouTube category: {details.get('category')}")
                                 with st.form(f"customer_seo_edit_{job['id']}"):
-                                    edit_title = st.text_input("YouTube title", value=saved_meta.get("title") or "", max_chars=100)
-                                    edit_description = st.text_area("Description", value=saved_meta.get("description") or "", max_chars=5000)
-                                    edit_tags = st.text_area("Tags (comma separated)", value=", ".join(saved_meta.get("tags") or []))
-                                    edit_hashtags = st.text_input("Hashtags (comma separated)", value=", ".join(saved_meta.get("hashtags") or []))
-                                    edit_caption = st.text_area("Viral caption", value=saved_meta.get("caption") or "", max_chars=2200)
+                                    edit_title = st.text_input("YouTube title", value=selected_title, max_chars=100)
+                                    edit_description = st.text_area("SEO Description", value=saved_meta.get("description") or "", max_chars=5000)
+                                    edit_tags = st.text_area("12–18 YouTube SEO tags (comma separated)", value=", ".join(saved_meta.get("tags") or []))
+                                    edit_hashtags = st.text_input("5 Hashtags (comma separated)", value=", ".join("#" + x.lstrip("#") for x in (saved_meta.get("hashtags") or [])))
+                                    edit_caption = st.text_area("YouTube caption", value=details.get("youtube_caption") or saved_meta.get("caption") or "", max_chars=2200)
+                                    edit_instagram_caption = st.text_area("Instagram caption", value=details.get("instagram_caption") or "", max_chars=2200)
+                                    edit_keywords = st.text_area("Extra SEO keywords", value=", ".join(details.get("keywords") or []))
                                     save_customer_seo = st.form_submit_button("Save my SEO edits", type="primary")
+                                if save_customer_seo:
+                                    try:
+                                        customer_youtube_seo_request(
+                                            "save", job["id"], supabase,
+                                            {
+                                                "title": edit_title,
+                                                "description": edit_description,
+                                                "tags": [x.strip() for x in edit_tags.split(",") if x.strip()],
+                                                "hashtags": [x.strip().lstrip("#") for x in edit_hashtags.split(",") if x.strip()],
+                                                "caption": edit_caption,
+                                                "metadata_details": {
+                                                    **details,
+                                                    "title_options": title_options,
+                                                    "youtube_caption": edit_caption,
+                                                    "instagram_caption": edit_instagram_caption,
+                                                    "keywords": [x.strip() for x in edit_keywords.split(",") if x.strip()],
+                                                },
+                                            },
+                                        )
+                                    except RuntimeError:
+                                        st.error("Your SEO edits could not be saved. Check the title and tag limits.")
+                                    else:
+                                        st.success("Your SEO edits are saved.")
+                                        st.rerun()
                                 if save_customer_seo:
                                     try:
                                         customer_youtube_seo_request(
