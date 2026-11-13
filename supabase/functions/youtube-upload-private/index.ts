@@ -9,6 +9,17 @@ const headers = {
 const json = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), { status, headers });
 
+function hasExpectedVideoContainer(bytes: Uint8Array, mime: string): boolean {
+  if (mime === "video/webm") {
+    return bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 &&
+      bytes[2] === 0xdf && bytes[3] === 0xa3;
+  }
+  if (mime === "video/mp4" || mime === "video/quicktime") {
+    return bytes.length >= 12 &&
+      String.fromCharCode(...bytes.slice(4, 8)) === "ftyp";
+  }
+  return false;
+}
 function secret(name: string): string {
   const value = Deno.env.get(name);
   if (!value) throw new Error("missing_configuration");
@@ -100,6 +111,9 @@ Deno.serve(async (req) => {
       throw new Error("video_file_size_mismatch");
     }
     const videoBytes = new Uint8Array(await videoBlob.arrayBuffer());
+    if (!hasExpectedVideoContainer(videoBytes, String(claimed.mime_type))) {
+      throw new Error("video_container_does_not_match_file_type");
+    }
 
     const hashtags: string[] = [];
     const seenHashtags = new Set<string>();
