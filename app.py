@@ -1451,7 +1451,7 @@ else:
     with customer_studio:
         st.subheader("✨ Gemini AI Content Studio")
         st.caption("Generate scripts and fresh ideas for your connected channel. Gemini creates the draft; you decide what to use.")
-        st.caption("Gemini fair-use limit: up to 12 Content Studio generations per workspace per hour.")
+        st.caption("Gemini fair-use limit: up to 12 text generations across Content Studio and Growth Doctor per workspace per hour.")
         if not active_tenant_ids:
             st.info("Content Studio is available after your workspace is active.")
         else:
