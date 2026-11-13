@@ -724,7 +724,7 @@ if role == "admin":
         try:
             rows = (
                 supabase.table("upload_jobs")
-                .select("id, tenant_id, video_title, status, youtube_video_id, scheduled_for, original_filename, file_size_bytes, created_at")
+                .select("id, tenant_id, video_title, status, youtube_video_id, scheduled_for, original_filename, storage_object_path, file_size_bytes, created_at")
                 .order("created_at", desc=True)
                 .limit(100)
                 .execute().data or []
@@ -744,6 +744,24 @@ if role == "admin":
                     } for row in rows],
                     use_container_width=True, hide_index=True,
                 )
+                for row in rows:
+                    object_path = row.get("storage_object_path")
+                    if not object_path:
+                        continue
+                    with st.expander(f"Customer video file — {row.get('original_filename') or row.get('video_title') or row['id']}"):
+                        if st.button("Create secure download link", key=f"admin_video_link_{row['id']}"):
+                            try:
+                                signed = supabase.storage.from_("customer-video-intake").create_signed_url(
+                                    object_path, 3600
+                                )
+                                signed_data = signed.get("data") or {}
+                                signed_url = signed_data.get("signedURL") or signed_data.get("signedUrl")
+                                if not signed_url:
+                                    st.error("A secure download link could not be created.")
+                                else:
+                                    st.link_button("Download customer video (1-hour link)", signed_url)
+                            except Exception:
+                                st.error("The customer video could not be accessed. Check admin storage permissions and try again.")
             else:
                 st.info("No customer uploads have been submitted yet.")
         except Exception:
