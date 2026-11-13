@@ -22,6 +22,12 @@ WORKFLOW_MIGRATION = (
 UPLOAD_MIGRATION = (
     ROOT / "supabase/migrations/20261113180000_customer_video_intake_storage.sql"
 ).read_text(encoding="utf-8")
+YOUTUBE_WORKER_MIGRATION = (
+    ROOT / "supabase/migrations/20261113190000_youtube_private_upload_worker.sql"
+).read_text(encoding="utf-8")
+YOUTUBE_WORKER = (
+    ROOT / "supabase/functions/youtube-upload-private/index.ts"
+).read_text(encoding="utf-8")
 
 
 class AuthenticationContractTests(unittest.TestCase):
@@ -96,6 +102,16 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('type=["mp4", "mov", "webm"]', APP)
         self.assertIn('create_signed_url(', APP)
         self.assertIn('Download customer video (1-hour link)', APP)
+
+    def test_private_youtube_upload_is_admin_gated_and_private_first(self):
+        self.assertIn("private.claim_youtube_upload_job", YOUTUBE_WORKER_MIGRATION)
+        self.assertIn("role='admin'", YOUTUBE_WORKER_MIGRATION)
+        self.assertIn("granted_scopes @>", YOUTUBE_WORKER_MIGRATION)
+        self.assertIn('privacyStatus: "private"', YOUTUBE_WORKER)
+        self.assertIn('status: "uploaded_private"', YOUTUBE_WORKER)
+        self.assertIn('youtube-upload-private', APP)
+        self.assertIn('Upload privately to connected YouTube channel', APP)
+        self.assertIn('customer approval is required before publishing', YOUTUBE_WORKER)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
