@@ -752,10 +752,14 @@ if role == "admin":
                         if st.button("Create secure download link", key=f"admin_video_link_{row['id']}"):
                             try:
                                 signed = supabase.storage.from_("customer-video-intake").create_signed_url(
-                                    object_path, 3600
+                                    object_path, 3600, {"download": True}
                                 )
-                                signed_data = signed.get("data") or {}
-                                signed_url = signed_data.get("signedURL") or signed_data.get("signedUrl")
+                                signed_data = signed.get("data") if isinstance(signed.get("data"), dict) else signed
+                                signed_url = (
+                                    signed_data.get("signedURL")
+                                    or signed_data.get("signedUrl")
+                                    or signed_data.get("signed_url")
+                                )
                                 if not signed_url:
                                     st.error("A secure download link could not be created.")
                                 else:
