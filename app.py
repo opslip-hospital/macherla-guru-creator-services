@@ -1262,6 +1262,16 @@ else:
                     f"- {v.get('title')} | views {v.get('views')} | likes {v.get('likes')} | comments {v.get('comments')}"
                     for v in ranked[:20]
                 )
+                if comparison.get("available"):
+                    current = comparison.get("current_period") or {}
+                    previous = comparison.get("previous_period") or {}
+                    growth_summary += (
+                        "\n\n15-DAY CHANNEL COMPARISON:"
+                        f"\nCurrent period: {current.get('start')} to {current.get('end')}"
+                        f"\nViews: {current.get('views', 0)} (previous: {previous.get('views', 0)})"
+                        f"\nWatch minutes: {current.get('estimatedMinutesWatched', 0)} (previous: {previous.get('estimatedMinutesWatched', 0)})"
+                        f"\nAverage view duration seconds: {current.get('averageViewDuration', 0)} (previous: {previous.get('averageViewDuration', 0)})"
+                    )
                 with st.spinner("Gemini is reviewing your recent video performance..."):
                     try:
                         growth_text = customer_content_studio_request(
