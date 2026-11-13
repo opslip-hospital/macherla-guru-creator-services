@@ -274,6 +274,13 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("hasExpectedVideoContainer", YOUTUBE_WORKER)
         self.assertIn("video_container_does_not_match_file_type", YOUTUBE_WORKER)
 
+    def test_unknown_publish_outcome_holds_job_to_prevent_retry(self):
+        self.assertIn("publish_status_unknown", APP)
+        self.assertIn("publish_status_unknown", PUBLISH_WORKER)
+        self.assertIn("outcomeUnknown=youtubeUpdateStarted&&!youtubeUpdateResponded", PUBLISH_WORKER)
+        self.assertIn("!outcomeUnknown", PUBLISH_WORKER)
+        self.assertIn("held to prevent an unsafe retry", PUBLISH_WORKER)
+
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
         self.assertNotIn("youtube.com/@macherlaguru", APP)
