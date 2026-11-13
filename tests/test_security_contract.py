@@ -111,7 +111,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('status: "uploaded_private"', YOUTUBE_WORKER)
         self.assertIn('youtube-upload-private', APP)
         self.assertIn('Upload privately to connected YouTube channel', APP)
-        self.assertIn('customer approval is required before publishing', YOUTUBE_WORKER)
+        self.assertIn('Customer approval is required before publishing', YOUTUBE_WORKER)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
