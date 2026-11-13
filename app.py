@@ -947,10 +947,24 @@ else:
         )
         own_tenant_ids = [r["tenant_id"] for r in own_memberships if r.get("tenant_id")]
         own_tenant_rows = (
-            supabase.table("tenants").select("id, status")
+            supabase.table("tenants").select("id, status, business_name")
             .in_("id", own_tenant_ids).execute().data or []
         ) if own_tenant_ids else []
-        active_tenant_ids = [r["id"] for r in own_tenant_rows if r.get("status") == "active"]
+        active_tenant_rows = [r for r in own_tenant_rows if r.get("status") == "active"]
+        active_tenant_ids = [r["id"] for r in active_tenant_rows if r.get("id")]
+        workspace_labels = {
+            str(r["id"]): (r.get("business_name") or "Creator workspace")
+            for r in active_tenant_rows
+        }
+        selected_active_tenant_id = (
+            st.selectbox(
+                "Active workspace",
+                active_tenant_ids,
+                format_func=lambda value: f"{workspace_labels.get(str(value), 'Creator workspace')} · {str(value)[:8]}",
+                key="creator_active_workspace",
+            )
+            if active_tenant_ids else None
+        )
     except Exception:
         own_tenant_ids = []
         active_tenant_ids = []
@@ -967,7 +981,7 @@ else:
                 if st.button("🔄 Refresh my channel", key="customer_refresh_channel", type="primary"):
                     with st.spinner("Fetching your YouTube channel and latest video performance..."):
                         try:
-                            refresh_result = refresh_youtube_analytics(active_tenant_ids[0], supabase)
+                            refresh_result = refresh_youtube_analytics(selected_active_tenant_id, supabase)
                         except RuntimeError:
                             st.error("Channel refresh failed. Connect YouTube with read-only permission, then retry.")
                         else:
@@ -1432,7 +1446,7 @@ else:
                 with st.spinner("Gemini is reviewing your recent video performance..."):
                     try:
                         growth_text = customer_content_studio_request(
-                            active_tenant_ids[0], "YouTube AI Growth Doctor",
+                            selected_active_tenant_id, "YouTube AI Growth Doctor",
                             f"Analyze these recent public YouTube video metrics. Average views: {avg_recent_views}.",
                             growth_summary + "\nGive practical next-video ideas, opening-hook improvements, and repeatable formats. Clearly state limits of public metrics.",
                             supabase, ai_consent=True,
@@ -1475,7 +1489,7 @@ else:
                     with st.spinner("Gemini is preparing your content..."):
                         try:
                             studio_result = customer_content_studio_request(
-                                active_tenant_ids[0], studio_kind, studio_topic, studio_notes,
+                                selected_active_tenant_id, studio_kind, studio_topic, studio_notes,
                                 supabase, ai_consent=True,
                             )
                         except RuntimeError as exc:
