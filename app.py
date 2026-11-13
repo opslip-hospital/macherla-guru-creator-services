@@ -109,11 +109,12 @@ def start_private_youtube_upload(job_id: str, client: Client) -> dict[str, Any]:
             error_payload = json.loads(exc.read().decode("utf-8"))
         except (ValueError, AttributeError):
             error_payload = {}
-        if error_payload.get("error") == "youtube_upload_status_sync_failed":
+        if error_payload.get("error") in ("youtube_upload_status_sync_failed", "youtube_upload_status_unknown"):
             video_id = str(error_payload.get("youtube_video_id") or "")
             if not re.fullmatch(r"[A-Za-z0-9_-]{6,20}", video_id):
                 video_id = ""
-            raise RuntimeError(f"youtube_upload_status_sync_failed:{video_id}") from None
+            error_code = str(error_payload.get("error"))
+            raise RuntimeError(f"{error_code}:{video_id}") from None
         raise RuntimeError("private_upload_failed") from None
     except (urllib.error.URLError, TimeoutError):
         raise RuntimeError("youtube_upload_status_unknown") from None
