@@ -94,6 +94,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('supabase.storage.from_("customer-video-intake").upload(', APP)
         self.assertIn('supabase.rpc("finalize_customer_video_upload"', APP)
         self.assertIn('type=["mp4", "mov", "webm"]', APP)
+        self.assertIn('create_signed_url(', APP)
+        self.assertIn('Download customer video (1-hour link)', APP)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
