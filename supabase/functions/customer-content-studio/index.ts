@@ -18,7 +18,11 @@ Deno.serve(async(req)=>{
   const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data:membership}=await admin.from("tenant_memberships").select("tenant_id").eq("tenant_id",tenant).eq("user_id",auth.user.id).eq("membership_role","owner").maybeSingle();
   if(!membership)return json({error:"workspace_owner_required"},403);
+  const {data:channelSnapshot}=await admin.from("channel_analytics_snapshots").select("channel_title")
+   .eq("tenant_id",tenant).order("captured_at",{ascending:false}).limit(1).maybeSingle();
+  const channelName=clean(channelSnapshot?.channel_title,120)||"the creator's connected YouTube channel";
   const prompt=`You are a practical YouTube content strategist and Telugu scriptwriter. Create original, engaging but truthful content for the creator's own channel.
+Creator's channel name: ${channelName}
 Channel/content type: ${kind||"YouTube video idea"}
 Topic: ${topic}
 Additional direction: ${notes||"None"}
