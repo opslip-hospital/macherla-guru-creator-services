@@ -29,6 +29,9 @@ UPLOAD_MIGRATION = (
 UPLOAD_OUTCOME_MIGRATION = (
     ROOT / "supabase/migrations/20261113168000_preserve_unknown_youtube_upload_outcomes.sql"
 ).read_text(encoding="utf-8")
+AI_RATE_LIMIT_MIGRATION = (
+    ROOT / "supabase/migrations/20261113295000_customer_ai_rate_limits.sql"
+).read_text(encoding="utf-8")
 MACHERLA_BRAND_CANONICALIZATION_MIGRATION = (
     ROOT / "supabase/migrations/20261113294000_canonicalize_macherla_guru_brand_hashtag.sql"
 ).read_text(encoding="utf-8")
@@ -68,6 +71,9 @@ SELF_SERVICE_MIGRATION = (
 SEO_REQUIRED_MIGRATION = (
     ROOT / "supabase/migrations/20261113291000_finalize_seo_upload_validation.sql"
 ).read_text(encoding="utf-8")
+CONTENT_STUDIO_FUNCTION = (
+    ROOT / "supabase/functions/customer-content-studio/index.ts"
+).read_text(encoding="utf-8")
 CUSTOMER_SEO_FUNCTION = (
     ROOT / "supabase/functions/customer-youtube-seo/index.ts"
 ).read_text(encoding="utf-8")
@@ -92,8 +98,8 @@ class AuthenticationContractTests(unittest.TestCase):
         versions = [path.name[:14] for path in migration_dir.glob("*.sql")]
         self.assertEqual(len(versions), len(set(versions)))
         self.assertGreater(
+            "20261113295000_customer_ai_rate_limits.sql",
             "20261113294000_canonicalize_macherla_guru_brand_hashtag.sql",
-            "20261113293000_validate_connected_channel_brand_hashtag.sql",
         )
         self.assertIn("connected channel brand", CHANNEL_BRAND_GUARD_MIGRATION)
 
@@ -338,6 +344,14 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('status: "upload_unknown"', YOUTUBE_WORKER)
         self.assertIn("youtube_upload_status_unknown", YOUTUBE_WORKER)
         self.assertIn("youtube_upload_status_unknown", APP)
+
+    def test_gemini_generation_is_rate_limited_per_customer(self):
+        self.assertIn("consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
+        self.assertIn("revoke all on table private.customer_ai_rate_limits from public, anon, authenticated", AI_RATE_LIMIT_MIGRATION)
+        self.assertIn("grant execute on function private.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
+        self.assertIn('p_action: "youtube_seo", p_limit: 5', CUSTOMER_SEO_FUNCTION)
+        self.assertIn('p_action:"content_studio",p_limit:12', CONTENT_STUDIO_FUNCTION)
+        self.assertIn("AI generation limit reached", APP)
 
     def test_gemini_file_and_model_errors_return_safe_stage_diagnostics(self):
         self.assertIn("ai_temporarily_busy", CUSTOMER_SEO_FUNCTION)
