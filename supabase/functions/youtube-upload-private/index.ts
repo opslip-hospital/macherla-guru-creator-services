@@ -104,11 +104,19 @@ Deno.serve(async (req) => {
       ? claimed.hashtags.map((tag: unknown) => String(tag).replace(/^#+/, "").trim()).filter(Boolean)
       : [];
     let description = String(claimed.description ?? "");
-    const hashtagLine = hashtags.map((tag: string) => `#${tag}`).join(" ");
-    if (hashtagLine && !description.includes(hashtagLine)) {
-      description = [description, hashtagLine].filter(Boolean).join("\n\n");
+    const existingHashtags = new Set(
+      (description.match(/#[\\p{L}\\p{N}_]+/gu) ?? []).map((tag: string) => tag.slice(1).toLowerCase()),
+    );
+    const missingHashtags = hashtags.filter((tag: string) => !existingHashtags.has(tag.toLowerCase()));
+    const hashtagLine = missingHashtags.map((tag: string) => `#${tag}`).join(" ");
+    const baseDescription = description.trim();
+    if (hashtagLine) {
+      const separator = baseDescription ? "\\n\\n" : "";
+      const availableBaseLength = Math.max(0, 5000 - separator.length - hashtagLine.length);
+      description = baseDescription.slice(0, availableBaseLength) + separator + hashtagLine;
+    } else {
+      description = baseDescription.slice(0, 5000);
     }
-    description = description.slice(0, 5000);
 
     const rawTags = Array.isArray(claimed.tags) ? claimed.tags.map((tag: unknown) => String(tag).trim()).filter(Boolean) : [];
     const tags: string[] = [];
