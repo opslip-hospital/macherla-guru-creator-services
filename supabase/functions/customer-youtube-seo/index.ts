@@ -215,7 +215,7 @@ Rules: return exactly 5 distinct title_options; title <=100 chars; description <
     await admin.from("audit_events").insert({
       tenant_id: job.tenant_id,
       actor_user_id: auth.user.id,
-      event_type: action === "generate" ? "customer_ai_video_seo_generated" : "customer_seo_metadata_saved",
+      event_type: action === "generate" ? "customer_ai_seo_generated" : "customer_seo_metadata_saved",
       details: { upload_job_id: jobId, analyzed_uploaded_video: action === "generate" },
     });
     return json({ success: true, metadata, analyzed_uploaded_video: action === "generate" });
