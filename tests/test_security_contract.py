@@ -287,7 +287,7 @@ class AuthenticationContractTests(unittest.TestCase):
     def test_unknown_publish_outcome_holds_job_to_prevent_retry(self):
         self.assertIn("publish_status_unknown", APP)
         self.assertIn("publish_status_unknown", PUBLISH_WORKER)
-        self.assertIn("outcomeUnknown=youtubeUpdateStarted&&!youtubeUpdateResponded", PUBLISH_WORKER)
+        self.assertIn("youtubeUpdateStarted&&(!youtubeUpdateResponded||youtubeUpdateOutcomeUnknown)", PUBLISH_WORKER)
         self.assertIn("!outcomeUnknown", PUBLISH_WORKER)
         self.assertIn("held to prevent an unsafe retry", PUBLISH_WORKER)
 
