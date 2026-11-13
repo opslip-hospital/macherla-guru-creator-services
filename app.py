@@ -1000,7 +1000,10 @@ else:
                     for col, job in zip(strip_cols, own_jobs[offset:offset + 4]):
                         job_id_text = str(job["id"])
                         label = (job.get("video_title") or "Video")[:22]
-                        status_label = (job.get("status") or "new").replace("_", " ").title()
+                        status_label = (
+                            "Check YouTube" if job.get("status") == "upload_unknown"
+                            else (job.get("status") or "new").replace("_", " ").title()
+                        )
                         with col:
                             if st.button(
                                 f"🎬 {label}\n{status_label}",
@@ -1077,7 +1080,9 @@ else:
             if selected_job:
                 job = selected_job
                 st.markdown(f"**{job.get('video_title') or 'Your video'}**")
-                st.caption(f"Status: {(job.get('status') or 'draft').replace('_', ' ').title()}")
+                st.caption(f"Status: {('Check YouTube' if job.get('status') == 'upload_unknown' else (job.get('status') or 'draft').replace('_', ' ').title())}")
+                if job.get("status") == "upload_unknown":
+                    st.error("YouTube accepted the upload request but the dashboard could not confirm the video ID. Do not retry this upload. Open YouTube Studio and check the channel's private videos first.")
                 try:
                     saved_rows = (
                         supabase.table("content_metadata")
