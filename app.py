@@ -258,10 +258,16 @@ def customer_content_studio_request(
         return str(payload["draft"])
     except urllib.error.HTTPError as exc:
         try:
-            detail = json.loads(exc.read().decode("utf-8")).get("error", "content_studio_failed")
+            body = json.loads(exc.read().decode("utf-8"))
+            detail = str(body.get("error") or "content_studio_failed")
+            retry_after = int(body.get("retry_after_seconds") or 0)
         except Exception:
-            detail = "content_studio_failed"
-        raise RuntimeError(str(detail)) from None
+            detail, retry_after = "content_studio_failed", 0
+        if detail == "ai_rate_limit_exceeded":
+            raise RuntimeError(f"AI generation limit reached. Try again in {max(1, (retry_after + 59) // 60)} minutes.") from None
+        if detail == "ai_rate_limit_check_failed":
+            raise RuntimeError("AI usage limit check is temporarily unavailable. Please try again shortly.") from None
+        raise RuntimeError(detail) from None
     except (urllib.error.URLError, TimeoutError, ValueError, AttributeError):
         raise RuntimeError("content_studio_failed") from None
 
@@ -297,12 +303,17 @@ def customer_youtube_seo_request(
             detail = str(body.get("error") or "seo_request_failed")
             stage = str(body.get("stage") or "")
             provider_status = str(body.get("provider_status") or "")
+            retry_after = int(body.get("retry_after_seconds") or 0)
             provider_code = str(body.get("provider_code") or "")
             provider_message = str(body.get("provider_message") or "")
         except Exception:
-            detail, stage, provider_status, provider_code, provider_message = "seo_request_failed", "", "", "", ""
+            detail, stage, provider_status, retry_after, provider_code, provider_message = "seo_request_failed", "", "", 0, "", ""
         if detail == "youtube_upload_connection_required":
             raise RuntimeError("Connect your YouTube channel with upload permission before generating SEO.") from None
+        if detail == "ai_rate_limit_exceeded":
+            raise RuntimeError(f"AI generation limit reached. Try again in {max(1, (retry_after + 59) // 60)} minutes.") from None
+        if detail == "ai_rate_limit_check_failed":
+            raise RuntimeError("AI usage limit check is temporarily unavailable. Please try again shortly.") from None
         safe_detail = detail[:80]
         safe_stage = stage[:40]
         safe_provider = re.sub(r"[^A-Za-z0-9 _.,:()/-]", "", provider_message)[:180]
