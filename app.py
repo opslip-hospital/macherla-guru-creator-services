@@ -286,13 +286,13 @@ def customer_youtube_seo_request(
             body = json.loads(exc.read().decode("utf-8"))
             detail = str(body.get("error") or "seo_request_failed")
             stage = str(body.get("stage") or "")
-            if detail == "youtube_upload_connection_required":
-                raise RuntimeError("Connect your YouTube channel with upload permission before generating SEO.") from None
             provider_status = str(body.get("provider_status") or "")
             provider_code = str(body.get("provider_code") or "")
             provider_message = str(body.get("provider_message") or "")
         except Exception:
             detail, stage, provider_status, provider_code, provider_message = "seo_request_failed", "", "", "", ""
+        if detail == "youtube_upload_connection_required":
+            raise RuntimeError("Connect your YouTube channel with upload permission before generating SEO.") from None
         safe_detail = detail[:80]
         safe_stage = stage[:40]
         safe_provider = re.sub(r"[^A-Za-z0-9 _.,:()/-]", "", provider_message)[:180]
