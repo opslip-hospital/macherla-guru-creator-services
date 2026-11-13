@@ -1191,7 +1191,7 @@ else:
                                     video_id = str(exc).partition(":")[2]
                                     if video_id:
                                         st.link_button("Open private YouTube video", f"https://www.youtube.com/watch?v={video_id}")
-                                elif str(exc) == "youtube_upload_status_unknown":
+                                elif str(exc).startswith("youtube_upload_status_unknown"):
                                     st.warning("The upload response was interrupted. The video may already exist as PRIVATE. Check YouTube Studio before retrying; do not upload it again yet.")
                                 else:
                                     st.error("YouTube upload failed. Connect your channel with upload permission and retry.")
