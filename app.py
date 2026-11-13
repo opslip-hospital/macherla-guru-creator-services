@@ -36,11 +36,7 @@ st.set_page_config(
 )
 
 st.title("🎬 Macherla Guru — YouTube AI Manager")
-st.caption("Free-first channel dashboard • AI-powered YouTube creator tools")
-st.info(
-    "This is a separate service project. The existing Macherla Guru YouTube AI "
-    "Manager is not connected to or modified by this application."
-)
+st.caption("Free-first channel dashboard • Telugu AI entertainment")
 
 
 def get_session_client() -> Client:
