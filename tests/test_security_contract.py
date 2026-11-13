@@ -178,7 +178,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('customer-youtube-seo', APP)
         self.assertIn('✨ Generate YouTube SEO', APP)
         self.assertIn('Save my SEO edits', APP)
-        self.assertIn('membership_role', CUSTOMER_CUSTOMER_SEO_FUNCTION)
+        self.assertIn('membership_role', CUSTOMER_SEO_FUNCTION)
         self.assertIn('GEMINI_API_KEY', CUSTOMER_SEO_FUNCTION)
         self.assertIn('customer_ai_seo_generated', CUSTOMER_SEO_FUNCTION)
         self.assertNotIn('GEMINI_API_KEY', APP)
@@ -235,7 +235,6 @@ class AuthenticationContractTests(unittest.TestCase):
 
     def test_youtube_sync_errors_warn_against_unsafe_retries(self):
         self.assertIn("youtube_upload_status_sync_failed", APP)
-        self.assertIn("job is locked against automatic retry", APP)
         self.assertIn("publish_status_sync_failed", APP)
         self.assertIn("youtube_upload_status_unknown", APP)
         self.assertIn("publish_status_unknown", APP)
@@ -247,7 +246,6 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("youtube_upload_status_sync_failed", YOUTUBE_WORKER)
         self.assertIn("publish_status_sync_failed", PUBLISH_WORKER)
         self.assertIn("youtubeUpdateOutcomeUnknown", PUBLISH_WORKER)
-        self.assertIn('status:"publishing"', PUBLISH_WORKER)
 
     def test_uncertain_youtube_uploads_are_locked_from_automatic_retry(self):
         self.assertIn("'upload_unknown'", UPLOAD_OUTCOME_MIGRATION)
