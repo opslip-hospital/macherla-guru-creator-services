@@ -122,7 +122,7 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - `customer-channel-dashboard`: v5 ACTIVE
 - `customer-content-studio`: v5 ACTIVE
 
-These are deployment-state checks only, not successful end-to-end tests. Database migration history was compared with the repository migration set; the latest storage-binding migration is applied. The final test run remains deferred by request.
+These are deployment-state checks only, not successful end-to-end tests. The live database migration history and current schema were reviewed; the required storage-binding, analytics/SEO columns, upload status constraint, and final SEO upload guard are present. Idempotent final migrations are committed for clean setup. The final test run remains deferred by request.
 - The scheduling date picker uses the India local calendar date, and schedule times are displayed and submitted in 12-hour AM/PM IST. The backend rejects schedule times that are not at least 15 minutes in the future.
 - The Streamlit app accepts the preferred `SUPABASE_PUBLISHABLE_KEY` secret and falls back to the legacy `SUPABASE_ANON_KEY` name for existing deployments; neither key is privileged.
 - A clean-replay reconciliation migration adds the analytics/SEO JSON fields idempotently. A final post-workflow migration reapplies the `upload_jobs_status_check` constraint with all live states, including `upload_unknown`, so earlier workflow migrations cannot accidentally remove the ambiguous-upload recovery state during a fresh database setup.
