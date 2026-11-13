@@ -24,7 +24,7 @@
 ## 4. Video intake and AI SEO
 - Upload a valid MP4, MOV, and WebM sample within the 100 MB limit; verify unsupported/mismatched file content is rejected.
 - Verify the private intake bucket remains private and each file path is bound to that customer's draft upload job.
-- Generate SEO and confirm five unique title options, 12–18 unique tags within the 450-character limit including separators, exactly five unique hashtags including **#MacherlaGuru**, description, captions, keywords, and category.
+- Generate SEO and confirm five unique title options, 12–18 unique tags within the 450-character limit including separators, exactly five unique hashtags including the connected channel's brand hashtag (for the Macherla Guru channel, **#MacherlaGuru**), description, captions, keywords, and category.
 - Edit and save metadata; verify invalid tag counts, duplicate hashtags, missing title options, and excessive keywords are rejected.
 - Confirm SEO becomes read-only after the YouTube private upload.
 
