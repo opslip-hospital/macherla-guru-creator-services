@@ -37,7 +37,8 @@ Migrations are in `supabase/migrations/`:
 - A server-side YouTube upload worker is deployed. It requires a trusted Master Admin action, decrypts the stored refresh token only inside the Edge Function, uploads with YouTube privacy set to private, and records the returned video ID.
 - A separate server-side publish/schedule worker is deployed. It only accepts jobs with recorded customer approval, requires the YouTube video-management scope, and can publish immediately or set a future publish time.
 - Customers can reconnect to grant the additional video-management permission; Google displays the requested access before consent. The `youtube.force-ssl` scope is broader than upload-only and is required by YouTube's videos.update endpoint.
-- The upload and publish workers have not yet passed a live Google OAuth/channel test. Automated AI SEO generation, payment processing, and end-to-end channel tests are not yet complete.
+- Gemini video-file analysis and customer SEO metadata generation are implemented in the deployed `customer-youtube-seo` Edge Function. The function analyzes the uploaded video through Gemini Files API and prepares title options, description, tags, hashtags, captions, keywords, and category. A live Gemini video test is still pending.
+- The upload and publish workers have not yet passed a live Google OAuth/channel test. Payment processing and end-to-end channel tests are not yet complete.
 
 Do not use the app with real customer channels until provisioning, OAuth, upload, publishing approval, audit logging, and live end-to-end security tests are complete. The current CI checks are static guardrails, not a penetration test or live authentication test.
 
