@@ -190,6 +190,7 @@ class AuthenticationContractTests(unittest.TestCase):
 
     def test_upload_appends_only_missing_hashtags_within_youtube_description_limit(self):
         self.assertIn("do not include hashtags", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("normalizeHashtags", CUSTOMER_SEO_FUNCTION)
         upload_worker = YOUTUBE_WORKER
         self.assertIn("existingHashtags", upload_worker)
         self.assertIn("missingHashtags", upload_worker)
