@@ -28,6 +28,7 @@
 - Edit and save metadata; verify invalid tag counts, duplicate hashtags, missing title options, and excessive keywords are rejected.
 - Confirm SEO becomes read-only after the YouTube private upload.
 - Use Gemini Content Studio to create a script, idea, Shorts draft, and caption; confirm the output uses the connected channel name and selected language without forcing a fixed character or channel style.
+- Confirm the customer upload/SEO/publish workflow contains no thumbnail prompt, thumbnail generation, or thumbnail upload controls.
 
 ## 5. YouTube upload and publishing
 - On the dedicated test channel, upload the sample video and verify YouTube receives the title, description, tags, category, and exactly five saved hashtags in the description, including that test channel's own brand hashtag (not a hardcoded MacherlaGuru hashtag).
