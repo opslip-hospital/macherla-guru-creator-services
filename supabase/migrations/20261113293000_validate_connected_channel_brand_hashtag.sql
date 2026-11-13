@@ -42,7 +42,11 @@ begin
     regexp_replace(normalize(coalesce(v_connection.channel_title,''), NFKC), '[^[:alnum:]]', '', 'g'),
     60
   );
-  if v_brand_hashtag = '' then v_brand_hashtag := 'YouTubeCreator'; end if;
+  if v_brand_hashtag = '' then
+    v_brand_hashtag := 'YouTubeCreator';
+  elsif lower(v_brand_hashtag) = 'macherlaguru' then
+    v_brand_hashtag := 'MacherlaGuru';
+  end if;
   select * into v_metadata from public.content_metadata
     where upload_job_id=p_job_id and tenant_id=v_job.tenant_id
     order by created_at desc limit 1;
