@@ -32,7 +32,7 @@ function normalizeTags(value: unknown, max: number): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
   for (const item of value) {
-    const tag = String(item).replace(/\\s+/g, " ").trim();
+    const tag = String(item).replace(/\s+/g, " ").trim();
     const key = tag.toLocaleLowerCase();
     if (!tag || seen.has(key)) continue;
     seen.add(key);
