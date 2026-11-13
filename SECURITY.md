@@ -9,7 +9,7 @@
 - Verify identity tokens/JWT signatures server-side; never trust client-provided role or tenant IDs.
 - Enforce tenant ownership in every database query and with database row-level security.
 - Admin permissions must be checked server-side and audited.
-- Upload videos as private by default. Publishing or scheduling requires an explicit customer approval event.
+- Upload videos as private by default. Publishing or scheduling requires the authenticated workspace owner's explicit Publish now or Schedule action; no separate platform-admin video approval is used.
 - Keep an immutable audit trail for OAuth connection changes, uploads, approvals, publish actions, and admin access.
 - Use least-privilege OAuth scopes and request additional scopes only when needed.
 - Apply rate limits, CSRF protection where applicable, secure cookies, HTTPS, and secret rotation.
@@ -17,4 +17,4 @@
 
 ## Current implementation status
 
-Supabase Auth, tenant-scoped customer workspaces, admin customer approval, Google OAuth start/callback Edge Functions, private refresh-token storage, and safe channel-status reads are implemented. Google OAuth is not live until the required Edge Function secrets are configured and a test channel connection succeeds. Video upload, publish approval, scheduling, SEO, billing, and support workflows remain pending.
+Supabase Auth, tenant-scoped customer workspaces, admin customer approval, Google OAuth start/callback, encrypted refresh-token storage, private video intake, Gemini SEO, customer-owned private upload and Publish now/Schedule workers, analytics, support, billing-status administration, and audit logging are implemented in code and deployed. Live end-to-end behavior remains unverified until the final authorized test pass. Public RPC wrappers execute as invokers and delegate to private security-definer functions with explicit identity and tenant/admin checks. Anonymous public-table and RPC access is revoked; customer data reads are RLS-scoped. Supabase Security Advisor currently reports leaked-password protection disabled; enable it in Authentication password/security settings before real customer onboarding. Do not onboard real customers until live OAuth, Gemini, upload, publishing, analytics, and tenant-isolation checks pass.
