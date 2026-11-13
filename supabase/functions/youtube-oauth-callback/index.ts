@@ -23,7 +23,7 @@ Deno.serve(async(req)=>{
   const enc=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},k,new TextEncoder().encode(tokens.refresh_token)));
   const packed=new Uint8Array(iv.length+enc.length);packed.set(iv);packed.set(enc,iv.length);
   const scopes=typeof tokens.scope==="string"?tokens.scope.split(" ").filter(Boolean):[];
-  if(!scopes.includes("https://www.googleapis.com/auth/youtube.upload")||!scopes.includes("https://www.googleapis.com/auth/youtube.readonly"))return redirect("required_permissions_missing");
+  if(!scopes.includes("https://www.googleapis.com/auth/youtube.upload")||!scopes.includes("https://www.googleapis.com/auth/youtube.readonly")||!scopes.includes("https://www.googleapis.com/auth/youtube.force-ssl"))return redirect("required_permissions_missing");
   await adminRpc(url,secretKey,"complete_youtube_oauth",{p_state_hash:await hash(state),p_channel_id:ch.id,p_channel_title:ch.snippet?.title??"YouTube channel",p_encrypted_refresh_token:"\\x"+hex(packed),p_granted_scopes:scopes});
   return redirect("connected");
  }catch{return redirect("failed")}
