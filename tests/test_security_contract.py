@@ -186,6 +186,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("channel_analytics_snapshots", ANALYTICS_WORKER)
         self.assertIn('youtube-refresh-analytics', APP)
         self.assertIn("Channel analytics", APP)
+        self.assertIn('timeZone:"Asia/Kolkata"', ANALYTICS_WORKER)
+        self.assertIn("formatToParts(new Date())", ANALYTICS_WORKER)
 
     def test_customer_ai_seo_is_owner_scoped_and_saved_server_side(self):
         self.assertIn('customer-youtube-seo', APP)
