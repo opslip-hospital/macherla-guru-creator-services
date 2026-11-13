@@ -125,15 +125,15 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('create_signed_url(', APP)
         self.assertIn('Download customer video (1-hour link)', APP)
 
-    def test_private_youtube_upload_is_admin_gated_and_private_first(self):
-        self.assertIn("private.claim_youtube_upload_job", YOUTUBE_WORKER_MIGRATION)
-        self.assertIn("role='admin'", YOUTUBE_WORKER_MIGRATION)
+    def test_private_youtube_upload_is_customer_owner_scoped_and_private_first(self):
+        self.assertIn("private.claim_youtube_upload_job", SELF_SERVICE_MIGRATION)
+        self.assertIn("membership_role='owner'", SELF_SERVICE_MIGRATION)
         self.assertIn("granted_scopes @>", YOUTUBE_WORKER_MIGRATION)
         self.assertIn('privacyStatus: "private"', YOUTUBE_WORKER)
         self.assertIn('status: "uploaded_private"', YOUTUBE_WORKER)
         self.assertIn('youtube-upload-private', APP)
-        self.assertIn('Upload privately to connected YouTube channel', APP)
-        self.assertIn('Customer approval is required before publishing', YOUTUBE_WORKER)
+        self.assertIn('Upload to my YouTube channel (PRIVATE)', APP)
+        self.assertIn("The channel owner can now publish or schedule it", YOUTUBE_WORKER)
 
     def test_customer_publish_is_explicit_and_tenant_scoped(self):
         self.assertIn("v_job.status not in ('uploaded_private','approved')", SELF_SERVICE_MIGRATION)
