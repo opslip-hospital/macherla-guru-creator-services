@@ -216,7 +216,7 @@ def customer_youtube_seo_request(
         except Exception:
             detail, stage, provider_status, retry_after, provider_code, provider_message = "seo_request_failed", "", "", 0, "", ""
         if detail == "youtube_upload_connection_required":
-            raise RuntimeError("Connect your YouTube channel with upload permission before generating SEO.") from None
+            raise RuntimeError("SEO drafts can be prepared with your workspace brand. Connect YouTube later for private upload and scheduling.") from None
         if detail == "ai_rate_limit_exceeded":
             raise RuntimeError(f"AI generation limit reached. Try again in {max(1, (retry_after + 59) // 60)} minutes.") from None
         if detail == "ai_rate_limit_check_failed":
