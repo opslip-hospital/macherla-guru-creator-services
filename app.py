@@ -108,7 +108,9 @@ def start_private_youtube_upload(job_id: str, client: Client) -> dict[str, Any]:
                 video_id = ""
             raise RuntimeError(f"youtube_upload_status_sync_failed:{video_id}") from None
         raise RuntimeError("private_upload_failed") from None
-    except (urllib.error.URLError, TimeoutError, ValueError, RuntimeError, AttributeError):
+    except (urllib.error.URLError, TimeoutError):
+        raise RuntimeError("youtube_upload_status_unknown") from None
+    except (ValueError, RuntimeError, AttributeError):
         raise RuntimeError("private_upload_failed") from None
 
 
@@ -151,7 +153,9 @@ def publish_approved_video(
                 video_id = ""
             raise RuntimeError(f"publish_status_sync_failed:{video_id}") from None
         raise RuntimeError("publish_failed") from None
-    except (urllib.error.URLError, TimeoutError, ValueError, RuntimeError, AttributeError):
+    except (urllib.error.URLError, TimeoutError):
+        raise RuntimeError("publish_status_unknown") from None
+    except (ValueError, RuntimeError, AttributeError):
         raise RuntimeError("publish_failed") from None
 
 
@@ -1161,10 +1165,12 @@ else:
                                 upload_result = start_private_youtube_upload(job["id"], supabase)
                             except RuntimeError as exc:
                                 if str(exc).startswith("youtube_upload_status_sync_failed"):
-                                    st.warning("YouTube may already have received this video as PRIVATE, but the dashboard could not confirm it. Check YouTube Studio before retrying; do not upload the video again yet.")
+                                    st.warning("YouTube received this video as PRIVATE, but the dashboard could not confirm it. Check YouTube Studio before retrying; do not upload the video again yet.")
                                     video_id = str(exc).partition(":")[2]
                                     if video_id:
                                         st.link_button("Open private YouTube video", f"https://www.youtube.com/watch?v={video_id}")
+                                elif str(exc) == "youtube_upload_status_unknown":
+                                    st.warning("The upload response was interrupted. The video may already exist as PRIVATE. Check YouTube Studio before retrying; do not upload it again yet.")
                                 else:
                                     st.error("YouTube upload failed. Connect your channel with upload permission and retry.")
                             else:
@@ -1215,10 +1221,12 @@ else:
                                 )
                             except RuntimeError as exc:
                                 if str(exc).startswith("publish_status_sync_failed"):
-                                    st.warning("YouTube may already have accepted the publish or schedule action, but the dashboard could not confirm it. Check YouTube Studio before retrying.")
+                                    st.warning("YouTube accepted the publish or schedule action, but the dashboard could not confirm it. Check YouTube Studio before retrying.")
                                     video_id = str(exc).partition(":")[2]
                                     if video_id:
                                         st.link_button("Open YouTube video", f"https://www.youtube.com/watch?v={video_id}")
+                                elif str(exc) == "publish_status_unknown":
+                                    st.warning("The publish/schedule response was interrupted. YouTube may already have accepted it. Check YouTube Studio before retrying.")
                                 else:
                                     st.error("YouTube could not complete this action. Your video remains private; check publishing permissions and schedule time.")
                             else:
