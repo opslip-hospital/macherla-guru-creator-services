@@ -1382,10 +1382,10 @@ else:
         else:
             with st.form("customer_content_studio_form"):
                 studio_kind = st.selectbox("What should Gemini create?", [
-                    "PJ Babu comedy script", "Video idea / topic", "YouTube Shorts script",
+                    "Comedy script", "Video idea / topic", "YouTube Shorts script",
                     "Telugu caption and hook"
                 ])
-                studio_topic = st.text_area("Video idea / topic", placeholder="ఉదా: యముడు నరకాన్ని PJ బాబుకి అమ్మేశాడు…", max_chars=500)
+                studio_topic = st.text_area("Video idea / topic", placeholder="ఉదా: ఊహించని అతిథి ఇంటికి వచ్చాడు…", max_chars=500)
                 studio_notes = st.text_area("Additional instructions (optional)", placeholder="ఉదా: 15 seconds, fast comedy, Telugu dialogue", max_chars=1000)
                 studio_submit = st.form_submit_button("✨ Generate with Gemini", type="primary", use_container_width=True)
             if studio_submit:
