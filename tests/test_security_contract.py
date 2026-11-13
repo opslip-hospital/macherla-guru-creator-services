@@ -239,6 +239,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("do not include hashtags", CUSTOMER_SEO_FUNCTION)
         self.assertIn("normalizeHashtags", CUSTOMER_SEO_FUNCTION)
         self.assertIn("ensureMacherlaGuruHashtag", CUSTOMER_SEO_FUNCTION)
+        self.assertIn(".slice(0, 100)", CUSTOMER_SEO_FUNCTION)
         self.assertIn('one must be MacherlaGuru', CUSTOMER_SEO_FUNCTION)
         self.assertIn("list_tenant_youtube_connections", CUSTOMER_SEO_FUNCTION)
         self.assertNotIn('schema("private")', CUSTOMER_SEO_FUNCTION)
