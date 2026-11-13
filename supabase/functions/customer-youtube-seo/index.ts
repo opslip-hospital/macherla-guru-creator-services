@@ -63,14 +63,14 @@ function ensureMacherlaGuruHashtag(value: unknown): string[] {
   else tags.push("MacherlaGuru");
   return tags;
 }
-async function uploadVideoToGemini(apiKey: string, bytes: Uint8Array, mime: string, name: string) {
+async function uploadVideoToGemini(apiKey: string, video: Blob, mime: string, name: string) {
   const start = await fetch("https://generativelanguage.googleapis.com/upload/v1beta/files", {
     method: "POST",
     headers: {
       "x-goog-api-key": apiKey,
       "X-Goog-Upload-Protocol": "resumable",
       "X-Goog-Upload-Command": "start",
-      "X-Goog-Upload-Header-Content-Length": String(bytes.byteLength),
+      "X-Goog-Upload-Header-Content-Length": String(video.size),
       "X-Goog-Upload-Header-Content-Type": mime,
       "Content-Type": "application/json",
     },
@@ -85,9 +85,9 @@ async function uploadVideoToGemini(apiKey: string, bytes: Uint8Array, mime: stri
       "x-goog-api-key": apiKey,
       "X-Goog-Upload-Offset": "0",
       "X-Goog-Upload-Command": "upload, finalize",
-      "Content-Length": String(bytes.byteLength),
+      "Content-Length": String(video.size),
     },
-    body: bytes,
+    body: video,
   });
   if (!uploaded.ok) throw new Error(`gemini_file_upload_failed:${uploaded.status}`);
   const payload = await uploaded.json();
