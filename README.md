@@ -117,10 +117,10 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 
 - `youtube-oauth-start`: v11 ACTIVE
 - `youtube-oauth-callback`: v11 ACTIVE
-- `youtube-upload-private`: v13 ACTIVE
-- `youtube-publish-approved`: v7 ACTIVE
+- `youtube-upload-private`: v18 ACTIVE
+- `youtube-publish-approved`: v8 ACTIVE
 - `youtube-refresh-analytics`: v5 ACTIVE
-- `customer-youtube-seo`: v25 ACTIVE
+- `customer-youtube-seo`: v31 ACTIVE
 - `customer-channel-dashboard`: v5 ACTIVE
 - `customer-content-studio`: v5 ACTIVE
 
@@ -132,6 +132,7 @@ These are deployment-state checks only, not successful end-to-end tests. Databas
 - A clean-replay reconciliation migration adds the analytics/SEO JSON fields idempotently. A final post-workflow migration reapplies the `upload_jobs_status_check` constraint with all live states, including `upload_unknown`, so earlier workflow migrations cannot accidentally remove the ambiguous-upload recovery state during a fresh database setup.
 - Both the Gemini SEO worker and private YouTube upload worker now verify the actual video container signature (MP4/MOV `ftyp`, WebM EBML header) against the declared MIME type before processing or upload. The updated functions are deployed ACTIVE: SEO v31 and private upload v17.
 - SEO generation and editing are restricted to jobs still in the secure `received` state, before the YouTube private upload. Once uploaded, the saved title/description/tags/hashtags are displayed read-only so the dashboard cannot imply that later edits were synchronized to YouTube.
-- The private upload worker records `upload_unknown` if YouTube returns a successful upload response but no usable video ID. That state is excluded from normal upload claims, and the customer UI explicitly tells the owner to check YouTube Studio and not retry blindly.
+- The private upload worker records `upload_unknown` if the upload result becomes uncertain after the binary request begins, including interrupted responses or a successful response without a usable video ID. That state is excluded from normal upload claims, and both customer and admin views tell operators to check YouTube Studio before retrying.
 - The publish worker distinguishes a definite YouTube rejection from a request that times out before a response. If the outcome is unknown, the job remains held in `publishing` rather than being reset to `uploaded_private`, preventing an unsafe repeat Publish/Schedule action. The customer UI displays a check-YouTube-Studio/support warning. The publish Edge Function is deployed ACTIVE (version 8).
 - The customer upload panel now explicitly handles unresolved `upload_unknown` and `publishing` states. It tells customers to check YouTube Studio and prevents blind retries while the dashboard cannot confirm whether YouTube accepted the action.
+- The admin read-only upload monitor now labels `upload_unknown` as `Check YouTube — do not retry`, matching the customer warning. Current live deployment inventory was refreshed from Supabase: OAuth start/callback v11, private upload v18, publish v8, analytics v5, customer SEO v31, channel dashboard v5, and content studio v5 are all ACTIVE.
