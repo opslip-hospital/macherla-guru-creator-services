@@ -29,7 +29,7 @@ Deno.serve(async(req)=>{
   await adminRpc(url,secret,"create_youtube_oauth_state",{p_user_id:ud.user.id,p_tenant_id:tenantId,p_state_hash:stateHash,p_expires_at:new Date(Date.now()+600000).toISOString()});
   const g=new URL("https://accounts.google.com/o/oauth2/v2/auth");
   g.searchParams.set("client_id",clientId);g.searchParams.set("redirect_uri",redirect);g.searchParams.set("response_type","code");
-  g.searchParams.set("scope","https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.force-ssl");
+  g.searchParams.set("scope","https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.force-ssl https://www.googleapis.com/auth/yt-analytics.readonly");
   g.searchParams.set("access_type","offline");g.searchParams.set("prompt","consent");g.searchParams.set("include_granted_scopes","true");g.searchParams.set("state",state);
   return json({authorization_url:g.toString()});
  }catch{return json({error:"oauth_start_failed"},500)}
