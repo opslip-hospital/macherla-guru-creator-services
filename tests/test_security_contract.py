@@ -216,6 +216,10 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("generatedKeywords.length > 20", CUSTOMER_SEO_FUNCTION)
         self.assertIn("maximum_20_seo_keywords_allowed", CUSTOMER_SEO_FUNCTION)
 
+    def test_seo_explains_that_channel_connection_is_required(self):
+        self.assertIn("youtube_upload_connection_required", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("Connect your YouTube channel with upload permission before generating SEO.", APP)
+
     def test_customer_ai_seo_is_owner_scoped_and_saved_server_side(self):
         self.assertIn('customer-youtube-seo', APP)
         self.assertIn('✨ Generate YouTube SEO', APP)
