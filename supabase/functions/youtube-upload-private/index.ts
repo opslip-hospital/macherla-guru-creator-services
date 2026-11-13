@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   let claimedJobId: string | null = null;
+  let uploadedVideoId: string | null = null;
   let admin: ReturnType<typeof createClient> | null = null;
   try {
     const supabaseUrl = secret("SUPABASE_URL");
@@ -157,6 +158,7 @@ Deno.serve(async (req) => {
     if (!uploaded.ok) throw new Error("youtube_private_upload_failed");
     const youtubeVideo = await uploaded.json();
     if (!youtubeVideo.id) throw new Error("youtube_video_id_missing");
+    uploadedVideoId = String(youtubeVideo.id);
 
     const { error: updateError } = await admin.from("upload_jobs").update({
       status: "uploaded_private",
@@ -179,11 +181,25 @@ Deno.serve(async (req) => {
     });
   } catch {
     if (admin && claimedJobId) {
-      await admin.from("upload_jobs").update({
-        status: "failed",
-        updated_at: new Date().toISOString(),
-      }).eq("id", claimedJobId).eq("status", "processing");
+      if (uploadedVideoId) {
+        // YouTube accepted the upload; preserve its ID and private state if dashboard sync failed.
+        await admin.from("upload_jobs").update({
+          status: "uploaded_private",
+          youtube_video_id: uploadedVideoId,
+          updated_at: new Date().toISOString(),
+        }).eq("id", claimedJobId).eq("status", "processing");
+      } else {
+        await admin.from("upload_jobs").update({
+          status: "failed",
+          updated_at: new Date().toISOString(),
+        }).eq("id", claimedJobId).eq("status", "processing");
+      }
     }
-    return json({ error: "private_youtube_upload_failed", message: "The private YouTube upload could not be completed. Check the channel connection and retry after reviewing the job." }, 502);
+    return json({
+      error: "private_youtube_upload_failed",
+      message: uploadedVideoId
+        ? "YouTube received the private video, but dashboard status sync needs attention. Check the video in YouTube Studio before retrying."
+        : "The private YouTube upload could not be completed. Check the channel connection and retry after reviewing the job.",
+    }, 502);
   }
 });
