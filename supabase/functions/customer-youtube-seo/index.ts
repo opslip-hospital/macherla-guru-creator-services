@@ -128,10 +128,10 @@ Deno.serve(async (req: Request) => {
     if (!membership) return json({ error: "workspace_owner_required" }, 403);
     const { data: tenantStatus } = await admin.from("tenants").select("status").eq("id", job.tenant_id).maybeSingle();
     if (tenantStatus?.status !== "active") return json({ error: "workspace_not_active" }, 403);
-    const { data: channelConnection } = await admin.schema("private").from("youtube_connections")
-      .select("channel_title").eq("tenant_id", job.tenant_id).is("revoked_at", null)
-      .order("connected_at", { ascending: false }).limit(1).maybeSingle();
-    const channelName = cleanText(channelConnection?.channel_title, 120) || "the creator's YouTube channel";
+    const { data: channelConnections } = await userClient.rpc("list_tenant_youtube_connections", {
+      target_tenant: job.tenant_id,
+    });
+    const channelName = cleanText(channelConnections?.[0]?.channel_title, 120) || "the creator's YouTube channel";
     if (!["received", "uploaded_private", "awaiting_approval", "approved"].includes(job.status)) {
       return json({ error: "video_not_ready_for_metadata" }, 409);
     }
