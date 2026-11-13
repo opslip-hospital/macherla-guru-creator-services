@@ -282,6 +282,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('job.get("status") == "publishing"', APP)
         self.assertIn("do not upload it again yet", APP)
         self.assertIn("do not click Publish or Schedule again", APP)
+        self.assertIn("Open YouTube video to check status", APP)
         self.assertIn("Check YouTube Studio before retrying", APP)
         self.assertIn("youtube_upload_status_sync_failed", YOUTUBE_WORKER)
         self.assertIn("publish_status_sync_failed", PUBLISH_WORKER)
