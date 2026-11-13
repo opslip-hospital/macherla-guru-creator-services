@@ -137,6 +137,32 @@ def publish_approved_video(
         raise RuntimeError("publish_failed") from None
 
 
+def refresh_youtube_analytics(tenant_id: str, client: Client) -> dict[str, Any]:
+    """Refresh channel statistics in the trusted backend without exposing Google tokens."""
+    try:
+        session = client.auth.get_session()
+        access_token = getattr(session, "access_token", None) if session else None
+        if not access_token:
+            raise RuntimeError("missing_session")
+        request = urllib.request.Request(
+            f"{SUPABASE_FUNCTIONS_URL}/youtube-refresh-analytics",
+            data=json.dumps({"tenant_id": tenant_id}).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "apikey": SUPABASE_PUBLISHABLE_KEY,
+                "Authorization": f"Bearer {access_token}",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=60) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        if not payload.get("success"):
+            raise RuntimeError("analytics_refresh_failed")
+        return payload
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError, RuntimeError, AttributeError):
+        raise RuntimeError("analytics_refresh_failed") from None
+
+
 def clear_session() -> None:
     """Clear this browser session's auth client and identity."""
     client = st.session_state.get("_creator_supabase_client")
@@ -491,8 +517,8 @@ st.caption(
 if role == "admin":
     st.divider()
     st.header("Service operations")
-    op_uploads, op_support, op_billing = st.tabs(
-        ["Upload queue", "Support inbox", "Billing overview"]
+    op_uploads, op_support, op_billing, op_analytics = st.tabs(
+        ["Upload queue", "Support inbox", "Billing overview", "Channel analytics"]
     )
     with op_uploads:
         try:
@@ -670,10 +696,61 @@ if role == "admin":
             st.caption("This is a status view only. No payments are collected or subscriptions changed here.")
         except Exception:
             st.error("Billing overview could not be loaded.")
+    with op_analytics:
+        try:
+            analytics_tenants = (
+                supabase.table("tenants")
+                .select("id, business_name")
+                .order("created_at", desc=True)
+                .limit(100)
+                .execute().data or []
+            )
+        except Exception:
+            analytics_tenants = []
+        if not analytics_tenants:
+            st.info("No customer workspaces are available.")
+        else:
+            tenant_labels = {
+                row["id"]: row.get("business_name") or row["id"]
+                for row in analytics_tenants
+            }
+            with st.form("refresh_customer_channel_analytics"):
+                analytics_tenant = st.selectbox(
+                    "Customer workspace",
+                    list(tenant_labels),
+                    format_func=lambda value: tenant_labels.get(value, value),
+                )
+                refresh_analytics = st.form_submit_button("Refresh YouTube analytics", type="primary")
+            if refresh_analytics:
+                try:
+                    refreshed = refresh_youtube_analytics(analytics_tenant, supabase)
+                except RuntimeError:
+                    st.error("Analytics refresh failed. Confirm that this customer has connected YouTube with read-only access.")
+                else:
+                    st.success(f"Analytics refreshed for {refreshed.get('channel_title', 'YouTube channel')}.")
+                    metric_a, metric_b, metric_c = st.columns(3)
+                    metric_a.metric("Subscribers", refreshed.get("subscriber_count") if refreshed.get("subscriber_count") is not None else "Hidden")
+                    metric_b.metric("Channel views", refreshed.get("view_count") if refreshed.get("view_count") is not None else "Unavailable")
+                    metric_c.metric("Videos", refreshed.get("video_count") if refreshed.get("video_count") is not None else "Unavailable")
+            try:
+                snapshot_rows = (
+                    supabase.table("channel_analytics_snapshots")
+                    .select("tenant_id, channel_title, subscriber_count, view_count, video_count, captured_at")
+                    .order("captured_at", desc=True)
+                    .limit(100)
+                    .execute().data or []
+                )
+                if snapshot_rows:
+                    st.dataframe(snapshot_rows, use_container_width=True, hide_index=True)
+                else:
+                    st.caption("No analytics snapshots have been collected yet.")
+            except Exception:
+                st.warning("Analytics history is temporarily unavailable.")
+
 else:
     st.divider()
     st.header("Your service")
-    customer_uploads, customer_tickets, customer_billing = st.tabs(["Videos & approvals", "Support", "Plan & billing"])
+    customer_uploads, customer_tickets, customer_billing, customer_analytics = st.tabs(["Videos & approvals", "Support", "Plan & billing", "Channel analytics"])
     try:
         own_memberships = (
             supabase.table("tenant_memberships")
@@ -770,6 +847,32 @@ else:
                             st.error("This job needs service-team attention.")
             except Exception:
                 st.warning("Your video list is temporarily unavailable.")
+
+    with customer_analytics:
+        if not own_tenant_ids:
+            st.info("Channel analytics will appear after your workspace is activated.")
+        else:
+            try:
+                latest_analytics = (
+                    supabase.table("channel_analytics_snapshots")
+                    .select("channel_title, subscriber_count, view_count, video_count, captured_at")
+                    .in_("tenant_id", own_tenant_ids)
+                    .order("captured_at", desc=True)
+                    .limit(1)
+                    .execute().data or []
+                )
+                if latest_analytics:
+                    snapshot = latest_analytics[0]
+                    st.subheader(snapshot.get("channel_title") or "YouTube channel")
+                    st.caption(f"Last refreshed: {snapshot.get('captured_at')}")
+                    metric_a, metric_b, metric_c = st.columns(3)
+                    metric_a.metric("Subscribers", snapshot.get("subscriber_count") if snapshot.get("subscriber_count") is not None else "Hidden")
+                    metric_b.metric("Channel views", snapshot.get("view_count") if snapshot.get("view_count") is not None else "Unavailable")
+                    metric_c.metric("Videos", snapshot.get("video_count") if snapshot.get("video_count") is not None else "Unavailable")
+                else:
+                    st.info("Your service team has not refreshed channel analytics yet.")
+            except Exception:
+                st.warning("Channel analytics are temporarily unavailable.")
 
     with customer_tickets:
         if not own_tenant_ids:
