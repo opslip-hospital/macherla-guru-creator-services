@@ -65,3 +65,6 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - Admin upload activity is a read-only monitor. Customer workspace owners alone can initiate private uploads and publish/schedule their own videos.
 - Database claim functions verify the authenticated caller matches the session and owns the target tenant before returning YouTube credentials to the server-side worker.
 - Workspace status and billing changes create audit events.
+
+- Suspended or closed workspaces cannot create new video jobs, write video files to intake storage, generate SEO/content drafts, or claim YouTube upload/publish actions.
+- The admin console includes a recent audit-event viewer for workspace, billing, support and customer publishing activity.
