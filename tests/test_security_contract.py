@@ -29,6 +29,9 @@ UPLOAD_MIGRATION = (
 UPLOAD_OUTCOME_MIGRATION = (
     ROOT / "supabase/migrations/20261113168000_preserve_unknown_youtube_upload_outcomes.sql"
 ).read_text(encoding="utf-8")
+AI_RATE_LIMIT_RPC_MIGRATION = (
+    ROOT / "supabase/migrations/20261113296000_server_only_ai_rate_limit_rpc.sql"
+).read_text(encoding="utf-8")
 AI_RATE_LIMIT_MIGRATION = (
     ROOT / "supabase/migrations/20261113295000_customer_ai_rate_limits.sql"
 ).read_text(encoding="utf-8")
@@ -97,8 +100,8 @@ class AuthenticationContractTests(unittest.TestCase):
 
     def test_gemini_rate_limits_use_service_only_public_rpc_wrapper(self):
         self.assertIn("private.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
-        self.assertIn("security invoker", AI_RATE_LIMIT_MIGRATION.lower())
-        self.assertIn("grant execute on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
+        self.assertIn("security invoker", AI_RATE_LIMIT_RPC_MIGRATION.lower())
+        self.assertIn("grant execute on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_RPC_MIGRATION)
         self.assertIn("customer_ai_rate_limits_window_start_idx", (ROOT / "supabase/migrations/20261113297000_index_customer_ai_rate_limit_cleanup.sql").read_text(encoding="utf-8"))
         self.assertIn("admin.rpc(", CUSTOMER_SEO_FUNCTION)
         self.assertIn('"consume_customer_ai_rate_limit"', CUSTOMER_SEO_FUNCTION)
@@ -371,7 +374,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
         self.assertIn("revoke all on table private.customer_ai_rate_limits from public, anon, authenticated", AI_RATE_LIMIT_MIGRATION)
         self.assertIn("grant execute on function private.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
-        self.assertIn("revoke all on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
+        self.assertIn("revoke all on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_RPC_MIGRATION)
         self.assertIn("grant execute on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
         self.assertIn('admin.rpc("consume_customer_ai_rate_limit"', CUSTOMER_SEO_FUNCTION)
         self.assertIn('admin.rpc("consume_customer_ai_rate_limit"', CONTENT_STUDIO_FUNCTION)
