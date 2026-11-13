@@ -149,7 +149,10 @@ Deno.serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const jobId = cleanText(body.job_id, 64);
     const action = body.action === "save" ? "save" : "generate";
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId)) {
+    if (action === "generate" && body.ai_consent !== true) {
+      return json({ error: "gemini_video_consent_required" }, 400);
+    }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(jobId)) {
       return json({ error: "invalid_job_id" }, 400);
     }
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -171,6 +174,20 @@ Deno.serve(async (req: Request) => {
     );
     const channelName = cleanText(uploadConnection?.channel_title, 120);
     if (!channelName) return json({ error: "youtube_upload_connection_required", stage: "youtube_connection" }, 409);
+    if (action === "generate") {
+      const consentLog = await admin.from("audit_events").insert({
+        tenant_id: job.tenant_id,
+        actor_user_id: auth.user.id,
+        event_type: "customer_gemini_video_consent_granted",
+        details: {
+          upload_job_id: jobId,
+          provider: "Google Gemini API",
+          data_use_tier_notice: "free_tier_content_may_be_used_to_improve_google_products",
+          consented_at: new Date().toISOString(),
+        },
+      });
+      if (consentLog.error) return json({ error: "consent_record_failed" }, 500);
+    }
     // Metadata is editable only before the private YouTube upload. Later edits
     // would otherwise change the dashboard record without updating YouTube.
     if (job.status !== "received") {
