@@ -43,6 +43,12 @@ ANALYTICS_MIGRATION = (
 ANALYTICS_WORKER = (
     ROOT / "supabase/functions/youtube-refresh-analytics/index.ts"
 ).read_text(encoding="utf-8")
+SELF_SERVICE_MIGRATION = (
+    ROOT / "supabase/migrations/20261113220000_customer_self_service_youtube_workflow.sql"
+).read_text(encoding="utf-8")
+CUSTOMER_SEO_FUNCTION = (
+    ROOT / "supabase/functions/customer-youtube-seo/index.ts"
+).read_text(encoding="utf-8")
 
 
 class AuthenticationContractTests(unittest.TestCase):
@@ -95,11 +101,12 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("public.admin_save_content_metadata", WORKFLOW_MIGRATION)
         self.assertIn("content_metadata_prepared", WORKFLOW_MIGRATION)
 
-    def test_customer_publish_consent_is_owner_checked_and_audited(self):
-        self.assertIn("private.customer_approve_upload", WORKFLOW_MIGRATION)
-        self.assertIn("membership_role='owner'", WORKFLOW_MIGRATION)
-        self.assertIn("customer_approved_video_publish", WORKFLOW_MIGRATION)
-        self.assertIn('supabase.rpc("customer_approve_upload"', APP)
+    def test_customer_can_publish_own_video_without_admin_approval(self):
+        self.assertIn("membership_role='owner'", SELF_SERVICE_MIGRATION)
+        self.assertIn("workspace owner required", SELF_SERVICE_MIGRATION)
+        self.assertIn("explicit_customer_action", SELF_SERVICE_MIGRATION)
+        self.assertIn('publish_approved_video(', APP)
+        self.assertNotIn('supabase.rpc("customer_approve_upload"', APP)
 
     def test_support_status_changes_are_admin_only_and_audited(self):
         self.assertIn("private.admin_update_service_ticket_status", WORKFLOW_MIGRATION)
@@ -128,13 +135,12 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('Upload privately to connected YouTube channel', APP)
         self.assertIn('Customer approval is required before publishing', YOUTUBE_WORKER)
 
-    def test_public_publishing_requires_recorded_customer_approval(self):
-        self.assertIn("v_job.status<>'approved'", PUBLISH_MIGRATION)
-        self.assertIn("v_job.approved_by is null", PUBLISH_MIGRATION)
-        self.assertIn("youtube.force-ssl", PUBLISH_MIGRATION)
+    def test_customer_publish_is_explicit_and_tenant_scoped(self):
+        self.assertIn("v_job.status not in ('uploaded_private','approved')", SELF_SERVICE_MIGRATION)
+        self.assertIn("youtube.force-ssl", SELF_SERVICE_MIGRATION)
         self.assertIn('privacyStatus:"public"', PUBLISH_WORKER)
         self.assertIn('privacyStatus:"private",publishAt', PUBLISH_WORKER)
-        self.assertIn("customer_approved:true", PUBLISH_WORKER)
+        self.assertIn("initiated_by_authenticated_owner_or_admin:true", PUBLISH_WORKER)
         self.assertIn("youtube.force-ssl", OAUTH_START)
         self.assertIn("Reconnect for publishing permissions", APP)
 
@@ -145,6 +151,15 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("channel_analytics_snapshots", ANALYTICS_WORKER)
         self.assertIn('youtube-refresh-analytics', APP)
         self.assertIn("Channel analytics", APP)
+
+    def test_customer_ai_seo_is_owner_scoped_and_saved_server_side(self):
+        self.assertIn('customer-youtube-seo', APP)
+        self.assertIn('✨ Generate YouTube SEO', APP)
+        self.assertIn('Save my SEO edits', APP)
+        self.assertIn('membership_role', CUSTOMER_SEO_FUNCTION)
+        self.assertIn('GEMINI_API_KEY', CUSTOMER_SEO_FUNCTION)
+        self.assertIn('customer_ai_seo_generated', CUSTOMER_SEO_FUNCTION)
+        self.assertNotIn('GEMINI_API_KEY', APP)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
