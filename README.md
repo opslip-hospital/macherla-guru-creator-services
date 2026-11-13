@@ -27,7 +27,7 @@ Migrations are in `supabase/migrations/`:
 - GitHub Actions CI compiles the app and runs static security-contract tests on pushes and pull requests.
 - The admin workspace appears only when the database profile has the trusted `admin` role.
 - Customer workspace activation and trusted admin provisioning are handled by the Master Admin approval workflow.
-- YouTube OAuth start/callback Edge Functions and encrypted refresh-token storage are deployed, but a real Google test-account connection is still pending.
+- YouTube OAuth start/callback Edge Functions and encrypted refresh-token storage are deployed. The callback now stores only scopes explicitly returned by Google and refuses to record a connection when upload/read permissions are absent; a real Google test-account connection is still pending.
 - Customers can submit support tickets; the Master Admin can view tickets and update their status with an audited admin-only RPC.
 - The Master Admin can prepare title, description, tags, hashtags and captions for existing upload jobs through an admin-only audited RPC.
 - Customers explicitly initiate Publish Now or Schedule after a private upload exists; the authenticated workspace owner is checked and the action is audited. No separate Master Admin approval is required for an individual video.
