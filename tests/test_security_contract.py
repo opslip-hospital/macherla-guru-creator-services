@@ -262,7 +262,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("private.claim_youtube_analytics", ANALYTICS_MIGRATION)
         self.assertIn("youtube.readonly", ANALYTICS_MIGRATION)
         self.assertIn("channel_analytics_snapshots", ANALYTICS_WORKER)
-        self.assertIn('youtube-refresh-analytics', APP)
+        self.assertNotIn("youtube-refresh-analytics", APP)
         self.assertIn('timeZone:"Asia/Kolkata"', ANALYTICS_WORKER)
         self.assertIn("formatToParts(new Date())", ANALYTICS_WORKER)
         self.assertNotIn("Recent uploads — sorted by views", APP)
