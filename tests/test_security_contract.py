@@ -188,6 +188,13 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("grant execute on function private.claim_youtube_upload_job", migration)
         self.assertIn("grant execute on function private.admin_update_tenant_status", migration)
 
+    def test_upload_appends_only_missing_hashtags_within_youtube_description_limit(self):
+        self.assertIn("do not include hashtags", CUSTOMER_SEO_FUNCTION)
+        upload_worker = YOUTUBE_WORKER
+        self.assertIn("existingHashtags", upload_worker)
+        self.assertIn("missingHashtags", upload_worker)
+        self.assertIn("5000 - separator.length - hashtagLine.length", upload_worker)
+
     def test_youtube_sync_errors_warn_against_unsafe_retries(self):
         self.assertIn("youtube_upload_status_sync_failed", APP)
         self.assertIn("do not upload the video again yet", APP)
