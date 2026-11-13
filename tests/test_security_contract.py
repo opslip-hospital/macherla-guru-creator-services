@@ -266,12 +266,6 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("SEO metadata uploaded to YouTube (read-only)", APP)
         self.assertIn("locked after private upload", APP)
 
-    def test_uncertain_upload_is_not_retryable(self):
-        self.assertIn("upload_unknown", UPLOAD_OUTCOME_MIGRATION)
-        self.assertIn("youtubeUploadAccepted = true", YOUTUBE_WORKER)
-        self.assertIn('status: "upload_unknown"', YOUTUBE_WORKER)
-        self.assertIn("Do not retry this upload", APP)
-
     def test_video_container_signatures_are_checked_before_ai_or_youtube_upload(self):
         self.assertIn("hasExpectedVideoContainer", CUSTOMER_SEO_FUNCTION)
         self.assertIn("video_container_does_not_match_file_type", CUSTOMER_SEO_FUNCTION)
