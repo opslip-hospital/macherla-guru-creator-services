@@ -125,3 +125,4 @@ Do not modify, import, or deploy code from `opslip-hospital/macherla-guru-ai-age
 - `customer-content-studio`: v5 ACTIVE
 
 These are deployment-state checks only, not successful end-to-end tests. Database migration history was compared with the repository migration set; the latest storage-binding migration is applied. The final test run remains deferred by request.
+- AI-generated and customer-edited SEO now always retains the channel brand hashtag `#MacherlaGuru`; exactly five unique hashtags are saved. Customer edits that do not meet the five-hashtag, 12–18-tag, 450-character, five-title, and keyword-count rules are rejected with a clear UI message. The SEO function's latest deployed version is ACTIVE (version 30).
