@@ -1074,7 +1074,8 @@ else:
 
             st.divider()
             st.subheader("🎥 Upload one video")
-            st.caption("Choose one MP4, MOV or WebM file. Gemini watches the video and prepares its SEO automatically.")
+            st.caption("Choose one MP4, MOV or WebM file. The video is stored privately first. AI analysis is optional and requires your explicit consent.")
+            gemini_ai_consent = False
             submit_video = False
             if not active_tenant_ids:
                 st.warning("Your workspace is not active yet. Upload and AI actions are paused; contact the service team.")
@@ -1082,7 +1083,12 @@ else:
                 with st.form("customer_video_intake", clear_on_submit=True):
                     upload_tenant = st.selectbox("Workspace", active_tenant_ids)
                     video_file = st.file_uploader("Choose video file", type=["mp4", "mov", "webm"], max_upload_size=100)
-                    submit_video = st.form_submit_button("⬆️ Upload video & generate AI SEO", type="primary", use_container_width=True)
+                    gemini_ai_consent = st.checkbox(
+                        "I consent to send this video to Google Gemini for AI SEO analysis. The current Gemini API Free Tier may use submitted content to improve Google products. I confirm I have the rights to share this video.",
+                        value=False,
+                        key="gemini_video_consent_on_upload",
+                    )
+                    submit_video = st.form_submit_button("⬆️ Upload video", type="primary", use_container_width=True)
             if submit_video:
                 if video_file is None:
                     st.warning("Choose a video file.")
@@ -1117,19 +1123,22 @@ else:
                             st.error("Secure upload did not complete. Please retry; no YouTube publishing was started.")
                         else:
                             st.session_state["creator_selected_job_id"] = job_id
-                            st.success("Video received. Gemini is analyzing the video and preparing SEO now.")
-                            try:
-                                customer_youtube_seo_request(
-                                    "generate", job_id, supabase,
-                                    {"title": upload_title, "language": "Telugu"},
-                                )
-                            except RuntimeError as exc:
-                                if ("youtube_channel_not_connected" in str(exc) or "youtube_upload_connection_required" in str(exc)):
-                                    st.info("Connect your YouTube channel above, then select this video and generate SEO. The brand hashtag will match your channel.")
+                            st.success("Video received and stored privately.")
+                            if gemini_ai_consent:
+                                try:
+                                    customer_youtube_seo_request(
+                                        "generate", job_id, supabase,
+                                        {"title": upload_title, "language": "Telugu", "ai_consent": True},
+                                    )
+                                except RuntimeError as exc:
+                                    if ("youtube_channel_not_connected" in str(exc) or "youtube_upload_connection_required" in str(exc)):
+                                        st.info("Connect your YouTube channel above, then select this video and consent before generating SEO. The brand hashtag will match your channel.")
+                                    else:
+                                        st.warning(f"Video is safe. AI SEO needs a retry: {str(exc)[:130]}.")
                                 else:
-                                    st.warning(f"Video is safe. AI SEO needs a retry: {str(exc)[:130]}.")
+                                    st.success("Gemini finished the video SEO. Review it below.")
                             else:
-                                st.success("Gemini finished the video SEO. Review it below.")
+                                st.info("No video was sent to Gemini. Select this upload below, review the AI data-use notice, and give consent only if you want AI SEO.")
                             st.rerun()
 
             st.divider()
@@ -1159,19 +1168,26 @@ else:
                     saved_meta = {}
 
                 if not saved_meta and job.get("status") == "received":
-                    st.info("Video upload complete. Gemini is ready to analyze its scenes and audio.")
+                    st.info("This video is stored privately. AI SEO sends it to Google Gemini; on the current Free Tier, submitted content may be used to improve Google products.")
+                gemini_job_consent = False
+                if job.get("status") == "received":
+                    gemini_job_consent = st.checkbox(
+                        "I consent to send this video to Google Gemini for AI SEO analysis. The current Gemini API Free Tier may use submitted content to improve Google products. I confirm I have the rights to share this video.",
+                        value=False,
+                        key=f"gemini_video_consent_{job['id']}",
+                    )
                 if job.get("status") == "received" and st.button(
                     "✨ Generate YouTube SEO",
                     key=f"generate_seo_{job['id']}",
                     type="primary",
                     use_container_width=True,
-                    disabled=job.get("status") != "received",
+                    disabled=not gemini_job_consent,
                 ):
                     with st.spinner("Gemini is watching your video and preparing SEO..."):
                         try:
                             customer_youtube_seo_request(
                                 "generate", job["id"], supabase,
-                                {"title": job.get("video_title") or "", "language": "Telugu"},
+                                {"title": job.get("video_title") or "", "language": "Telugu", "ai_consent": True},
                             )
                         except RuntimeError as exc:
                             if ("youtube_channel_not_connected" in str(exc) or "youtube_upload_connection_required" in str(exc)):
