@@ -29,6 +29,9 @@ UPLOAD_MIGRATION = (
 UPLOAD_OUTCOME_MIGRATION = (
     ROOT / "supabase/migrations/20261113168000_preserve_unknown_youtube_upload_outcomes.sql"
 ).read_text(encoding="utf-8")
+DISCONNECT_MIGRATION = (
+    ROOT / "supabase/migrations/20261113298000_customer_disconnect_youtube_channel.sql"
+).read_text(encoding="utf-8")
 AI_RATE_LIMIT_RPC_MIGRATION = (
     ROOT / "supabase/migrations/20261113296000_server_only_ai_rate_limit_rpc.sql"
 ).read_text(encoding="utf-8")
@@ -124,8 +127,8 @@ class AuthenticationContractTests(unittest.TestCase):
         versions = [path.name[:14] for path in migration_dir.glob("*.sql")]
         self.assertEqual(len(versions), len(set(versions)))
         self.assertGreater(
+            "20261113298000_customer_disconnect_youtube_channel.sql",
             "20261113297000_index_customer_ai_rate_limit_cleanup.sql",
-            "20261113296000_server_only_ai_rate_limit_rpc.sql",
         )
         self.assertIn("connected channel brand", CHANNEL_BRAND_GUARD_MIGRATION)
 
@@ -370,6 +373,16 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('status: "upload_unknown"', YOUTUBE_WORKER)
         self.assertIn("youtube_upload_status_unknown", YOUTUBE_WORKER)
         self.assertIn("youtube_upload_status_unknown", APP)
+
+    def test_customer_can_disconnect_youtube_and_clear_saved_token(self):
+        self.assertIn("private.revoke_youtube_connection", DISCONNECT_MIGRATION)
+        self.assertIn("membership_role='owner'", DISCONNECT_MIGRATION)
+        self.assertIn("encrypted_refresh_token=decode('','hex')", DISCONNECT_MIGRATION)
+        self.assertIn("granted_scopes='{}'::text[]", DISCONNECT_MIGRATION)
+        self.assertIn("youtube_channel_disconnected", DISCONNECT_MIGRATION)
+        self.assertIn('supabase.rpc("revoke_youtube_connection"', APP)
+        self.assertIn("Disconnect this YouTube channel", APP)
+        self.assertIn("Existing YouTube videos and schedules remain in YouTube", APP)
 
     def test_gemini_generation_is_rate_limited_per_customer(self):
         self.assertIn("consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
