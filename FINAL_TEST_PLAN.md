@@ -47,6 +47,6 @@
 - Confirm anonymous public-table/RPC access remains revoked and public tables have RLS enabled.
 - Confirm service-role credentials never appear in Streamlit code or browser responses.
 - Enable Supabase Auth **Leaked Password Protection** in the project Authentication password/security settings before real customer onboarding.
-- Confirm Google OAuth test users and redirect URI are configured for the test account. Before real customer onboarding, move the consent screen from Testing to In production and complete Google's verification for required YouTube scopes; external Testing mode is limited to 100 test users and refresh tokens for YouTube scopes expire after 7 days.
+- Confirm Google OAuth test users and redirect URI are configured for the test account. Before real customer onboarding, provide a custom domain the service owner controls, publish a public product homepage with privacy-policy and terms links on that verified domain, and complete Google's domain/brand/sensitive-scope verification. Do not assume the shared `streamlit.app` hostname can be verified as an owned domain. Move the consent screen from Testing to In production; external Testing mode is limited to 100 test users and YouTube-scope refresh tokens expire after 7 days.
 - Do not onboard real customers until OAuth, Gemini video analysis, private upload, Publish now, Schedule, analytics, tenant isolation, and admin workflows pass.
 - Keep the existing **Macherla Guru YouTube AI Manager** untouched throughout all tests.
