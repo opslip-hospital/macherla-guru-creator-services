@@ -180,6 +180,16 @@ Deno.serve(async (req: Request) => {
       return json({ error: "metadata_locked_after_private_upload" }, 409);
     }
     if (action === "generate") {
+      const { data: rateAllowed, error: rateError } = await admin.schema("private").rpc(
+        "consume_customer_ai_rate_limit",
+        { p_user_id: auth.user.id, p_tenant_id: job.tenant_id, p_action: "youtube_seo", p_limit: 5 },
+      );
+      if (rateError) return json({ error: "ai_rate_limit_check_failed", stage: "rate_limit" }, 503);
+      if (!rateAllowed) {
+        const now = new Date();
+        const retryAfter = 3600 - (now.getUTCMinutes() * 60 + now.getUTCSeconds());
+        return json({ error: "ai_rate_limit_exceeded", stage: "rate_limit", retry_after_seconds: retryAfter }, 429);
+      }
       const consentLog = await admin.from("audit_events").insert({
         tenant_id: job.tenant_id,
         actor_user_id: auth.user.id,
