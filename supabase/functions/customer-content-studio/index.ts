@@ -20,7 +20,7 @@ Deno.serve(async(req)=>{
   if(!membership)return json({error:"workspace_owner_required"},403);
   const {data:tenantStatus}=await admin.from("tenants").select("status").eq("id",tenant).maybeSingle();
   if(tenantStatus?.status!=="active")return json({error:"workspace_not_active"},403);
-  const {data:rateAllowed,error:rateError}=await admin.schema("private").rpc("consume_customer_ai_rate_limit",{
+  const {data:rateAllowed,error:rateError}=await admin.rpc("consume_customer_ai_rate_limit",{
    p_user_id:auth.user.id,p_tenant_id:tenant,p_action:"content_studio",p_limit:12,
   });
   if(rateError)return json({error:"ai_rate_limit_check_failed"},503);
