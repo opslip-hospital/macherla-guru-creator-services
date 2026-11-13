@@ -118,6 +118,16 @@ Deno.serve(async (req) => {
       tagLength += tag.length;
     }
     const title = String(claimed.video_title ?? "Creator video").slice(0, 100);
+    const categoryName = String(claimed.metadata_details?.category ?? "").toLowerCase();
+    const categoryIds: Record<string, string> = {
+      "film & animation": "1", "autos & vehicles": "2", "music": "10",
+      "pets & animals": "15", "sports": "17", "short movies": "18",
+      "travel & events": "19", "gaming": "20", "videoblogging": "21",
+      "people & blogs": "22", "comedy": "23", "entertainment": "24",
+      "news & politics": "25", "howto & style": "26", "education": "27",
+      "science & technology": "28", "nonprofits & activism": "29",
+    };
+    const categoryId = categoryIds[categoryName] ?? "22";
     const initiate = await fetch(
       "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
       {
@@ -129,7 +139,7 @@ Deno.serve(async (req) => {
           "X-Upload-Content-Length": String(videoBytes.byteLength),
         },
         body: JSON.stringify({
-          snippet: { title, description, tags, categoryId: "22" },
+          snippet: { title, description, tags, categoryId },
           status: { privacyStatus: "private" },
         }),
       },
