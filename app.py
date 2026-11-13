@@ -77,6 +77,32 @@ def start_youtube_oauth(tenant_id: str, client: Client) -> str:
         raise RuntimeError("youtube_oauth_start_failed") from None
 
 
+def start_private_youtube_upload(job_id: str, client: Client) -> dict[str, Any]:
+    """Request an admin-gated server-side upload; Google tokens never reach Streamlit."""
+    try:
+        session = client.auth.get_session()
+        access_token = getattr(session, "access_token", None) if session else None
+        if not access_token:
+            raise RuntimeError("missing_session")
+        request = urllib.request.Request(
+            f"{SUPABASE_FUNCTIONS_URL}/youtube-upload-private",
+            data=json.dumps({"job_id": job_id}).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "apikey": SUPABASE_PUBLISHABLE_KEY,
+                "Authorization": f"Bearer {access_token}",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=180) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        if not payload.get("success") or payload.get("status") != "uploaded_private":
+            raise RuntimeError("private_upload_failed")
+        return payload
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError, RuntimeError, AttributeError):
+        raise RuntimeError("private_upload_failed") from None
+
+
 def clear_session() -> None:
     """Clear this browser session's auth client and identity."""
     client = st.session_state.get("_creator_supabase_client")
@@ -434,6 +460,16 @@ if role == "admin":
                     with st.container(border=True):
                         st.write(f"**{job.get('video_title') or 'Untitled video'}**")
                         st.caption(f"Job: {job['id']} • Status: {job.get('status', 'draft')} • Workspace: {job.get('tenant_id', '')}")
+                        if job.get("status") == "received":
+                            if st.button("Upload privately to connected YouTube channel", key=f"private_youtube_upload_{job['id']}", type="primary"):
+                                try:
+                                    upload_result = start_private_youtube_upload(job["id"], supabase)
+                                except RuntimeError:
+                                    st.error("Private YouTube upload failed. Check the customer's Google channel connection and OAuth permissions before retrying.")
+                                else:
+                                    st.success("YouTube accepted the video as PRIVATE. Customer approval is still required before publishing.")
+                                    if upload_result.get("youtube_url"):
+                                        st.link_button("Open private YouTube video", upload_result["youtube_url"])
                         if job.get("storage_object_path"):
                             try:
                                 signed = supabase.storage.from_("customer-video-intake").create_signed_url(
