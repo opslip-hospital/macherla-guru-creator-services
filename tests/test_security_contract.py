@@ -225,6 +225,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("remove stray hashtags", upload_worker)
         self.assertIn(".replace(/#[\\p{L}\\p{N}_]+/gu, \"\")", upload_worker)
         self.assertIn("5000 - separator.length - hashtagLine.length", upload_worker)
+        self.assertIn("nextLength > 450", upload_worker)
+        self.assertIn("Math.max(0, generatedTags.length - 1)", CUSTOMER_SEO_FUNCTION)
         self.assertIn("nextLength = tagLength + tag.length + (tags.length ? 1 : 0)", upload_worker)
 
     def test_upload_unknown_is_locked_but_pretransfer_failure_is_retryable(self):
