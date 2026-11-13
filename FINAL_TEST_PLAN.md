@@ -19,7 +19,7 @@
 - Connect the channel and confirm upload, read-only, and force-SSL scopes are granted; analytics comparison is optional if the analytics scope is not granted.
 - Refresh the customer channel dashboard and confirm channel title, subscribers (or hidden status), views, video count, and recent uploads.
 - Refresh analytics and confirm the snapshot and 15-day-vs-previous-15-day comparison are shown when the analytics scope is available.
-- Confirm reconnecting without analytics scope does not invent comparison metrics.
+- Confirm reconnecting without analytics scope does not invent comparison metrics and the customer sees a separate reconnect action to request the optional analytics scope.
 
 ## 4. Video intake and AI SEO
 - Upload a valid MP4, MOV, and WebM sample within the 100 MB limit; verify unsupported/mismatched file content is rejected.
