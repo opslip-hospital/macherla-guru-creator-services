@@ -1203,6 +1203,8 @@ else:
                         except RuntimeError as exc:
                             if ("youtube_channel_not_connected" in str(exc) or "youtube_upload_connection_required" in str(exc)):
                                 st.info("Connect your YouTube channel above before generating SEO. The required brand hashtag is based on your connected channel.")
+                            elif "ai_rate_limit_exceeded" in str(exc):
+                                st.warning("This workspace has reached its hourly AI SEO limit. Please try again after the limit resets.")
                             else:
                                 st.error(f"AI SEO error: {str(exc)[:130]}")
                         else:
