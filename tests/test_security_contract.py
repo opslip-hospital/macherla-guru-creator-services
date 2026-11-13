@@ -86,6 +86,14 @@ SEO_TAG_SEPARATOR_GUARD = (
 
 
 class AuthenticationContractTests(unittest.TestCase):
+    def test_gemini_rate_limits_use_service_only_public_rpc_wrapper(self):
+        self.assertIn("private.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
+        self.assertIn("security invoker", AI_RATE_LIMIT_MIGRATION.lower())
+        self.assertIn("grant execute on function public.consume_customer_ai_rate_limit", AI_RATE_LIMIT_MIGRATION)
+        self.assertIn('admin.rpc("consume_customer_ai_rate_limit"', CUSTOMER_SEO_FUNCTION)
+        self.assertIn('admin.rpc("consume_customer_ai_rate_limit"', (ROOT / "supabase/functions/customer-content-studio/index.ts").read_text(encoding="utf-8"))
+        self.assertNotIn('schema("private").rpc("consume_customer_ai_rate_limit"', CUSTOMER_SEO_FUNCTION)
+
     def test_public_homepage_links_to_privacy_and_terms(self):
         self.assertIn("Connect your own YouTube channel", APP)
         self.assertIn('st.page_link("pages/Privacy_Policy.py"', APP)
