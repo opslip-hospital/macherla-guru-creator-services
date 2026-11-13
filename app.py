@@ -650,6 +650,7 @@ else:
 
             if connections:
                 primary_connection = connections[0]
+                st.caption("New uploads use the most recently connected channel with YouTube upload permission. Disconnect other channels if you want to change the target.")
                 for connection in connections:
                     channel_id = str(connection.get("channel_id") or "")
                     st.success(
