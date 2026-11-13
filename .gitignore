@@ -1,0 +1,28 @@
+# Secrets and environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Local data and uploads
+data/
+uploads/
+*.sqlite3
+*.db
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
