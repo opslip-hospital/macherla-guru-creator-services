@@ -51,6 +51,17 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("grant usage on schema private to authenticated", HARDENING_MIGRATION)
         self.assertIn("revoke all on function private.is_platform_admin() from public, anon", HARDENING_MIGRATION)
 
+    def test_customer_support_uses_existing_tenant_insert_policy(self):
+        self.assertIn('supabase.table("service_tickets").insert({', APP)
+        self.assertIn('"tenant_id": ticket_tenant', APP)
+        self.assertIn('select("subject, message, status, created_at")', APP)
+
+    def test_customer_operations_do_not_enable_upload_or_billing_writes(self):
+        self.assertIn('supabase.table("upload_jobs")', APP)
+        self.assertIn('supabase.table("billing_accounts")', APP)
+        self.assertNotIn('supabase.table("upload_jobs").insert(', APP)
+        self.assertNotIn('supabase.table("billing_accounts").insert(', APP)
+
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
         self.assertNotIn("youtube.com/@macherlaguru", APP)
