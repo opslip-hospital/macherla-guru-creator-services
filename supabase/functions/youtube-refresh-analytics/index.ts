@@ -61,11 +61,44 @@ Deno.serve(async(req)=>{
     }
    }
   }
+  const dateKey=(d:Date)=>d.toISOString().slice(0,10);
+  const dayOffset=(d:Date,n:number)=>new Date(d.getTime()-n*86400000);
+  const yesterday=dayOffset(new Date(),1);
+  const currentStart=dayOffset(yesterday,14);
+  const previousEnd=dayOffset(currentStart,1);
+  const previousStart=dayOffset(previousEnd,14);
+  async function analyticsWindow(start:Date,end:Date){
+   const endpoint=new URL("https://youtubeanalytics.googleapis.com/v2/reports");
+   endpoint.searchParams.set("ids","channel==MINE");
+   endpoint.searchParams.set("startDate",dateKey(start));
+   endpoint.searchParams.set("endDate",dateKey(end));
+   endpoint.searchParams.set("metrics","views,estimatedMinutesWatched,averageViewDuration,likes,comments,subscribersGained");
+   const report=await fetch(endpoint.toString(),{headers:{Authorization:`Bearer ${tokens.access_token}`}});
+   if(!report.ok)return null;
+   const data=await report.json();
+   const headers=(data.columnHeaders??[]).map((h:any)=>h.name);
+   const row=(data.rows??[])[0]??[];
+   const result:any={};
+   headers.forEach((name:string,index:number)=>{result[name]=Number(row[index]??0);});
+   return result;
+  }
+  let analyticsComparison:any={available:false};
+  if((claim.granted_scopes??[]).includes("https://www.googleapis.com/auth/yt-analytics.readonly")){
+   const [current,previous]=await Promise.all([
+    analyticsWindow(currentStart,yesterday),analyticsWindow(previousStart,previousEnd)
+   ]);
+   if(current&&previous)analyticsComparison={
+    available:true,
+    current_period:{start:dateKey(currentStart),end:dateKey(yesterday),...current},
+    previous_period:{start:dateKey(previousStart),end:dateKey(previousEnd),...previous},
+   };
+  }
   const snapshot={
    tenant_id:tenant,connection_id:claim.connection_id,channel_id:claim.channel_id,
    channel_title:channel.snippet?.title??claim.channel_title??"YouTube channel",
    channel_description:channel.snippet?.description??"",
    recent_uploads:recentUploads,
+   analytics_comparison:analyticsComparison,
    subscriber_count:stats.hiddenSubscriberCount?null:Number(stats.subscriberCount??0),
    view_count:stats.viewCount==null?null:Number(stats.viewCount),
    video_count:stats.videoCount==null?null:Number(stats.videoCount),
