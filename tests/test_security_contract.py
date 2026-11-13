@@ -23,7 +23,7 @@ UPLOAD_MIGRATION = (
     ROOT / "supabase/migrations/20261113180000_customer_video_intake_storage.sql"
 ).read_text(encoding="utf-8")
 STORAGE_BINDING_MIGRATION = (
-    ROOT / "supabase/migrations/20261113167000_bind_storage_uploads_to_draft_jobs.sql"
+    ROOT / "supabase/migrations/20261113287000_bind_storage_uploads_to_draft_jobs.sql"
 ).read_text(encoding="utf-8")
 YOUTUBE_WORKER_MIGRATION = (
     ROOT / "supabase/migrations/20261113190000_youtube_private_upload_worker.sql"
@@ -197,7 +197,7 @@ class AuthenticationContractTests(unittest.TestCase):
 
     def test_public_rpc_wrappers_are_invokers_and_anonymous_execution_is_not_granted(self):
         migration = (
-            ROOT / "supabase/migrations/20261113165000_move_definer_wrappers_to_private.sql"
+            ROOT / "supabase/migrations/20261113285000_move_definer_wrappers_to_private.sql"
         ).read_text(encoding="utf-8")
         self.assertIn("security invoker", migration.lower())
         self.assertIn("grant execute on function private.claim_youtube_upload_job", migration)
