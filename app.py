@@ -289,6 +289,19 @@ def clear_session() -> None:
             st.session_state.pop(key, None)
 
 
+def format_scheduled_time(value: str | None) -> str:
+    """Render stored UTC/ISO schedule timestamps in the customer's 12-hour IST format."""
+    if not value:
+        return "time unavailable"
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=ZoneInfo("UTC"))
+        return parsed.astimezone(ZoneInfo("Asia/Kolkata")).strftime("%d %b %Y, %I:%M %p IST")
+    except (TypeError, ValueError):
+        return str(value)
+
+
 def safe_error_message(error: Exception) -> str:
     """Avoid displaying provider response bodies or tokens to end users."""
     message = str(error).lower()
@@ -1204,7 +1217,7 @@ else:
                                     st.link_button("Open YouTube video", result["youtube_url"])
                                 st.rerun()
                 elif job.get("status") == "scheduled":
-                    scheduled_text = job.get("scheduled_for") or "time unavailable"
+                    scheduled_text = format_scheduled_time(job.get("scheduled_for"))
                     st.success(f"Scheduled: {scheduled_text}")
                 elif job.get("status") == "published":
                     st.success("Published on YouTube.")
