@@ -662,8 +662,8 @@ st.caption(
 if role == "admin":
     st.divider()
     st.header("Service operations")
-    op_uploads, op_support, op_billing, op_analytics = st.tabs(
-        ["Upload queue", "Support inbox", "Billing overview", "Channel analytics"]
+    op_uploads, op_support, op_billing, op_analytics, op_audit = st.tabs(
+        ["Upload monitor", "Support inbox", "Billing overview", "Channel analytics", "Audit log"]
     )
     with op_uploads:
         try:
@@ -815,6 +815,22 @@ if role == "admin":
                     st.caption("No analytics snapshots have been collected yet.")
             except Exception:
                 st.warning("Analytics history is temporarily unavailable.")
+    with op_audit:
+        st.caption("Latest security and service activity across customer workspaces.")
+        try:
+            audit_rows = (
+                supabase.table("audit_events")
+                .select("created_at, tenant_id, actor_user_id, event_type, details")
+                .order("created_at", desc=True)
+                .limit(100)
+                .execute().data or []
+            )
+            if audit_rows:
+                st.dataframe(audit_rows, use_container_width=True, hide_index=True)
+            else:
+                st.info("No audit events have been recorded yet.")
+        except Exception:
+            st.error("Audit history could not be loaded. Check the admin audit read policy.")
 
 else:
     st.divider()
