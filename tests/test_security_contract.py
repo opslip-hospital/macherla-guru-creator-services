@@ -140,7 +140,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("youtube.force-ssl", SELF_SERVICE_MIGRATION)
         self.assertIn('privacyStatus:"public"', PUBLISH_WORKER)
         self.assertIn('privacyStatus:"private",publishAt', PUBLISH_WORKER)
-        self.assertIn("initiated_by_authenticated_owner_or_admin:true", PUBLISH_WORKER)
+        self.assertIn("initiated_by_authenticated_owner:true", PUBLISH_WORKER)
         self.assertIn("youtube.force-ssl", OAUTH_START)
         self.assertIn("Reconnect for publishing permissions", APP)
 
@@ -164,6 +164,8 @@ class AuthenticationContractTests(unittest.TestCase):
     def test_customer_channel_dashboard_is_owner_scoped(self):
         dashboard = (ROOT / "supabase/functions/customer-channel-dashboard/index.ts").read_text(encoding="utf-8")
         self.assertIn("workspace_owner_required", dashboard)
+        self.assertIn("workspace_not_active", dashboard)
+        self.assertIn('select("status")', dashboard)
         self.assertIn("youtube.readonly", dashboard)
         self.assertIn("playlistItems?part=snippet,contentDetails", dashboard)
         self.assertIn("videos?part=snippet,statistics,status", dashboard)
@@ -177,6 +179,14 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("customer_content_studio_request", APP)
         self.assertIn("✨ Gemini AI Content Studio", APP)
         self.assertIn("🩺 Your AI Growth Doctor", APP)
+
+    def test_public_rpc_wrappers_are_invokers_and_anonymous_execution_is_not_granted(self):
+        migration = (
+            ROOT / "supabase/migrations/20261113165000_move_definer_wrappers_to_private.sql"
+        ).read_text(encoding="utf-8")
+        self.assertIn("security invoker", migration.lower())
+        self.assertIn("grant execute on function private.claim_youtube_upload_job", migration)
+        self.assertIn("grant execute on function private.admin_update_tenant_status", migration)
 
     def test_existing_manager_is_not_imported_or_called(self):
         self.assertNotIn("macherla-guru-ai-agent", APP)
