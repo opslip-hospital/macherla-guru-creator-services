@@ -68,6 +68,7 @@ YOUTUBE_WORKER = (
 PUBLISH_MIGRATION = (
     ROOT / "supabase/migrations/20261113200000_youtube_customer_approved_publish_schedule.sql"
 ).read_text(encoding="utf-8")
+SUPABASE_CONFIG = (ROOT / "supabase/config.toml").read_text(encoding="utf-8")
 PUBLISH_WORKER = (
     ROOT / "supabase/functions/youtube-publish-approved/index.ts"
 ).read_text(encoding="utf-8")
@@ -455,14 +456,19 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("SEO metadata uploaded to YouTube (read-only)", APP)
         self.assertIn("locked after private upload", APP)
 
-    def test_video_uploads_use_blob_bodies_without_full_arraybuffer_copies(self):
+    def test_youtube_upload_uses_bounded_range_chunks(self):
         self.assertIn("video: Blob", CUSTOMER_SEO_FUNCTION)
         self.assertIn("body: video,", CUSTOMER_SEO_FUNCTION)
         self.assertIn("videoBlob.slice(0, 12).arrayBuffer()", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("videoBlob.slice(0, 12).arrayBuffer()", YOUTUBE_WORKER)
-        self.assertIn("body: videoBlob", YOUTUBE_WORKER)
+        self.assertIn("createSignedUrl", YOUTUBE_WORKER)
+        self.assertIn("Range: `bytes=${offset}-${end}`", YOUTUBE_WORKER)
+        self.assertIn("chunkBytes = 8 * 1024 * 1024", YOUTUBE_WORKER)
+        self.assertIn("Content-Range", YOUTUBE_WORKER)
+        self.assertIn("uploaded.status === 308", YOUTUBE_WORKER)
+        self.assertIn("youtubeUploadOutcomeUnknown = true", YOUTUBE_WORKER)
+        self.assertNotIn("body: videoBlob", YOUTUBE_WORKER)
+        self.assertNotIn("download(claimed.storage_object_path)", YOUTUBE_WORKER)
         self.assertNotIn("new Uint8Array(await videoBlob.arrayBuffer())", CUSTOMER_SEO_FUNCTION)
-        self.assertNotIn("new Uint8Array(await videoBlob.arrayBuffer())", YOUTUBE_WORKER)
 
     def test_video_container_signatures_are_checked_before_ai_or_youtube_upload(self):
         self.assertIn("hasExpectedVideoContainer", CUSTOMER_SEO_FUNCTION)
@@ -532,6 +538,26 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("p_mode is distinct from 'schedule'", SCHEDULE_ONLY_MIGRATION)
         self.assertNotIn('privacyStatus:"public"', PUBLISH_WORKER)
         self.assertIn('const status={privacyStatus:"private",publishAt};', PUBLISH_WORKER)
+
+    def test_oauth_callback_is_the_only_function_without_jwt_verification(self):
+        self.assertIn("[functions.youtube-oauth-callback]", SUPABASE_CONFIG)
+        self.assertIn("verify_jwt = false", SUPABASE_CONFIG)
+        self.assertEqual(SUPABASE_CONFIG.count("verify_jwt = false"), 1)
+        callback = (ROOT / "supabase/functions/youtube-oauth-callback/index.ts").read_text(encoding="utf-8")
+        self.assertIn("state.length<32", callback)
+        self.assertIn("complete_youtube_oauth", callback)
+
+    def test_edge_functions_use_one_canonical_secret_with_legacy_fallback(self):
+        for path in [
+            "supabase/functions/youtube-oauth-callback/index.ts",
+            "supabase/functions/youtube-upload-private/index.ts",
+            "supabase/functions/customer-youtube-seo/index.ts",
+            "supabase/functions/youtube-publish-approved/index.ts",
+        ]:
+            source = (ROOT / path).read_text(encoding="utf-8")
+            self.assertIn('Deno.env.get("SUPABASE_SECRET_KEY")', source)
+            self.assertIn('Deno.env.get("SUPABASE_SECRET_KEYS")', source)
+            self.assertIn('Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")', source)
 
 
 if __name__ == "__main__":
