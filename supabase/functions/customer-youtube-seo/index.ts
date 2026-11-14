@@ -154,12 +154,15 @@ Deno.serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const jobId = cleanText(body.job_id, 64);
     const action = body.action === "save" ? "save" : "generate";
+    stage = "consent_validation";
     if (action === "generate" && body.ai_consent !== true) {
-      return json({ error: "gemini_video_consent_required" }, 400);
+      console.warn("SEO generation stopped: explicit Gemini video consent was not received.");
+      return json({ error: "gemini_video_consent_required", stage }, 400);
     }
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(jobId)) {
       return json({ error: "invalid_job_id" }, 400);
     }
+    stage = "job_lookup";
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data: job, error: jobError } = await admin.from("upload_jobs")
       .select("id,tenant_id,video_title,status,storage_object_path,mime_type,file_size_bytes")
