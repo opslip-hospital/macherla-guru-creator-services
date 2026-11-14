@@ -87,3 +87,28 @@ The current integration uses the Gemini Developer API. Google's current document
 ## Current customer dashboard workflow
 
 The customer home is intentionally limited to one video workflow: upload one video to the private intake bucket, generate/review/edit/save Gemini SEO, connect YouTube if not already connected, upload privately, then choose an IST schedule time with AM/PM. Customers without a YouTube channel can still prepare SEO using their workspace brand name. Exactly five hashtags are stored; one is the workspace brand until a channel is connected, then the connected channel's brand after regeneration. There is no thumbnail feature, customer analytics panel, Growth Doctor, Content Studio, support panel, billing panel, or Publish Now control in this customer workflow. The Master Admin view remains separate and is used for workspace activation/status.
+
+
+## Supabase Edge Function configuration and service key
+
+The repository's `supabase/config.toml` disables JWT verification only for
+`youtube-oauth-callback`, because Google's browser redirect does not include
+a Supabase Authorization header. All other customer-facing functions retain JWT
+verification and perform their own authenticated-user and workspace checks.
+
+Use `SUPABASE_SECRET_KEY` as the canonical Edge Function secret name. During
+migration, functions temporarily accept the legacy `SUPABASE_SECRET_KEYS`
+JSON object's `default` value or `SUPABASE_SERVICE_ROLE_KEY` as fallbacks.
+After setting and verifying `SUPABASE_SECRET_KEY` in the dedicated Creator
+Services Supabase project, remove legacy values in a separate controlled
+secret-rotation step. Never commit secret values.
+
+## Large private YouTube uploads
+
+The private upload worker reads the private Storage object using bounded HTTP
+Range requests and sends 8 MiB chunks through the YouTube resumable-upload
+session. It avoids downloading the entire source video into one Edge Function
+Blob. If YouTube accepts any chunk and a later transfer fails, the job remains
+locked as `upload_unknown` to prevent an unsafe duplicate. Verify the video in
+YouTube Studio before recovery. Production validation must still exercise real
+200 MB transfers and interrupted uploads against deployed Supabase and YouTube.
