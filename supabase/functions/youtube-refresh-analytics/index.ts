@@ -1,12 +1,25 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+function supabaseEnvMap(name: string): Record<string, string> {
+  try {
+    const parsed = JSON.parse(Deno.env.get(name) ?? "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
 function supabaseSecretKey(): string {
- const direct=Deno.env.get("SUPABASE_SECRET_KEY");
- if(direct)return direct;
- const legacyJson=Deno.env.get("SUPABASE_SECRET_KEYS");
- if(legacyJson){try{const parsed=JSON.parse(legacyJson);if(typeof parsed?.default==="string"&&parsed.default)return parsed.default;}catch{/* legacy fallback */}}
- const legacy=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
- if(legacy)return legacy;
- throw new Error("missing_configuration");
+  const mapped = supabaseEnvMap("SUPABASE_SECRET_KEYS").default;
+  if (typeof mapped === "string" && mapped) return mapped;
+  const legacy = Deno.env.get("SUPABASE_SECRET_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) return legacy;
+  throw new Error("missing_configuration");
+}
+function supabasePublishableKey(): string {
+  const mapped = supabaseEnvMap("SUPABASE_PUBLISHABLE_KEYS").default;
+  if (typeof mapped === "string" && mapped) return mapped;
+  const legacy = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY");
+  if (legacy) return legacy;
+  throw new Error("missing_configuration");
 }
 const headers={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const json=(v:unknown,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
@@ -23,7 +36,7 @@ Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers});
  if(req.method!=="POST")return json({error:"method_not_allowed"},405);
  try{
-  const url=required("SUPABASE_URL"),pub=Deno.env.get("SUPABASE_PUBLISHABLE_KEY")??Deno.env.get("SUPABASE_ANON_KEY"),
+  const url=required("SUPABASE_URL"),pub=supabasePublishableKey(),
    service=supabaseSecretKey();
   if(!pub||!service)throw new Error("missing_configuration");
   const bearer=(req.headers.get("Authorization")??"").match(/^Bearer\s+(.+)$/i)?.[1];
