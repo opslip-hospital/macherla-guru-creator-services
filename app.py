@@ -135,7 +135,7 @@ def start_private_youtube_upload(job_id: str, client: Client) -> dict[str, Any]:
 def publish_approved_video(
     job_id: str, mode: str, publish_at: str | None, client: Client
 ) -> dict[str, Any]:
-    """Execute public publishing or scheduling only through the trusted Edge Function."""
+    """Schedule an already-private video only through the trusted Edge Function."""
     try:
         session = client.auth.get_session()
         access_token = getattr(session, "access_token", None) if session else None
@@ -602,7 +602,7 @@ else:
                 )
                 contains_synthetic_media = st.checkbox(
                     "AI-generated / altered realistic content (YouTube disclosure)",
-                    value=True,
+                    value=False,
                 )
                 submit_video = st.form_submit_button("⬆️ Upload video", type="primary", use_container_width=True)
         if submit_video:
