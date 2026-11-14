@@ -247,7 +247,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('status: "uploaded_private"', YOUTUBE_WORKER)
         self.assertIn('youtube-upload-private', APP)
         self.assertIn("📅 Continue to Schedule (private upload first)", APP)
-        self.assertIn("The channel owner can now publish or schedule it", YOUTUBE_WORKER)
+        self.assertIn("The channel owner can now schedule it", YOUTUBE_WORKER)
 
     def test_customer_seo_editor_explains_workspace_then_channel_brand_hashtag(self):
         self.assertIn("One hashtag uses your workspace brand until a YouTube channel is connected", APP)
