@@ -1,4 +1,13 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+function supabaseSecretKey(): string {
+ const direct=Deno.env.get("SUPABASE_SECRET_KEY");
+ if(direct)return direct;
+ const legacyJson=Deno.env.get("SUPABASE_SECRET_KEYS");
+ if(legacyJson){try{const parsed=JSON.parse(legacyJson);if(typeof parsed?.default==="string"&&parsed.default)return parsed.default;}catch{/* legacy fallback */}}
+ const legacy=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+ if(legacy)return legacy;
+ throw new Error("missing_configuration");
+}
 const headers={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const json=(v:unknown,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 function required(n:string){const v=Deno.env.get(n);if(!v)throw new Error("missing_configuration");return v;}
@@ -15,7 +24,7 @@ Deno.serve(async(req)=>{
  if(req.method!=="POST")return json({error:"method_not_allowed"},405);
  try{
   const url=required("SUPABASE_URL"),pub=Deno.env.get("SUPABASE_PUBLISHABLE_KEY")??Deno.env.get("SUPABASE_ANON_KEY"),
-   service=Deno.env.get("SUPABASE_SECRET_KEY")??Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+   service=supabaseSecretKey();
   if(!pub||!service)throw new Error("missing_configuration");
   const bearer=(req.headers.get("Authorization")??"").match(/^Bearer\s+(.+)$/i)?.[1];
   if(!bearer)return json({error:"authentication_required"},401);
