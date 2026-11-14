@@ -222,6 +222,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('supabase.rpc("finalize_customer_video_upload"', APP)
         self.assertIn('type=["mp4", "mov", "avi", "webm"]', APP)
         self.assertIn("max_upload_size=200", APP)
+        self.assertIn("maxUploadSize = 200", STREAMLIT_CONFIG)
         self.assertIn("p_size>209715200", UPLOAD_ENHANCEMENT_MIGRATION)
         self.assertIn("video/x-msvideo", UPLOAD_ENHANCEMENT_MIGRATION)
         self.assertIn("file_size_limit = 209715200", UPLOAD_ENHANCEMENT_MIGRATION)
