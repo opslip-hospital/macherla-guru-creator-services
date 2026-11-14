@@ -26,6 +26,9 @@ WORKFLOW_MIGRATION = (
 UPLOAD_MIGRATION = (
     ROOT / "supabase/migrations/20261113180000_customer_video_intake_storage.sql"
 ).read_text(encoding="utf-8")
+UPLOAD_ENHANCEMENT_MIGRATION = (
+    ROOT / "supabase/migrations/20261114053752_customer_upload_200mb_avi_thumbnail_disclosure.sql"
+).read_text(encoding="utf-8")
 UPLOAD_OUTCOME_MIGRATION = (
     ROOT / "supabase/migrations/20261113168000_preserve_unknown_youtube_upload_outcomes.sql"
 ).read_text(encoding="utf-8")
@@ -217,8 +220,11 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("customer video intake read own tenant or admin", UPLOAD_MIGRATION)
         self.assertIn('supabase.storage.from_("customer-video-intake").upload(', APP)
         self.assertIn('supabase.rpc("finalize_customer_video_upload"', APP)
-        self.assertIn('type=["mp4", "mov", "webm"]', APP)
-        self.assertIn("max_upload_size=100", APP)
+        self.assertIn('type=["mp4", "mov", "avi", "webm"]', APP)
+        self.assertIn("max_upload_size=200", APP)
+        self.assertIn("p_size>209715200", UPLOAD_ENHANCEMENT_MIGRATION)
+        self.assertIn("video/x-msvideo", UPLOAD_ENHANCEMENT_MIGRATION)
+        self.assertIn("file_size_limit = 209715200", UPLOAD_ENHANCEMENT_MIGRATION)
         self.assertNotIn("Download customer video (1-hour link)", APP)
 
     def test_storage_uploads_must_match_a_customer_draft_job(self):
@@ -453,6 +459,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("video_container_does_not_match_file_type", CUSTOMER_SEO_FUNCTION)
         self.assertIn("hasExpectedVideoContainer", YOUTUBE_WORKER)
         self.assertIn("video_container_does_not_match_file_type", YOUTUBE_WORKER)
+        self.assertIn('mime === "video/x-msvideo"', YOUTUBE_WORKER)
+        self.assertIn("209715200", YOUTUBE_WORKER)
 
     def test_unknown_publish_outcome_holds_job_to_prevent_retry(self):
         self.assertIn("publish_status_unknown", APP)
@@ -468,10 +476,14 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("greatest(cardinality", SEO_TAG_SEPARATOR_GUARD)
         self.assertIn("Math.max(0, savedTags.length - 1)", CUSTOMER_SEO_FUNCTION)
 
-    def test_customer_video_workflow_does_not_add_thumbnail_features(self):
-        self.assertNotIn("thumbnail", APP.lower())
+    def test_customer_video_workflow_supports_optional_thumbnail_and_disclosure(self):
+        self.assertIn("thumbnail_file", APP)
+        self.assertIn("set_customer_upload_assets", APP)
+        self.assertIn("thumbnail_storage_object_path", UPLOAD_ENHANCEMENT_MIGRATION)
+        self.assertIn("thumbnail_storage_object_path", YOUTUBE_WORKER)
+        self.assertIn("contains_synthetic_media", UPLOAD_ENHANCEMENT_MIGRATION)
+        self.assertIn("containsSyntheticMedia", YOUTUBE_WORKER)
         self.assertNotIn("thumbnail_prompt", CUSTOMER_SEO_FUNCTION.lower())
-        self.assertNotIn("thumbnail", YOUTUBE_WORKER.lower())
 
     def test_gemini_video_analysis_requires_explicit_free_tier_consent(self):
         self.assertIn("gemini_video_consent_required", CUSTOMER_SEO_FUNCTION)
