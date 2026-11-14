@@ -812,6 +812,10 @@ else:
                                 st.error("YouTube upload failed. Connect your channel with upload permission and retry.")
                         else:
                             st.success("Your video is uploaded as PRIVATE.")
+                            if upload_result.get("thumbnail_requested") and upload_result.get("thumbnail_applied"):
+                                st.success("Your custom thumbnail was applied to YouTube.")
+                            elif upload_result.get("thumbnail_requested"):
+                                st.warning("The video is private, but YouTube did not confirm the custom thumbnail. You can set it later in YouTube Studio.")
                             if upload_result.get("youtube_url"):
                                 st.link_button("Open private YouTube video", upload_result["youtube_url"])
                             st.rerun()
