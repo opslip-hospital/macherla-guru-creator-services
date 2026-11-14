@@ -31,7 +31,7 @@ SUPABASE_FUNCTIONS_URL = f"{SUPABASE_URL.rstrip('/')}/functions/v1" if SUPABASE_
 st.set_page_config(
     page_title=APP_NAME,
     page_icon="🎬",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="collapsed",
 )
 
@@ -42,18 +42,18 @@ if st.session_state.pop("_creator_clear_all_state", False):
     for _session_key in list(st.session_state.keys()):
         st.session_state.pop(_session_key, None)
 
+if st.session_state.pop("_creator_clear_video_uploader", False):
+    st.session_state.pop("customer_video_file_50mb", None)
+
 st.title("🎬 Macherla Guru Creator Services")
 st.caption("One video • Gemini SEO • Private YouTube upload • IST scheduling")
 st.markdown(
     "Upload one video first. Gemini prepares your SEO title, description, tags, five hashtags and captions. "
     "You can do this before connecting a YouTube channel; connect later for private upload and IST scheduling. "
-    "Review and save every AI suggestion before continuing."
+    "Review and edit every Gemini suggestion before the private YouTube upload."
 )
-legal_left, legal_right = st.columns(2)
-with legal_left:
-    st.page_link("pages/Privacy_Policy.py", label="Privacy Policy")
-with legal_right:
-    st.page_link("pages/Terms_of_Service.py", label="Terms of Service")
+st.page_link("pages/Privacy_Policy.py", label="Privacy Policy")
+st.page_link("pages/Terms_of_Service.py", label="Terms of Service")
 
 
 def get_session_client() -> Client:
@@ -512,7 +512,7 @@ if role == "admin":
         "Live Gemini and YouTube actions still need a successful end-to-end test. Payment processing is not enabled."
     )
 else:
-    # Minimal customer workspace: video upload -> Gemini SEO -> schedule.
+    # One-column customer journey: upload -> Gemini SEO -> thumbnail -> disclosure -> private upload/schedule.
     try:
         memberships = (
             supabase.table("tenant_memberships")
@@ -535,13 +535,12 @@ else:
         selected_active_tenant_id = None
         st.error("Your customer workspace could not be loaded. Please retry.")
 
-    st.header("🎬 Upload → 🤖 SEO → 📅 Schedule")
+    st.header("🎬 ఒక్క వీడియో ఇవ్వు — మిగతావన్నీ Gemini సిద్ధం చేస్తుంది")
     if not own_tenant_ids:
         st.info("Your customer workspace is waiting for activation by the service team.")
     elif not active_tenant_ids:
         st.info("Your workspace is not active yet. Upload and scheduling will be available after activation.")
     else:
-        # Keep channel connection setup out of the main workflow unless it is required.
         try:
             channel_connections = supabase.rpc(
                 "list_tenant_youtube_connections",
@@ -555,18 +554,7 @@ else:
             None,
         )
         has_upload_permission = upload_connection is not None
-        connected_channel_name = str((upload_connection or {}).get("channel_title") or "").strip()
-        if not has_upload_permission:
-            st.info("You can upload a video and prepare Gemini SEO without a YouTube channel. Connect your channel later to upload privately and schedule.")
-            if st.button("Connect / reconnect YouTube channel", key="minimal_connect_youtube", type="primary"):
-                try:
-                    google_url = start_youtube_oauth(selected_active_tenant_id, supabase)
-                except RuntimeError:
-                    st.error("Google connection could not be started. Please contact the service administrator.")
-                else:
-                    st.link_button("Continue securely with Google", google_url, type="primary")
-        st.caption("🎬 Upload one video — Gemini takes care of the SEO, tags, hashtags and captions.")
-        # Show only the newest video; no upload-history strip or separate workspace.
+
         try:
             own_jobs = (
                 supabase.table("upload_jobs")
@@ -580,62 +568,85 @@ else:
             own_jobs = []
             st.warning("Your latest video is temporarily unavailable.")
         selected_job = own_jobs[0] if own_jobs else None
+        saved_meta: dict[str, Any] = {}
         if selected_job:
             st.session_state["creator_selected_job_id"] = str(selected_job["id"])
-        else:
-            st.caption("No video uploaded yet.")
+            try:
+                saved_rows = (
+                    supabase.table("content_metadata")
+                    .select("title, description, tags, hashtags, caption, metadata_details")
+                    .eq("upload_job_id", selected_job["id"])
+                    .order("created_at", desc=True)
+                    .limit(1)
+                    .execute().data or []
+                )
+                saved_meta = saved_rows[0] if saved_rows else {}
+            except Exception:
+                saved_meta = {}
 
-        st.subheader("🎥 Upload your video")
-        st.caption("Upload one video. Gemini will prepare the SEO, tags, hashtags and captions after you press the button below.")
-        submit_video = False
-        if not active_tenant_ids:
-            st.warning("Your workspace is not active yet. Upload and AI actions are paused; contact the service team.")
-        else:
-            with st.form("customer_video_intake", clear_on_submit=True):
-                video_file = st.file_uploader(
-                    "Choose video file (MP4, MOV, AVI, WEBM • max 200 MB)",
-                    type=["mp4", "mov", "avi", "webm"], max_upload_size=200,
-                )
-                thumbnail_file = st.file_uploader(
-                    "Thumbnail image (optional • JPG/PNG • max 2 MB)",
-                    type=["jpg", "jpeg", "png"], max_upload_size=2,
-                )
-                contains_synthetic_media = st.checkbox(
-                    "AI-generated / altered realistic content (YouTube disclosure)",
-                    value=False,
-                )
-                gemini_video_consent = st.checkbox(
-                    "I consent to send this video to Google Gemini to create captions, SEO, tags and hashtags. The current Gemini API Free Tier may use submitted content to improve Google products. I confirm I have the rights to share this video.",
-                    value=False,
-                )
-                submit_video = st.form_submit_button(
-                    "✨ Create Captions, SEO & Tags",
-                    type="primary",
-                    use_container_width=True,
-                )
-        if submit_video:
+        pending_seo_job_id = st.session_state.get("creator_pending_seo_job_id")
+        if (
+            selected_job
+            and selected_job.get("status") == "received"
+            and not saved_meta
+            and not pending_seo_job_id
+        ):
+            pending_seo_job_id = str(selected_job["id"])
+            st.session_state["creator_pending_seo_job_id"] = pending_seo_job_id
+
+        # 1. Video upload
+        st.subheader("1. Video upload")
+        video_file = st.file_uploader(
+            "నీ వీడియో ఎంచుకోండి",
+            type=["mp4", "mov", "avi", "webm"],
+            max_upload_size=50,
+            key="customer_video_file_50mb",
+            help="MP4, MOV, AVI లేదా WEBM • గరిష్ఠంగా 50 MB",
+        )
+        st.caption("MP4 • MOV • AVI • WEBM — Maximum file size: 50 MB")
+
+        # 2. Gemini generation. The consent and per-workspace rate limit remain in force.
+        st.subheader("2. Gemini — Title, SEO, Tags & Captions")
+        gemini_video_consent = st.checkbox(
+            "I consent to send this video to Google Gemini to create captions, SEO, tags and hashtags. The current Gemini API Free Tier may use submitted content to improve Google products. I confirm I have the rights to share this video.",
+            value=False,
+            key="gemini_video_consent_single_flow",
+        )
+        st.caption("Gemini SEO limit: up to 5 video generations per workspace per hour.")
+        show_seo_action = not saved_meta or video_file is not None or bool(pending_seo_job_id)
+        create_seo_clicked = False
+        if show_seo_action:
+            create_seo_clicked = st.button(
+                "✨ ఈ వీడియో చూసి Title, SEO, Tags, Captions తయారు చేయి",
+                type="primary",
+                use_container_width=True,
+                disabled=video_file is None and not pending_seo_job_id,
+                key="create_video_seo_single_action",
+            )
+        if create_seo_clicked:
             if not gemini_video_consent:
-                st.warning("Please confirm consent before sending the video to Gemini.")
-            elif video_file is None:
-                st.warning("Choose a video file.")
+                st.warning("Please confirm Gemini consent before sending the video.")
             else:
-                safe_filename = re.sub(r"[^A-Za-z0-9._-]", "_", Path(video_file.name).name)[:255]
-                file_bytes = video_file.getvalue()
-                extension = Path(safe_filename).suffix.lower()
-                mime_by_extension = {
-                    ".mp4": "video/mp4", ".mov": "video/quicktime",
-                    ".avi": "video/x-msvideo", ".webm": "video/webm",
-                }
-                mime_type = mime_by_extension.get(extension, "")
-                thumbnail_bytes = thumbnail_file.getvalue() if thumbnail_file is not None else None
-                if len(file_bytes) > 209715200:
-                    st.error("This file is larger than 200 MB.")
-                elif not mime_type:
-                    st.error("Use an MP4, MOV, AVI or WEBM video file.")
-                elif thumbnail_bytes is not None and len(thumbnail_bytes) > 2097152:
-                    st.error("Thumbnail must be 2 MB or smaller (YouTube custom thumbnail limit).")
-                else:
-                    try:
+                try:
+                    if pending_seo_job_id:
+                        job_id = str(pending_seo_job_id)
+                        upload_title = str((selected_job or {}).get("video_title") or "New video")[:100]
+                    elif video_file is None:
+                        st.warning("Choose a video file first.")
+                        job_id = ""
+                    else:
+                        safe_filename = re.sub(r"[^A-Za-z0-9._-]", "_", Path(video_file.name).name)[:255]
+                        file_bytes = video_file.getvalue()
+                        extension = Path(safe_filename).suffix.lower()
+                        mime_by_extension = {
+                            ".mp4": "video/mp4", ".mov": "video/quicktime",
+                            ".avi": "video/x-msvideo", ".webm": "video/webm",
+                        }
+                        mime_type = mime_by_extension.get(extension, "")
+                        if len(file_bytes) > 52428800:
+                            raise RuntimeError("This video exceeds the 50 MB limit.")
+                        if not mime_type:
+                            raise RuntimeError("Use an MP4, MOV, AVI or WEBM video file.")
                         upload_title = Path(safe_filename).stem[:100] or "New video"
                         created = supabase.rpc("create_customer_upload_job", {
                             "p_tenant": selected_active_tenant_id,
@@ -650,266 +661,198 @@ else:
                             object_path, file_bytes,
                             file_options={"content-type": mime_type, "upsert": "false"},
                         )
-                        thumbnail_path = None
-                        if thumbnail_bytes is not None:
-                            thumbnail_ext = Path(thumbnail_file.name).suffix.lower()
-                            thumbnail_name = "thumbnail.png" if thumbnail_ext == ".png" else "thumbnail.jpg"
-                            thumbnail_path = f"{selected_active_tenant_id}/{job_id}/{thumbnail_name}"
-                            thumbnail_mime = "image/png" if thumbnail_name.endswith(".png") else "image/jpeg"
-                            supabase.storage.from_("customer-video-intake").upload(
-                                thumbnail_path, thumbnail_bytes,
-                                file_options={"content-type": thumbnail_mime, "upsert": "false"},
-                            )
                         supabase.rpc("finalize_customer_video_upload", {
                             "p_job": job_id, "p_object_path": object_path,
                         }).execute()
-                        supabase.rpc("set_customer_upload_assets", {
-                            "p_job": job_id,
-                            "p_thumbnail_path": thumbnail_path,
-                            "p_contains_synthetic_media": contains_synthetic_media,
-                        }).execute()
-                    except Exception:
-                        st.error("Secure upload did not complete. Please retry; no YouTube publishing was started.")
-                    else:
+                        st.session_state["creator_pending_seo_job_id"] = job_id
+                    if job_id:
                         st.session_state["creator_selected_job_id"] = job_id
-                        st.success("Video uploaded securely. Gemini is now creating your captions, SEO, tags and hashtags.")
-                        with st.spinner("Gemini is watching your video and preparing everything..."):
-                            try:
-                                customer_youtube_seo_request(
-                                    "generate", job_id, supabase,
-                                    {"title": upload_title, "language": "Telugu", "ai_consent": bool(gemini_video_consent)},
-                                )
-                            except RuntimeError as exc:
-                                st.session_state["creator_seo_failed_job_id"] = job_id
-                                if "gemini_video_consent_required" in str(exc):
-                                    st.warning("The video is safely uploaded. Tick the Gemini consent box below, then retry SEO.")
-                                elif "ai_rate_limit_exceeded" in str(exc):
-                                    st.warning("Your video is safely uploaded. The workspace reached its hourly Gemini limit; retry after the limit resets.")
-                                else:
-                                    st.error(f"Video uploaded, but Gemini could not finish SEO: {str(exc)[:180]}")
-                            else:
-                                st.session_state.pop("creator_seo_failed_job_id", None)
-                                st.success("Gemini created your captions, SEO, tags and hashtags. Review and save them below.")
-                        st.rerun()
-
-        st.divider()
-        st.subheader("🤖 Gemini SEO, Tags, Hashtags & Captions")
-        if selected_job:
-            job = selected_job
-            st.markdown(f"**{job.get('video_title') or 'Your video'}**")
-            st.caption(f"Status: {('Check YouTube' if job.get('status') in {'upload_unknown', 'publishing'} else (job.get('status') or 'draft').replace('_', ' ').title())}")
-            if job.get("status") == "upload_unknown":
-                st.error("YouTube accepted the upload request but the dashboard could not confirm the video ID. Do not retry this upload. Open YouTube Studio and check the channel's private videos first.")
-            elif job.get("status") == "publishing":
-                st.warning("A Publish/Schedule request may still be processing or may already have been accepted by YouTube. Do not click Publish or Schedule again until you confirm the video's status in YouTube Studio. Contact support if it remains unclear.")
-            youtube_video_id = str(job.get("youtube_video_id") or "")
-            if re.fullmatch(r"[A-Za-z0-9_-]{6,20}", youtube_video_id):
-                st.link_button("Open this YouTube video", f"https://www.youtube.com/watch?v={youtube_video_id}")
-            try:
-                saved_rows = (
-                    supabase.table("content_metadata")
-                    .select("title, description, tags, hashtags, caption, metadata_details")
-                    .eq("upload_job_id", job["id"])
-                    .order("created_at", desc=True)
-                    .limit(1)
-                    .execute().data or []
-                )
-                saved_meta = saved_rows[0] if saved_rows else {}
-            except Exception:
-                saved_meta = {}
-
-            if not saved_meta and job.get("status") == "received":
-                st.info("Gemini will review this video and prepare its YouTube metadata. On the current Gemini API Free Tier, submitted content may be used to improve Google products.")
-            if job.get("status") == "received" and not saved_meta:
-                if st.session_state.get("creator_seo_failed_job_id") == str(job["id"]):
-                    st.warning("Your video is saved securely, but Gemini SEO did not finish. You do not need to upload the video again.")
-                    retry_consent = st.checkbox(
-                        "I consent to send this saved video to Google Gemini for captions, SEO, tags and hashtags. The Gemini API Free Tier may use submitted content to improve Google products.",
-                        value=False,
-                        key=f"gemini_retry_consent_{job['id']}",
-                    )
-                    if st.button(
-                        "🔁 Retry Captions, SEO & Tags",
-                        key=f"retry_seo_{job['id']}",
-                        type="primary",
-                        use_container_width=True,
-                        disabled=not retry_consent,
-                    ):
-                        with st.spinner("Gemini is reviewing your saved video..."):
-                            try:
-                                customer_youtube_seo_request(
-                                    "generate", str(job["id"]), supabase,
-                                    {"title": job.get("video_title") or "", "language": "Telugu", "ai_consent": True},
-                                )
-                            except RuntimeError as exc:
-                                st.error(f"Gemini SEO retry failed: {str(exc)[:180]}")
-                            else:
-                                st.session_state.pop("creator_seo_failed_job_id", None)
-                                st.success("Gemini created your captions, SEO, tags and hashtags.")
-                                st.rerun()
-                else:
-                    st.info("Select your video above and press “Create Captions, SEO & Tags”. Gemini will prepare everything in one step.")
-            if job.get("status") == "received":
-                st.caption("Gemini fair-use limit: up to 5 video SEO generations per workspace per hour.")
-
-            if saved_meta and job.get("status") == "received":
-                details = saved_meta.get("metadata_details") or {}
-                title_options = details.get("title_options") or [saved_meta.get("title") or ""]
-                if len(title_options) > 1:
-                    st.markdown("**AI title options**")
-                    selected_title = st.radio(
-                        "Choose YouTube title", title_options,
-                        index=next((i for i, value in enumerate(title_options) if value == saved_meta.get("title")), 0),
-                        key=f"title_options_{job['id']}",
-                    )
-                else:
-                    selected_title = saved_meta.get("title") or ""
-                if details.get("category"):
-                    st.caption(f"YouTube category: {details.get('category')}")
-                with st.form(f"customer_seo_edit_{job['id']}"):
-                    edit_title = st.text_input("YouTube title", value=selected_title, max_chars=100)
-                    edit_description = st.text_area("SEO Description", value=saved_meta.get("description") or "", max_chars=5000)
-                    edit_tags = st.text_area("YouTube SEO tags", value=", ".join(saved_meta.get("tags") or []))
-                    edit_hashtags = st.text_input("5 Hashtags", value=", ".join("#" + x.lstrip("#") for x in (saved_meta.get("hashtags") or [])))
-                    st.caption("One hashtag uses your workspace brand until a YouTube channel is connected; after connecting, regenerate SEO to use the channel name. The other four hashtags match the video topic.")
-                    edit_caption = st.text_area("YouTube caption", value=details.get("youtube_caption") or saved_meta.get("caption") or "", max_chars=2200)
-                    edit_instagram_caption = st.text_area("Instagram caption", value=details.get("instagram_caption") or "", max_chars=2200)
-                    edit_keywords = st.text_area("Extra SEO keywords", value=", ".join(details.get("keywords") or []))
-                    save_customer_seo = st.form_submit_button("Save my SEO edits", type="primary")
-                if save_customer_seo:
-                    try:
-                        customer_youtube_seo_request(
-                            "save", job["id"], supabase,
-                            {
-                                "title": edit_title,
-                                "description": edit_description,
-                                "tags": [x.strip() for x in edit_tags.split(",") if x.strip()],
-                                "hashtags": [x.strip().lstrip("#") for x in edit_hashtags.split(",") if x.strip()],
-                                "caption": edit_caption,
-                                "metadata_details": {
-                                    **details,
-                                    "title_options": title_options,
-                                    "youtube_caption": edit_caption,
-                                    "instagram_caption": edit_instagram_caption,
-                                    "keywords": [x.strip() for x in edit_keywords.split(",") if x.strip()],
-                                },
-                            },
-                        )
-                    except RuntimeError:
-                        st.error("SEO was not saved. Use 12–18 unique tags (450 characters max), exactly 5 unique hashtags including one hashtag based on your connected channel name, 5 unique title options, and no more than 20 keywords.")
-                    else:
-                        st.success("SEO saved.")
-                        st.rerun()
-            elif saved_meta:
-                st.markdown("**SEO metadata uploaded to YouTube (read-only)**")
-                st.write("**Title:**", saved_meta.get("title") or "")
-                st.write("**Description:**", saved_meta.get("description") or "")
-                st.write("**Tags:**", ", ".join(saved_meta.get("tags") or []))
-                st.write("**Hashtags:**", " ".join("#" + x.lstrip("#") for x in (saved_meta.get("hashtags") or [])))
-                st.caption("This metadata is locked after private upload so dashboard edits cannot silently differ from YouTube.")
-
-            if job.get("status") == "received":
-                connected_brand = re.sub(r"[^\w]", "", connected_channel_name, flags=re.UNICODE).lower()
-                saved_brands = [
-                    re.sub(r"[^\w]", "", str(tag).lstrip("#"), flags=re.UNICODE).lower()
-                    for tag in (saved_meta.get("hashtags") or [])
-                ]
-                if saved_meta and not has_upload_permission:
-                    st.info("Your SEO draft is ready. Connect your YouTube channel, then generate SEO once more so the brand hashtag matches your channel before private upload.")
-                elif saved_meta and connected_brand and connected_brand not in saved_brands:
-                    st.info("Your channel is connected, but this SEO draft uses a different brand hashtag. Generate and save SEO again to match your connected channel before private upload.")
-                elif saved_meta:
-                    if st.button(
-                        "📅 Continue to Schedule (private upload first)",
-                        key=f"customer_upload_youtube_{job['id']}",
-                        type="primary", use_container_width=True,
-                    ):
-                        try:
-                            upload_result = start_private_youtube_upload(job["id"], supabase)
-                        except RuntimeError as exc:
-                            if str(exc).startswith("youtube_upload_status_sync_failed"):
-                                st.warning("YouTube received this video as PRIVATE, but the dashboard could not confirm it. Check YouTube Studio before retrying; do not upload the video again yet.")
-                                video_id = str(exc).partition(":")[2]
-                                if video_id:
-                                    st.link_button("Open private YouTube video", f"https://www.youtube.com/watch?v={video_id}")
-                            elif str(exc).startswith("youtube_upload_status_unknown"):
-                                st.warning("The upload response was interrupted. The video may already exist as PRIVATE. Check YouTube Studio before retrying; do not upload it again yet.")
-                            else:
-                                st.error("YouTube upload failed. Connect your channel with upload permission and retry.")
-                        else:
-                            st.success("Your video is uploaded as PRIVATE.")
-                            if upload_result.get("thumbnail_requested") and upload_result.get("thumbnail_applied"):
-                                st.success("Your custom thumbnail was applied to YouTube.")
-                            elif upload_result.get("thumbnail_requested"):
-                                st.warning("The video is private, but YouTube did not confirm the custom thumbnail. You can set it later in YouTube Studio.")
-                            if upload_result.get("youtube_url"):
-                                st.link_button("Open private YouTube video", upload_result["youtube_url"])
-                            st.rerun()
-                else:
-                    st.info("Generate and save SEO first. The private YouTube upload button appears after that.")
-            if job.get("status") in {"uploaded_private", "approved"}:
-                st.success("Video is PRIVATE on YouTube. Choose your schedule time below.")
-                with st.form(f"customer_publish_action_{job['id']}"):
-                    customer_schedule_date = st.date_input(
-                        "Schedule date (IST)",
-                        value=datetime.now(ZoneInfo("Asia/Kolkata")).date() + timedelta(days=1),
-                        min_value=datetime.now(ZoneInfo("Asia/Kolkata")).date(),
-                        key=f"customer_schedule_date_{job['id']}",
-                    )
-                    hour_12 = st.selectbox(
-                        "Hour", list(range(1, 13)), index=8,
-                        key=f"schedule_hour_{job['id']}",
-                    )
-                    minute = st.selectbox(
-                        "Minutes", [f"{m:02d}" for m in range(60)], index=0,
-                        key=f"schedule_minute_{job['id']}",
-                    )
-                    am_pm = st.selectbox(
-                        "AM / PM", ["AM", "PM"], index=0,
-                        key=f"schedule_ampm_{job['id']}",
-                    )
-                    customer_publish_submit = st.form_submit_button(
-                        "📅 Confirm Schedule", type="primary",
-                    )
-                if customer_publish_submit and customer_schedule_date:
-                    hour_24 = (int(hour_12) % 12) + (12 if am_pm == "PM" else 0)
-                    selected_time = time(hour_24, int(minute))
-                    scheduled_local = datetime.combine(
-                        customer_schedule_date, selected_time,
-                        tzinfo=ZoneInfo("Asia/Kolkata"),
-                    )
-                    if scheduled_local < datetime.now(ZoneInfo("Asia/Kolkata")) + timedelta(minutes=15):
-                        st.error("Choose a schedule time at least 15 minutes in the future (IST).")
-                    else:
-                        try:
-                            result = publish_approved_video(
-                                job["id"], "schedule", scheduled_local.isoformat(), supabase,
+                        with st.spinner("Gemini is watching your video and preparing Title, SEO, Tags and Captions..."):
+                            customer_youtube_seo_request(
+                                "generate", job_id, supabase,
+                                {"title": upload_title, "language": "Telugu", "ai_consent": True},
                             )
-                        except RuntimeError as exc:
-                            if str(exc).startswith("publish_status_sync_failed"):
-                                st.warning("YouTube accepted the schedule action, but the dashboard could not confirm it. Check YouTube Studio before retrying.")
-                                video_id = str(exc).partition(":")[2]
-                                if video_id:
-                                    st.link_button("Open YouTube video", f"https://www.youtube.com/watch?v={video_id}")
-                            elif str(exc) == "publish_status_unknown":
-                                st.warning("The scheduling response was interrupted. YouTube may already have accepted it. Check YouTube Studio before retrying; do not repeat the action.")
-                                existing_video_id = str(job.get("youtube_video_id") or "")
-                                if re.fullmatch(r"[A-Za-z0-9_-]{6,20}", existing_video_id):
-                                    st.link_button("Open YouTube video to check status", f"https://www.youtube.com/watch?v={existing_video_id}")
-                            else:
-                                st.error("YouTube could not schedule this video. It remains private; check scheduling permissions and selected time.")
-                        else:
-                            st.success(result.get("message", "Your video has been scheduled."))
-                            if result.get("youtube_url"):
-                                st.link_button("Open scheduled YouTube video", result["youtube_url"])
-                            st.rerun()
-            elif job.get("status") == "scheduled":
-                scheduled_text = format_scheduled_time(job.get("scheduled_for"))
-                st.success(f"Scheduled: {scheduled_text}")
-            elif job.get("status") == "published":
-                st.success("Published on YouTube.")
-            elif job.get("status") == "failed":
-                st.error("This video needs attention. Please contact support.")
-        else:
-            st.info("Upload one video above. Gemini will prepare everything after you press the SEO button.")
+                        st.session_state.pop("creator_pending_seo_job_id", None)
+                        st.session_state["_creator_clear_video_uploader"] = True
+                        st.success("Gemini prepared your metadata. Review and edit it below.")
+                        st.rerun()
+                except RuntimeError as exc:
+                    st.error(str(exc)[:220])
+                except Exception:
+                    st.error("Video upload or Gemini generation failed. Your workspace data remains protected. Retry the same step; do not upload again if the video is already saved.")
 
+        # 3–5 appear once Gemini has generated metadata for the current video.
+        if selected_job and saved_meta and selected_job.get("status") == "received":
+            with st.form(f"customer_final_private_upload_{selected_job['id']}"):
+                details = saved_meta.get("metadata_details") or {}
+                st.subheader("Review your Gemini details")
+                edit_title = st.text_input(
+                    "Title", value=saved_meta.get("title") or selected_job.get("video_title") or "",
+                    max_chars=100,
+                )
+                edit_hashtags = st.text_input(
+                    "5 Hashtags",
+                    value=", ".join("#" + str(x).lstrip("#") for x in (saved_meta.get("hashtags") or [])),
+                )
+                edit_description = st.text_area(
+                    "Description", value=saved_meta.get("description") or "", max_chars=5000,
+                )
+                edit_tags = st.text_area(
+                    "Tags", value=", ".join(saved_meta.get("tags") or []),
+                )
+                edit_caption = st.text_area(
+                    "Captions", value=details.get("youtube_caption") or saved_meta.get("caption") or "",
+                    max_chars=2200,
+                )
+                st.subheader("3. Thumbnail upload (optional)")
+                st.caption("JPG/PNG • maximum 2 MB. YouTube may ignore files over 2 MB.")
+                thumbnail_file = st.file_uploader(
+                    "Thumbnail image (ఐచ్ఛికం)",
+                    type=["jpg", "jpeg", "png"],
+                    max_upload_size=2,
+                    key=f"customer_thumbnail_{selected_job['id']}",
+                )
+                st.subheader("4. YouTube disclosure")
+                contains_synthetic_media = st.checkbox(
+                    "AI-generated / altered realistic content (YouTube disclosure)",
+                    value=True,
+                    key=f"contains_synthetic_media_{selected_job['id']}",
+                )
+                st.subheader("5. Private YouTube upload")
+                final_upload_clicked = st.form_submit_button(
+                    "🔒 Review చేసిన వివరాలతో Privateగా Upload చేయి",
+                    type="primary",
+                    use_container_width=True,
+                    disabled=not has_upload_permission,
+                )
+            if not has_upload_permission:
+                st.info("Connect your YouTube channel to enable the private upload. Your Gemini draft is already saved.")
+                if st.button("Connect / reconnect YouTube channel", key=f"connect_youtube_{selected_job['id']}", use_container_width=True):
+                    try:
+                        google_url = start_youtube_oauth(selected_active_tenant_id, supabase)
+                    except RuntimeError:
+                        st.error("Google connection could not be started. Please contact the service administrator.")
+                    else:
+                        st.link_button("Continue securely with Google", google_url, type="primary")
+            if final_upload_clicked and has_upload_permission:
+                try:
+                    if len(edit_title.strip()) > 100 or not edit_title.strip():
+                        raise RuntimeError("Title is required and must be 100 characters or fewer.")
+                    thumbnail_bytes = thumbnail_file.getvalue() if thumbnail_file is not None else None
+                    if thumbnail_bytes is not None and len(thumbnail_bytes) > 2097152:
+                        raise RuntimeError("Thumbnail must be 2 MB or smaller.")
+                    details = saved_meta.get("metadata_details") or {}
+                    customer_youtube_seo_request(
+                        "save", str(selected_job["id"]), supabase,
+                        {
+                            "title": edit_title.strip(),
+                            "description": edit_description,
+                            "tags": [x.strip() for x in edit_tags.split(",") if x.strip()],
+                            "hashtags": [x.strip().lstrip("#") for x in edit_hashtags.split(",") if x.strip()],
+                            "caption": edit_caption,
+                            "metadata_details": {
+                                **details,
+                                "title_options": details.get("title_options") or [edit_title.strip()],
+                                "youtube_caption": edit_caption,
+                            },
+                        },
+                    )
+                    thumbnail_path = None
+                    if thumbnail_bytes is not None:
+                        thumbnail_ext = Path(thumbnail_file.name).suffix.lower()
+                        thumbnail_name = "thumbnail.png" if thumbnail_ext == ".png" else "thumbnail.jpg"
+                        thumbnail_path = f"{selected_active_tenant_id}/{selected_job['id']}/{thumbnail_name}"
+                        thumbnail_mime = "image/png" if thumbnail_name.endswith(".png") else "image/jpeg"
+                        supabase.storage.from_("customer-video-intake").upload(
+                            thumbnail_path, thumbnail_bytes,
+                            file_options={"content-type": thumbnail_mime, "upsert": "true"},
+                        )
+                    supabase.rpc("set_customer_upload_assets", {
+                        "p_job": str(selected_job["id"]),
+                        "p_thumbnail_path": thumbnail_path,
+                        "p_contains_synthetic_media": bool(contains_synthetic_media),
+                    }).execute()
+                    with st.spinner("Uploading your reviewed video to YouTube as PRIVATE..."):
+                        upload_result = start_private_youtube_upload(str(selected_job["id"]), supabase)
+                    st.session_state["creator_private_upload_success_job_id"] = str(selected_job["id"])
+                    st.success("Your video was uploaded to YouTube as PRIVATE.")
+                    if upload_result.get("thumbnail_requested") and upload_result.get("thumbnail_applied"):
+                        st.success("Your custom thumbnail was applied.")
+                    elif upload_result.get("thumbnail_requested"):
+                        st.warning("The video is private; YouTube did not confirm the thumbnail. You can set it in YouTube Studio.")
+                    if upload_result.get("youtube_url"):
+                        st.link_button("Open private YouTube video", upload_result["youtube_url"])
+                    st.rerun()
+                except RuntimeError as exc:
+                    st.error(str(exc)[:220])
+                except Exception:
+                    st.error("Private upload failed. The video remains in your secure workspace; check YouTube status before retrying.")
+
+        elif selected_job and not saved_meta and selected_job.get("status") == "received":
+            st.info("Your video is saved securely. Complete Step 2 to let Gemini create its metadata.")
+        elif not selected_job:
+            st.info("Choose your video in Step 1. The Gemini button becomes available after you select it.")
+
+        # Schedule remains attached to the same private-uploaded video.
+        if selected_job and selected_job.get("status") in {"uploaded_private", "approved"}:
+            st.success("Your video is PRIVATE on YouTube. Choose its schedule time below.")
+            with st.form(f"customer_publish_action_{selected_job['id']}"):
+                customer_schedule_date = st.date_input(
+                    "Schedule date (IST)",
+                    value=datetime.now(ZoneInfo("Asia/Kolkata")).date() + timedelta(days=1),
+                    min_value=datetime.now(ZoneInfo("Asia/Kolkata")).date(),
+                    key=f"customer_schedule_date_{selected_job['id']}",
+                )
+                hour_12 = st.selectbox(
+                    "Hour", list(range(1, 13)), index=8,
+                    key=f"schedule_hour_{selected_job['id']}",
+                )
+                minute = st.selectbox(
+                    "Minutes", [f"{m:02d}" for m in range(60)], index=0,
+                    key=f"schedule_minute_{selected_job['id']}",
+                )
+                am_pm = st.selectbox(
+                    "AM / PM", ["AM", "PM"], index=0,
+                    key=f"schedule_ampm_{selected_job['id']}",
+                )
+                customer_publish_submit = st.form_submit_button("📅 Confirm Schedule", type="primary")
+            if customer_publish_submit and customer_schedule_date:
+                hour_24 = (int(hour_12) % 12) + (12 if am_pm == "PM" else 0)
+                selected_time = time(hour_24, int(minute))
+                scheduled_local = datetime.combine(
+                    customer_schedule_date, selected_time,
+                    tzinfo=ZoneInfo("Asia/Kolkata"),
+                )
+                if scheduled_local < datetime.now(ZoneInfo("Asia/Kolkata")) + timedelta(minutes=15):
+                    st.error("Choose a schedule time at least 15 minutes in the future (IST).")
+                else:
+                    try:
+                        result = publish_approved_video(
+                            str(selected_job["id"]), "schedule", scheduled_local.isoformat(), supabase,
+                        )
+                    except RuntimeError as exc:
+                        if str(exc).startswith("publish_status_sync_failed"):
+                            st.warning("YouTube accepted the schedule action, but the dashboard could not confirm it. Check YouTube Studio before retrying.")
+                            video_id = str(exc).partition(":")[2]
+                            if video_id:
+                                st.link_button("Open YouTube video", f"https://www.youtube.com/watch?v={video_id}")
+                        elif str(exc) == "publish_status_unknown":
+                            st.warning("The scheduling response was interrupted. YouTube may already have accepted it. Check YouTube Studio before retrying; do not repeat the action.")
+                            existing_video_id = str(selected_job.get("youtube_video_id") or "")
+                            if re.fullmatch(r"[A-Za-z0-9_-]{6,20}", existing_video_id):
+                                st.link_button("Open YouTube video to check status", f"https://www.youtube.com/watch?v={existing_video_id}")
+                        else:
+                            st.error("YouTube could not schedule this video. It remains private; check scheduling permissions and selected time.")
+                    else:
+                        st.success(result.get("message", "Your video has been scheduled."))
+                        if result.get("youtube_url"):
+                            st.link_button("Open scheduled YouTube video", result["youtube_url"])
+                        st.rerun()
+        elif selected_job and selected_job.get("status") == "scheduled":
+            st.success(f"Scheduled: {format_scheduled_time(selected_job.get('scheduled_for'))}")
+        elif selected_job and selected_job.get("status") == "published":
+            st.success("Published on YouTube.")
+        elif selected_job and selected_job.get("status") == "upload_unknown":
+            st.error("YouTube may have accepted the upload. Check YouTube Studio before retrying; this job is locked to prevent duplicate uploads.")
+        elif selected_job and selected_job.get("status") == "publishing":
+            st.warning("The schedule request may still be processing. Check YouTube Studio before retrying.")

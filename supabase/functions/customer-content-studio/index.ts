@@ -1,4 +1,26 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+function supabaseEnvMap(name: string): Record<string, string> {
+  try {
+    const parsed = JSON.parse(Deno.env.get(name) ?? "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+function supabaseSecretKey(): string {
+  const mapped = supabaseEnvMap("SUPABASE_SECRET_KEYS").default;
+  if (typeof mapped === "string" && mapped) return mapped;
+  const legacy = Deno.env.get("SUPABASE_SECRET_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) return legacy;
+  throw new Error("missing_configuration");
+}
+function supabasePublishableKey(): string {
+  const mapped = supabaseEnvMap("SUPABASE_PUBLISHABLE_KEYS").default;
+  if (typeof mapped === "string" && mapped) return mapped;
+  const legacy = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY");
+  if (legacy) return legacy;
+  throw new Error("missing_configuration");
+}
 const headers={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const json=(v:unknown,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const clean=(v:unknown,n:number)=>typeof v==="string"?v.trim().slice(0,n):"";
@@ -6,8 +28,8 @@ Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers});
  if(req.method!=="POST")return json({error:"method_not_allowed"},405);
  try{
-  const url=Deno.env.get("SUPABASE_URL")!,pub=Deno.env.get("SUPABASE_PUBLISHABLE_KEY")??Deno.env.get("SUPABASE_ANON_KEY");
-  const service=Deno.env.get("SUPABASE_SECRET_KEY")??Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const url=Deno.env.get("SUPABASE_URL")!,pub=supabasePublishableKey();
+  const service=supabaseSecretKey();
   const key=Deno.env.get("GEMINI_API_KEY");if(!url||!pub||!service||!key)return json({error:"ai_not_configured"},503);
   const bearer=(req.headers.get("Authorization")??"").match(/^Bearer\s+(.+)$/i)?.[1];
   if(!bearer)return json({error:"authentication_required"},401);

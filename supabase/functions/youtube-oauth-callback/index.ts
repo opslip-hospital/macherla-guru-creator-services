@@ -1,4 +1,25 @@
-const map=(n:string)=>{try{return JSON.parse(Deno.env.get(n)??"{}")}catch{return {}}};
+function supabaseEnvMap(name: string): Record<string, string> {
+  try {
+    const parsed = JSON.parse(Deno.env.get(name) ?? "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+function supabaseSecretKey(): string {
+  const mapped = supabaseEnvMap("SUPABASE_SECRET_KEYS").default;
+  if (typeof mapped === "string" && mapped) return mapped;
+  const legacy = Deno.env.get("SUPABASE_SECRET_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) return legacy;
+  throw new Error("missing_configuration");
+}
+function supabasePublishableKey(): string {
+  const mapped = supabaseEnvMap("SUPABASE_PUBLISHABLE_KEYS").default;
+  if (typeof mapped === "string" && mapped) return mapped;
+  const legacy = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY");
+  if (legacy) return legacy;
+  throw new Error("missing_configuration");
+}
 const hash=async(s:string)=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,"0")).join("");
 const hex=(b:Uint8Array)=>[...b].map(x=>x.toString(16).padStart(2,"0")).join("");
 function redirect(status:string){const base=Deno.env.get("APP_BASE_URL");if(!base)return new Response("OAuth callback is not configured.",{status:503});const u=new URL(base);u.searchParams.set("youtube_oauth",status);return Response.redirect(u.toString(),303)}
@@ -12,7 +33,7 @@ Deno.serve(async(req)=>{
  const q=new URL(req.url).searchParams;if(q.get("error"))return redirect("denied");
  const code=q.get("code")??"",state=q.get("state")??"";if(!code||state.length<32||state.length>256)return redirect("failed");
  try{
-  const url=Deno.env.get("SUPABASE_URL")!,secretKey=map("SUPABASE_SECRET_KEYS").default??Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),id=Deno.env.get("GOOGLE_CLIENT_ID")!,secret=Deno.env.get("GOOGLE_CLIENT_SECRET")!,uri=Deno.env.get("GOOGLE_REDIRECT_URI")!;
+  const url=Deno.env.get("SUPABASE_URL")!,secretKey=supabaseSecretKey(),id=Deno.env.get("GOOGLE_CLIENT_ID")!,secret=Deno.env.get("GOOGLE_CLIENT_SECRET")!,uri=Deno.env.get("GOOGLE_REDIRECT_URI")!;
   const keyB64=Deno.env.get("TOKEN_ENCRYPTION_KEY")??"",keyBytes=Uint8Array.from(atob(keyB64),(c)=>c.charCodeAt(0));
   if(!url||!secretKey||!id||!secret||!uri||keyBytes.length!==32)return redirect("not_configured");
   const tr=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code,client_id:id,client_secret:secret,redirect_uri:uri,grant_type:"authorization_code"})});

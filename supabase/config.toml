@@ -1,0 +1,4 @@
+# Google's OAuth redirect does not carry a Supabase user JWT.
+# Keep JWT verification enabled for every other Edge Function.
+[functions.youtube-oauth-callback]
+verify_jwt = false

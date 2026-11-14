@@ -8,6 +8,29 @@ const headers = {
 };
 const json = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), { status, headers });
+function supabaseEnvMap(name: string): Record<string, string> {
+  try {
+    const parsed = JSON.parse(Deno.env.get(name) ?? "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+function supabaseSecretKey(): string {
+  const mapped = supabaseEnvMap("SUPABASE_SECRET_KEYS").default;
+  if (typeof mapped === "string" && mapped) return mapped;
+  const legacy = Deno.env.get("SUPABASE_SECRET_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) return legacy;
+  throw new Error("missing_configuration");
+}
+function supabasePublishableKey(): string {
+  const mapped = supabaseEnvMap("SUPABASE_PUBLISHABLE_KEYS").default;
+  if (typeof mapped === "string" && mapped) return mapped;
+  const legacy = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY");
+  if (legacy) return legacy;
+  throw new Error("missing_configuration");
+}
+
 function required(name: string) {
   const value = Deno.env.get(name);
   if (!value) throw new Error("missing_configuration");
@@ -74,14 +97,16 @@ function ensureChannelBrandHashtag(value: unknown, channelName: string): string[
   const withoutBrand = tags.filter((tag) => tag.toLocaleLowerCase() !== brand.toLocaleLowerCase());
   return [...withoutBrand.slice(0, 4), brand];
 }
-async function uploadVideoToGemini(apiKey: string, video: Blob, mime: string, name: string) {
+async function uploadVideoToGemini(
+  apiKey: string, storageUrl: URL, totalBytes: number, mime: string, name: string,
+) {
   const start = await fetch("https://generativelanguage.googleapis.com/upload/v1beta/files", {
     method: "POST",
     headers: {
       "x-goog-api-key": apiKey,
       "X-Goog-Upload-Protocol": "resumable",
       "X-Goog-Upload-Command": "start",
-      "X-Goog-Upload-Header-Content-Length": String(video.size),
+      "X-Goog-Upload-Header-Content-Length": String(totalBytes),
       "X-Goog-Upload-Header-Content-Type": mime,
       "Content-Type": "application/json",
     },
@@ -90,19 +115,32 @@ async function uploadVideoToGemini(apiKey: string, video: Blob, mime: string, na
   if (!start.ok) throw new Error(`gemini_file_start_failed:${start.status}`);
   const uploadUrl = start.headers.get("x-goog-upload-url") ?? start.headers.get("location");
   if (!uploadUrl || !uploadUrl.startsWith("https://")) throw new Error("gemini_upload_url_missing");
-  const uploaded = await fetch(uploadUrl, {
-    method: "POST",
-    headers: {
-      "x-goog-api-key": apiKey,
-      "X-Goog-Upload-Offset": "0",
-      "X-Goog-Upload-Command": "upload, finalize",
-      "Content-Length": String(video.size),
-    },
-    body: video,
-  });
-  if (!uploaded.ok) throw new Error(`gemini_file_upload_failed:${uploaded.status}`);
-  const payload = await uploaded.json();
-  const file = payload.file ?? payload;
+  const chunkBytes = 8 * 1024 * 1024;
+  let offset = 0;
+  let payload: Record<string, unknown> | null = null;
+  while (offset < totalBytes) {
+    const end = Math.min(offset + chunkBytes, totalBytes) - 1;
+    const source = await fetch(storageUrl, { headers: { Range: `bytes=${offset}-${end}` } });
+    if (source.status !== 206) throw new Error("gemini_source_range_read_failed");
+    const chunk = new Uint8Array(await source.arrayBuffer());
+    if (chunk.length !== end - offset + 1) throw new Error("gemini_source_range_size_mismatch");
+    const finalChunk = end + 1 === totalBytes;
+    const uploaded = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        "x-goog-api-key": apiKey,
+        "X-Goog-Upload-Offset": String(offset),
+        "X-Goog-Upload-Command": finalChunk ? "upload, finalize" : "upload",
+        "Content-Length": String(chunk.length),
+      },
+      body: chunk,
+    });
+    if (!uploaded.ok) throw new Error(`gemini_file_upload_failed:${uploaded.status}`);
+    if (finalChunk) payload = await uploaded.json();
+    offset = end + 1;
+  }
+  if (!payload) throw new Error("gemini_file_reference_missing");
+  const file = (payload.file ?? payload) as Record<string, unknown>;
   if (!file.name || !file.uri) throw new Error("gemini_file_reference_missing");
   return { name: String(file.name), uri: String(file.uri), state: String(file.state ?? "PROCESSING") };
 }
@@ -140,8 +178,8 @@ Deno.serve(async (req: Request) => {
   let stage = "initialization";
   try {
     const url = required("SUPABASE_URL");
-    const publishable = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY");
-    const service = Deno.env.get("SUPABASE_SECRET_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const publishable = supabasePublishableKey();
+    const service = supabaseSecretKey();
     if (!publishable || !service) throw new Error("missing_configuration");
     const bearer = (req.headers.get("Authorization") ?? "").match(/^Bearer\s+(.+)$/i)?.[1];
     if (!bearer) return json({ error: "authentication_required" }, 401);
@@ -194,18 +232,23 @@ Deno.serve(async (req: Request) => {
       geminiKey = required("GEMINI_API_KEY");
       if (!job.storage_object_path || !["video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"].includes(String(job.mime_type)) ||
           !Number.isFinite(Number(job.file_size_bytes)) || Number(job.file_size_bytes) <= 0 ||
-          Number(job.file_size_bytes) > 209715200) {
+          Number(job.file_size_bytes) > 52428800) {
         return json({ error: "video_file_unavailable_or_unsupported" }, 409);
       }
       stage = "video_storage_download";
-      const { data: videoBlob, error: storageError } = await admin.storage
-        .from("customer-video-intake").download(job.storage_object_path);
-      if (storageError || !videoBlob) return json({ error: "video_file_unavailable" }, 409);
-      if (videoBlob.size !== Number(job.file_size_bytes) || videoBlob.size > 209715200) {
+      const totalBytes = Number(job.file_size_bytes);
+      if (!Number.isSafeInteger(totalBytes) || totalBytes <= 0 || totalBytes > 52428800) {
         return json({ error: "video_file_size_mismatch" }, 409);
       }
-      const videoHeader = new Uint8Array(await videoBlob.slice(0, 12).arrayBuffer());
-      if (!hasExpectedVideoContainer(videoHeader, String(job.mime_type))) {
+      const { data: signed, error: storageError } = await admin.storage
+        .from("customer-video-intake").createSignedUrl(job.storage_object_path, 3600);
+      if (storageError || !signed?.signedUrl) return json({ error: "video_file_unavailable" }, 409);
+      const storageUrl = new URL(signed.signedUrl, url);
+      if (storageUrl.origin !== new URL(url).origin) return json({ error: "storage_url_invalid" }, 502);
+      const firstRange = await fetch(storageUrl, { headers: { Range: "bytes=0-11" } });
+      if (firstRange.status !== 206) return json({ error: "video_file_unavailable" }, 409);
+      const videoHeader = new Uint8Array(await firstRange.arrayBuffer());
+      if (videoHeader.length !== 12 || !hasExpectedVideoContainer(videoHeader, String(job.mime_type))) {
         return json({ error: "video_container_does_not_match_file_type" }, 415);
       }
 
@@ -235,7 +278,7 @@ Deno.serve(async (req: Request) => {
 
       stage = "gemini_file_upload";
       const geminiFile = await uploadVideoToGemini(
-        geminiKey, videoBlob, String(job.mime_type), String(job.video_title ?? "creator-video"),
+        geminiKey, storageUrl, totalBytes, String(job.mime_type), String(job.video_title ?? "creator-video"),
       );
       geminiFileName = geminiFile.name;
       stage = "gemini_file_processing";

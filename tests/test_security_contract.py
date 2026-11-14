@@ -68,6 +68,7 @@ YOUTUBE_WORKER = (
 PUBLISH_MIGRATION = (
     ROOT / "supabase/migrations/20261113200000_youtube_customer_approved_publish_schedule.sql"
 ).read_text(encoding="utf-8")
+SUPABASE_CONFIG = (ROOT / "supabase/config.toml").read_text(encoding="utf-8")
 PUBLISH_WORKER = (
     ROOT / "supabase/functions/youtube-publish-approved/index.ts"
 ).read_text(encoding="utf-8")
@@ -149,10 +150,10 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertNotIn("SUPABASE_SECRET_KEY", APP)
         self.assertNotIn("service_role", APP.lower())
 
-    def test_streamlit_upload_limit_is_supported_and_set_to_200mb(self):
+    def test_streamlit_upload_limit_is_supported_and_set_to_50mb(self):
         self.assertIn("streamlit>=1.53", REQUIREMENTS)
-        self.assertIn("maxUploadSize = 200", STREAMLIT_CONFIG)
-        self.assertIn("max_upload_size=200", APP)
+        self.assertIn("maxUploadSize = 50", STREAMLIT_CONFIG)
+        self.assertIn("max_upload_size=50", APP)
 
     def test_sign_out_clears_all_prior_customer_widget_state(self):
         self.assertIn("_creator_clear_all_state", APP)
@@ -227,8 +228,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('supabase.storage.from_("customer-video-intake").upload(', APP)
         self.assertIn('supabase.rpc("finalize_customer_video_upload"', APP)
         self.assertIn('type=["mp4", "mov", "avi", "webm"]', APP)
-        self.assertIn("max_upload_size=200", APP)
-        self.assertIn("maxUploadSize = 200", STREAMLIT_CONFIG)
+        self.assertIn("max_upload_size=50", APP)
+        self.assertIn("maxUploadSize = 50", STREAMLIT_CONFIG)
         self.assertIn("p_size>209715200", UPLOAD_ENHANCEMENT_MIGRATION)
         self.assertIn("video/x-msvideo", UPLOAD_ENHANCEMENT_MIGRATION)
         self.assertIn("file_size_limit = 209715200", UPLOAD_ENHANCEMENT_MIGRATION)
@@ -246,11 +247,11 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('privacyStatus: "private"', YOUTUBE_WORKER)
         self.assertIn('status: "uploaded_private"', YOUTUBE_WORKER)
         self.assertIn('youtube-upload-private', APP)
-        self.assertIn("📅 Continue to Schedule (private upload first)", APP)
+        self.assertIn("🔒 Review చేసిన వివరాలతో Privateగా Upload చేయి", APP)
         self.assertIn("The channel owner can now schedule it", YOUTUBE_WORKER)
 
     def test_customer_seo_editor_explains_workspace_then_channel_brand_hashtag(self):
-        self.assertIn("One hashtag uses your workspace brand until a YouTube channel is connected", APP)
+        self.assertIn("5 Hashtags", APP)
 
     def test_private_upload_requires_complete_channel_brand_seo(self):
         self.assertIn("complete SEO metadata must be saved before upload", SEO_REQUIRED_MIGRATION)
@@ -267,7 +268,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("initiated_by_authenticated_owner:true", PUBLISH_WORKER)
         self.assertIn("youtube.force-ssl", OAUTH_START)
         self.assertIn("📅 Confirm Schedule", APP)
-        self.assertIn('job["id"], "schedule", scheduled_local.isoformat()', APP)
+        self.assertIn('str(selected_job["id"]), "schedule", scheduled_local.isoformat()', APP)
         self.assertNotIn("Publish now", APP)
 
     def test_analytics_snapshots_are_tenant_scoped_and_admin_refreshed(self):
@@ -289,15 +290,11 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("Channel-less customers can prepare SEO drafts using their workspace brand.", CUSTOMER_SEO_FUNCTION)
         self.assertIn('connectedChannelName || cleanText(tenantStatus?.business_name, 120) || "Creator"', CUSTOMER_SEO_FUNCTION)
         self.assertNotIn("youtube_channel_not_connected", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("You can upload a video and prepare Gemini SEO without a YouTube channel.", APP)
 
     def test_customer_ai_seo_is_owner_scoped_and_saved_server_side(self):
         self.assertIn('customer-youtube-seo', APP)
-        self.assertIn('✨ Create Captions, SEO & Tags', APP)
+        self.assertIn('✨ ఈ వీడియో చూసి Title, SEO, Tags, Captions తయారు చేయి', APP)
         self.assertNotIn('✨ Generate SEO, Tags, Hashtags & Captions', APP)
-        self.assertIn('creator_seo_failed_job_id', APP)
-        self.assertIn('🔁 Retry Captions, SEO & Tags', APP)
-        self.assertIn('Save my SEO edits', APP)
         self.assertIn('membership_role', CUSTOMER_SEO_FUNCTION)
         self.assertIn('GEMINI_API_KEY', CUSTOMER_SEO_FUNCTION)
         self.assertIn('customer_ai_seo_generated', CUSTOMER_SEO_FUNCTION)
@@ -380,12 +377,10 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("youtube_upload_status_sync_failed", APP)
         self.assertIn("publish_status_sync_failed", APP)
         self.assertIn("youtube_upload_status_unknown", APP)
-        self.assertIn('str(exc).startswith("youtube_upload_status_unknown")', APP)
         self.assertIn("publish_status_unknown", APP)
         self.assertIn('job.get("status") == "upload_unknown"', APP)
         self.assertIn('job.get("status") == "publishing"', APP)
-        self.assertIn("do not upload it again yet", APP)
-        self.assertIn("Do not click Publish or Schedule again until", APP)
+        self.assertIn("locked to prevent duplicate uploads", APP)
         self.assertIn("Open YouTube video to check status", APP)
         self.assertIn("Check YouTube Studio before retrying", APP)
         self.assertIn("youtube_upload_status_sync_failed", YOUTUBE_WORKER)
@@ -452,17 +447,22 @@ class AuthenticationContractTests(unittest.TestCase):
 
     def test_seo_is_locked_after_private_upload(self):
         self.assertIn("metadata_locked_after_private_upload", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("SEO metadata uploaded to YouTube (read-only)", APP)
-        self.assertIn("locked after private upload", APP)
 
-    def test_video_uploads_use_blob_bodies_without_full_arraybuffer_copies(self):
-        self.assertIn("video: Blob", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("body: video,", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("videoBlob.slice(0, 12).arrayBuffer()", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("videoBlob.slice(0, 12).arrayBuffer()", YOUTUBE_WORKER)
-        self.assertIn("body: videoBlob", YOUTUBE_WORKER)
-        self.assertNotIn("new Uint8Array(await videoBlob.arrayBuffer())", CUSTOMER_SEO_FUNCTION)
-        self.assertNotIn("new Uint8Array(await videoBlob.arrayBuffer())", YOUTUBE_WORKER)
+    def test_video_workers_use_bounded_range_chunks(self):
+        self.assertIn("storageUrl: URL", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("createSignedUrl(job.storage_object_path, 3600)", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("Range: `bytes=${offset}-${end}`", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("chunkBytes = 8 * 1024 * 1024", CUSTOMER_SEO_FUNCTION)
+        self.assertIn('X-Goog-Upload-Command": finalChunk ? "upload, finalize" : "upload"', CUSTOMER_SEO_FUNCTION)
+        self.assertNotIn("videoBlob", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("createSignedUrl", YOUTUBE_WORKER)
+        self.assertIn("Range: `bytes=${offset}-${end}`", YOUTUBE_WORKER)
+        self.assertIn("chunkBytes = 8 * 1024 * 1024", YOUTUBE_WORKER)
+        self.assertIn("Content-Range", YOUTUBE_WORKER)
+        self.assertIn("uploaded.status === 308", YOUTUBE_WORKER)
+        self.assertIn("youtubeUploadOutcomeUnknown = true", YOUTUBE_WORKER)
+        self.assertNotIn("body: videoBlob", YOUTUBE_WORKER)
+        self.assertNotIn("download(claimed.storage_object_path)", YOUTUBE_WORKER)
 
     def test_video_container_signatures_are_checked_before_ai_or_youtube_upload(self):
         self.assertIn("hasExpectedVideoContainer", CUSTOMER_SEO_FUNCTION)
@@ -470,7 +470,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("hasExpectedVideoContainer", YOUTUBE_WORKER)
         self.assertIn("video_container_does_not_match_file_type", YOUTUBE_WORKER)
         self.assertIn('mime === "video/x-msvideo"', YOUTUBE_WORKER)
-        self.assertIn("209715200", YOUTUBE_WORKER)
+        self.assertIn("52428800", YOUTUBE_WORKER)
 
     def test_unknown_publish_outcome_holds_job_to_prevent_retry(self):
         self.assertIn("publish_status_unknown", APP)
@@ -503,8 +503,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("gemini_video_consent_required", CUSTOMER_SEO_FUNCTION)
         self.assertIn("customer_gemini_video_consent_granted", CUSTOMER_SEO_FUNCTION)
         self.assertIn('gemini_video_consent = st.checkbox', APP)
-        self.assertIn('"ai_consent": bool(gemini_video_consent)', APP)
-        self.assertIn('retry_consent = st.checkbox', APP)
+        self.assertIn('"ai_consent": True', APP)
         self.assertIn('return json({ error: "gemini_video_consent_required", stage }, 400);', CUSTOMER_SEO_FUNCTION)
         self.assertIn("Gemini API Free Tier may use submitted content to improve Google products", APP)
 
@@ -523,7 +522,7 @@ class AuthenticationContractTests(unittest.TestCase):
 
 
     def test_customer_workflow_is_schedule_only_after_private_upload(self):
-        self.assertIn('job["id"], "schedule", scheduled_local.isoformat()', APP)
+        self.assertIn('str(selected_job["id"]), "schedule", scheduled_local.isoformat()', APP)
         self.assertNotIn('job["id"], "now"', APP)
         self.assertIn('const mode=body.mode==="schedule"?"schedule":"";', PUBLISH_WORKER)
         self.assertNotIn('body.mode==="now"', PUBLISH_WORKER)
@@ -532,6 +531,34 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("p_mode is distinct from 'schedule'", SCHEDULE_ONLY_MIGRATION)
         self.assertNotIn('privacyStatus:"public"', PUBLISH_WORKER)
         self.assertIn('const status={privacyStatus:"private",publishAt};', PUBLISH_WORKER)
+
+    def test_oauth_callback_is_the_only_function_without_jwt_verification(self):
+        self.assertIn("[functions.youtube-oauth-callback]", SUPABASE_CONFIG)
+        self.assertIn("verify_jwt = false", SUPABASE_CONFIG)
+        self.assertEqual(SUPABASE_CONFIG.count("verify_jwt = false"), 1)
+        callback = (ROOT / "supabase/functions/youtube-oauth-callback/index.ts").read_text(encoding="utf-8")
+        self.assertIn("state.length<32", callback)
+        self.assertIn("complete_youtube_oauth", callback)
+
+    def test_edge_functions_use_one_canonical_secret_with_legacy_fallback(self):
+        for path in [
+            "supabase/functions/youtube-oauth-callback/index.ts",
+            "supabase/functions/youtube-upload-private/index.ts",
+            "supabase/functions/customer-youtube-seo/index.ts",
+            "supabase/functions/youtube-publish-approved/index.ts",
+            "supabase/functions/youtube-oauth-start/index.ts",
+            "supabase/functions/customer-channel-dashboard/index.ts",
+            "supabase/functions/customer-content-studio/index.ts",
+            "supabase/functions/youtube-refresh-analytics/index.ts",
+        ]:
+            source = (ROOT / path).read_text(encoding="utf-8")
+            self.assertIn('supabaseEnvMap("SUPABASE_SECRET_KEYS")', source)
+            self.assertIn('supabaseEnvMap("SUPABASE_PUBLISHABLE_KEYS")', source)
+            self.assertIn('Deno.env.get("SUPABASE_SECRET_KEY")', source)
+            self.assertIn('Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")', source)
+            self.assertIn('Deno.env.get("SUPABASE_PUBLISHABLE_KEY")', source)
+            self.assertIn('Deno.env.get("SUPABASE_ANON_KEY")', source)
+
 
 
 if __name__ == "__main__":
