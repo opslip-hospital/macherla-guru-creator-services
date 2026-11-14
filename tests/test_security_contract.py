@@ -259,7 +259,7 @@ class AuthenticationContractTests(unittest.TestCase):
     def test_customer_publish_is_explicit_and_tenant_scoped(self):
         self.assertIn("v_job.status not in ('uploaded_private','approved')", SELF_SERVICE_MIGRATION)
         self.assertIn("youtube.force-ssl", SELF_SERVICE_MIGRATION)
-        self.assertIn('privacyStatus:"public"', PUBLISH_WORKER)
+        self.assertNotIn('privacyStatus:"public"', PUBLISH_WORKER)
         self.assertIn('privacyStatus:"private",publishAt', PUBLISH_WORKER)
         self.assertIn("initiated_by_authenticated_owner:true", PUBLISH_WORKER)
         self.assertIn("youtube.force-ssl", OAUTH_START)
@@ -488,7 +488,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("max_upload_size=2", APP)
         self.assertIn("2097152", APP)
         self.assertIn("2097152", THUMBNAIL_LIMIT_MIGRATION)
-        self.assertIn("value=True", APP)
+        self.assertIn("value=False", APP)
         self.assertIn("contains_synthetic_media", UPLOAD_ENHANCEMENT_MIGRATION)
         self.assertIn("containsSyntheticMedia", YOUTUBE_WORKER)
         self.assertNotIn("thumbnail_prompt", CUSTOMER_SEO_FUNCTION.lower())
@@ -519,6 +519,9 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertNotIn('job["id"], "now"', APP)
         self.assertIn('const mode=body.mode==="schedule"?"schedule":"";', PUBLISH_WORKER)
         self.assertNotIn('body.mode==="now"', PUBLISH_WORKER)
+        self.assertNotIn('mode==="now"', PUBLISH_WORKER)
+        self.assertNotIn('privacyStatus:"public"', PUBLISH_WORKER)
+        self.assertIn('const status={privacyStatus:"private",publishAt};', PUBLISH_WORKER)
 
 
 if __name__ == "__main__":
