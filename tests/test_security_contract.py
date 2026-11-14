@@ -3,6 +3,7 @@
 These checks are not a substitute for live OAuth, RLS, or penetration tests.
 """
 from pathlib import Path
+import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -563,3 +564,10 @@ class AuthenticationContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_customer_youtube_seo_accepts_valid_uuid_job_id(self):
+        expected_pattern = r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+        self.assertIn(expected_pattern, CUSTOMER_SEO_FUNCTION)
+        self.assertIsNotNone(
+            re.fullmatch(expected_pattern, "125ba8a7-10c4-41fe-a4a3-c67ff6b8fb73", re.IGNORECASE)
+        )
