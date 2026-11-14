@@ -555,6 +555,10 @@ class AuthenticationContractTests(unittest.TestCase):
             "supabase/functions/youtube-upload-private/index.ts",
             "supabase/functions/customer-youtube-seo/index.ts",
             "supabase/functions/youtube-publish-approved/index.ts",
+            "supabase/functions/youtube-oauth-start/index.ts",
+            "supabase/functions/customer-channel-dashboard/index.ts",
+            "supabase/functions/customer-content-studio/index.ts",
+            "supabase/functions/youtube-refresh-analytics/index.ts",
         ]:
             source = (ROOT / path).read_text(encoding="utf-8")
             self.assertIn('Deno.env.get("SUPABASE_SECRET_KEY")', source)
