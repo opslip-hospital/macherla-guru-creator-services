@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
   let youtubeUploadStarted = false;
   let youtubeUploadResponded = false;
   let youtubeUploadOutcomeUnknown = false;
-  let admin: ReturnType<typeof createClient> | null = null;
+  let admin: any = null;
   try {
     const supabaseUrl = secret("SUPABASE_URL");
     const publishable = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")
