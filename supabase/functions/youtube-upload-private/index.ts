@@ -250,6 +250,7 @@ Deno.serve(async (req) => {
       status: "uploaded_private",
       youtube_video_id: youtubeVideo.id,
       youtube_url: `https://www.youtube.com/watch?v=${youtubeVideo.id}`,
+      thumbnail_requested: Boolean(claimed.thumbnail_storage_object_path),
       thumbnail_applied: thumbnailApplied,
       message: "Video uploaded as private. The channel owner can now publish or schedule it.",
     });
