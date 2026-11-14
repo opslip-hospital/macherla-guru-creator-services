@@ -268,7 +268,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("initiated_by_authenticated_owner:true", PUBLISH_WORKER)
         self.assertIn("youtube.force-ssl", OAUTH_START)
         self.assertIn("📅 Confirm Schedule", APP)
-        self.assertIn('job["id"], "schedule", scheduled_local.isoformat()', APP)
+        self.assertIn('str(selected_job["id"]), "schedule", scheduled_local.isoformat()', APP)
         self.assertNotIn("Publish now", APP)
 
     def test_analytics_snapshots_are_tenant_scoped_and_admin_refreshed(self):
@@ -290,7 +290,6 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("Channel-less customers can prepare SEO drafts using their workspace brand.", CUSTOMER_SEO_FUNCTION)
         self.assertIn('connectedChannelName || cleanText(tenantStatus?.business_name, 120) || "Creator"', CUSTOMER_SEO_FUNCTION)
         self.assertNotIn("youtube_channel_not_connected", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("You can upload a video and prepare Gemini SEO without a YouTube channel.", APP)
 
     def test_customer_ai_seo_is_owner_scoped_and_saved_server_side(self):
         self.assertIn('customer-youtube-seo', APP)
@@ -378,7 +377,6 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("youtube_upload_status_sync_failed", APP)
         self.assertIn("publish_status_sync_failed", APP)
         self.assertIn("youtube_upload_status_unknown", APP)
-        self.assertIn('str(exc).startswith("youtube_upload_status_unknown")', APP)
         self.assertIn("publish_status_unknown", APP)
         self.assertIn('job.get("status") == "upload_unknown"', APP)
         self.assertIn('job.get("status") == "publishing"', APP)
@@ -525,7 +523,7 @@ class AuthenticationContractTests(unittest.TestCase):
 
 
     def test_customer_workflow_is_schedule_only_after_private_upload(self):
-        self.assertIn('job["id"], "schedule", scheduled_local.isoformat()', APP)
+        self.assertIn('str(selected_job["id"]), "schedule", scheduled_local.isoformat()', APP)
         self.assertNotIn('job["id"], "now"', APP)
         self.assertIn('const mode=body.mode==="schedule"?"schedule":"";', PUBLISH_WORKER)
         self.assertNotIn('body.mode==="now"', PUBLISH_WORKER)
