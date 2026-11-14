@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
       youtube_url: `https://www.youtube.com/watch?v=${youtubeVideo.id}`,
       thumbnail_requested: Boolean(claimed.thumbnail_storage_object_path),
       thumbnail_applied: thumbnailApplied,
-      message: "Video uploaded as private. The channel owner can now publish or schedule it.",
+      message: "Video uploaded as private. The channel owner can now schedule it.",
     });
   } catch {
     if (admin && claimedJobId) {
