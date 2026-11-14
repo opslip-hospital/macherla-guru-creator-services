@@ -27,7 +27,7 @@ This deployment is for the separate `macherla-guru-creator-services` repository 
 
 ## Google YouTube OAuth setup
 
-The repository contains the customer OAuth and YouTube worker Edge Functions deployed in the dedicated Creator Services Supabase project:
+The repository contains the customer OAuth and YouTube worker Edge Functions deployed in the dedicated Creator Services Supabase project. The OAuth callback is the only function configured without gateway JWT verification because Google's redirect has no Supabase Authorization header. Deploy it explicitly with `supabase functions deploy youtube-oauth-callback --no-verify-jwt` (the repository `supabase/config.toml` carries the same setting):
 
 - Start: `https://gigthhrovhktrpghpnya.supabase.co/functions/v1/youtube-oauth-start`
 - Callback: `https://gigthhrovhktrpghpnya.supabase.co/functions/v1/youtube-oauth-callback`
@@ -49,7 +49,7 @@ In the Supabase project's **Edge Functions > Secrets**, set:
 - `APP_BASE_URL` — the exact deployed Streamlit Creator Services URL, including https
 - `TOKEN_ENCRYPTION_KEY` — base64 encoding of 32 random bytes (generate locally with `openssl rand -base64 32`; never send it in chat)
 
-The project-provided Supabase URL is read inside Edge Functions. Set `SUPABASE_SECRET_KEY` in the dedicated project's Edge Function Secrets as the canonical server credential; the functions retain temporary compatibility fallbacks for `SUPABASE_SECRET_KEYS` and `SUPABASE_SERVICE_ROLE_KEY`. Never copy the service-role/secret key into Streamlit or GitHub. The Streamlit app uses only the publishable key.
+The project-provided Supabase URL is read inside Edge Functions. Set `SUPABASE_SECRET_KEYS` and `SUPABASE_PUBLISHABLE_KEYS` as JSON maps in the dedicated project's Edge Function Secrets (each map must contain a `default` key). The functions prefer these maps and retain temporary compatibility fallbacks for `SUPABASE_SECRET_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_ANON_KEY`. Never copy the service-role/secret key into Streamlit or GitHub. The Streamlit app uses only the publishable key.
 
 ## AI YouTube SEO generation
 
@@ -72,7 +72,7 @@ The OAuth flow requests `youtube.upload`, `youtube.readonly`, and `youtube.force
 The application, database workflows, and Edge Functions are deployed. Deployment status alone does not prove that Google OAuth, Gemini video analysis, or YouTube publishing works end to end. Confirm that the listed OAuth, encryption, and Gemini secrets are present in the dedicated Supabase project's Edge Function Secrets without copying their values into chat or GitHub. A real test Google account must connect a channel before live OAuth is considered verified. Gemini video SEO, private upload, Schedule, and admin/customer flows remain pending the final authorized test pass. Supabase Auth leaked-password protection is currently reported disabled by Security Advisor; enable it in the project's Authentication password/security settings before onboarding real customers. Billing is administrative status tracking only; payment processing and automatic charges are not enabled.
 ## Streamlit upload configuration
 
-The app requires Streamlit 1.53 or newer for the per-widget `max_upload_size` setting. The repository pins `streamlit>=1.53,<2.0` and includes `.streamlit/config.toml` with a 200 MB global upload cap. Keep this aligned with the private Supabase bucket and database upload limit.
+The app requires Streamlit 1.53 or newer for the per-widget `max_upload_size` setting. The repository pins `streamlit>=1.53,<2.0` and includes `.streamlit/config.toml` with a 50 MB global upload cap. The app and both Gemini/YouTube Edge Functions enforce the same 50 MB video limit; the private Storage bucket's larger ceiling is only a backend ceiling, not the accepted customer upload limit.
 ## Google OAuth production readiness
 
 The Google OAuth consent screen must not remain in **Testing** for real customer use. Google's official OAuth documentation states that external apps in Testing are limited to 100 test users and refresh tokens expire after 7 days when non-basic scopes such as YouTube scopes are requested. Before onboarding real customers, switch the consent screen to **In production** and complete Google's verification process for any sensitive/restricted scopes required by the YouTube integration. Keep a test account in the test-user list while developing. See Google's [OAuth 2.0 refresh-token expiration guidance](https://developers.google.com/identity/protocols/oauth2#expiration) and [OAuth verification policies](https://developers.google.com/identity/protocols/oauth2/policies).
@@ -108,7 +108,9 @@ secret-rotation step. Never commit secret values.
 The private upload worker reads the private Storage object using bounded HTTP
 Range requests and sends 8 MiB chunks through the YouTube resumable-upload
 session. It avoids downloading the entire source video into one Edge Function
-Blob. If YouTube accepts any chunk and a later transfer fails, the job remains
-locked as `upload_unknown` to prevent an unsafe duplicate. Verify the video in
-YouTube Studio before recovery. Production validation must still exercise real
-200 MB transfers and interrupted uploads against deployed Supabase and YouTube.
+Blob. Customer video files are currently capped at 50 MB in the Streamlit app,
+Gemini SEO function, and private YouTube upload function. If YouTube accepts any
+chunk and a later transfer fails, the job remains locked as `upload_unknown` to
+prevent an unsafe duplicate. Verify the video in YouTube Studio before recovery.
+Production validation must still exercise real 50 MB transfers and interrupted
+uploads against deployed Supabase and YouTube.
