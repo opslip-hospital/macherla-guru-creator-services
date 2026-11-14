@@ -25,6 +25,21 @@ function hasExpectedVideoContainer(bytes: Uint8Array, mime: string): boolean {
   }
   return false;
 }
+function supabaseSecretKey(): string {
+  const direct = Deno.env.get("SUPABASE_SECRET_KEY");
+  if (direct) return direct;
+  const legacyJson = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (legacyJson) {
+    try {
+      const parsed = JSON.parse(legacyJson);
+      if (typeof parsed?.default === "string" && parsed.default) return parsed.default;
+    } catch { /* fall through to legacy service-role variable */ }
+  }
+  const legacyServiceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacyServiceRole) return legacyServiceRole;
+  throw new Error("missing_configuration");
+}
+
 function secret(name: string): string {
   const value = Deno.env.get(name);
   if (!value) throw new Error("missing_configuration");
@@ -63,9 +78,7 @@ Deno.serve(async (req) => {
     const publishable = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")
       ?? Deno.env.get("SUPABASE_ANON_KEY")
       ?? (() => { throw new Error("missing_configuration"); })();
-    const serviceKey = Deno.env.get("SUPABASE_SECRET_KEY")
-      ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-      ?? (() => { throw new Error("missing_configuration"); })();
+    const serviceKey = supabaseSecretKey();
     const bearer = (req.headers.get("Authorization") ?? "").match(/^Bearer\s+(.+)$/i)?.[1];
     if (!bearer) return json({ error: "authentication_required" }, 401);
 
@@ -110,15 +123,20 @@ Deno.serve(async (req) => {
     const tokenData = await tokenResponse.json();
     if (!tokenData.access_token) throw new Error("google_access_token_missing");
 
-    const { data: videoBlob, error: storageError } = await admin.storage
-      .from("customer-video-intake")
-      .download(claimed.storage_object_path);
-    if (storageError || !videoBlob) throw new Error("private_video_file_unavailable");
-    if (videoBlob.size !== Number(claimed.file_size_bytes) || videoBlob.size > 209715200) {
+    const totalBytes = Number(claimed.file_size_bytes);
+    if (!Number.isSafeInteger(totalBytes) || totalBytes <= 0 || totalBytes > 209715200) {
       throw new Error("video_file_size_mismatch");
     }
-    const videoHeader = new Uint8Array(await videoBlob.slice(0, 12).arrayBuffer());
-    if (!hasExpectedVideoContainer(videoHeader, String(claimed.mime_type))) {
+    const { data: signed, error: signedError } = await admin.storage
+      .from("customer-video-intake")
+      .createSignedUrl(String(claimed.storage_object_path), 300);
+    if (signedError || !signed?.signedUrl) throw new Error("private_video_file_unavailable");
+    const storageUrl = new URL(signed.signedUrl, supabaseUrl);
+    if (storageUrl.origin !== new URL(supabaseUrl).origin) throw new Error("storage_url_invalid");
+    const firstRange = await fetch(storageUrl, { headers: { Range: "bytes=0-11" } });
+    if (firstRange.status !== 206) throw new Error("storage_range_read_failed");
+    const videoHeader = new Uint8Array(await firstRange.arrayBuffer());
+    if (videoHeader.length !== 12 || !hasExpectedVideoContainer(videoHeader, String(claimed.mime_type))) {
       throw new Error("video_container_does_not_match_file_type");
     }
 
@@ -178,7 +196,7 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${tokenData.access_token}`,
           "Content-Type": "application/json; charset=UTF-8",
           "X-Upload-Content-Type": String(claimed.mime_type),
-          "X-Upload-Content-Length": String(videoBlob.size),
+          "X-Upload-Content-Length": String(totalBytes),
         },
         body: JSON.stringify({
           snippet: { title, description, tags, categoryId },
@@ -192,22 +210,51 @@ Deno.serve(async (req) => {
       throw new Error("youtube_upload_url_invalid");
     }
     youtubeUploadStarted = true;
-    const uploaded = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": String(claimed.mime_type), "Content-Length": String(videoBlob.size) },
-      body: videoBlob,
-    });
-    youtubeUploadResponded = true;
-    if (!uploaded.ok) {
-      if (uploaded.status >= 500) youtubeUploadOutcomeUnknown = true;
-      throw new Error("youtube_private_upload_failed");
+    // Transfer bounded 8 MiB ranges through the YouTube resumable session.
+    const chunkBytes = 8 * 1024 * 1024;
+    let offset = 0;
+    let youtubeVideo: Record<string, unknown> | null = null;
+    while (offset < totalBytes) {
+      const end = Math.min(offset + chunkBytes, totalBytes) - 1;
+      const source = await fetch(storageUrl, { headers: { Range: `bytes=${offset}-${end}` } });
+      if (source.status !== 206) throw new Error("storage_range_read_failed");
+      const chunk = new Uint8Array(await source.arrayBuffer());
+      if (chunk.length !== end - offset + 1) throw new Error("storage_range_size_mismatch");
+      const uploaded = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": String(claimed.mime_type),
+          "Content-Length": String(chunk.length),
+          "Content-Range": `bytes ${offset}-${end}/${totalBytes}`,
+        },
+        body: chunk,
+      });
+      youtubeUploadResponded = true;
+      if (uploaded.status === 308) {
+        const range = uploaded.headers.get("Range");
+        const acknowledged = range?.match(/bytes=0-(\\d+)/);
+        const nextOffset = acknowledged ? Number(acknowledged[1]) + 1 : 0;
+        if (nextOffset <= offset || nextOffset > totalBytes) {
+          youtubeUploadOutcomeUnknown = true;
+          throw new Error("youtube_upload_offset_invalid");
+        }
+        // Bytes were accepted; any later interruption must remain non-retryable.
+        youtubeUploadOutcomeUnknown = true;
+        offset = nextOffset;
+        continue;
+      }
+      if (!uploaded.ok) {
+        if (uploaded.status >= 500) youtubeUploadOutcomeUnknown = true;
+        throw new Error("youtube_private_upload_failed");
+      }
+      youtubeUploadOutcomeUnknown = true;
+      youtubeVideo = await uploaded.json();
+      offset = totalBytes;
     }
-    // A 2xx response means the transfer may have been accepted. Keep it
-    // non-retryable until a valid YouTube video ID is recovered.
-    youtubeUploadOutcomeUnknown = true;
-    const youtubeVideo = await uploaded.json();
-    if (!youtubeVideo.id) throw new Error("youtube_video_id_missing");
-    uploadedVideoId = String(youtubeVideo.id);
+    if (!youtubeVideo || typeof youtubeVideo.id !== "string" || !youtubeVideo.id) {
+      throw new Error("youtube_video_id_missing");
+    }
+    uploadedVideoId = youtubeVideo.id;
     youtubeUploadOutcomeUnknown = false;
 
     // Apply the customer's optional custom thumbnail after YouTube confirms the video ID.
