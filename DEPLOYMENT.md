@@ -49,7 +49,7 @@ In the Supabase project's **Edge Functions > Secrets**, set:
 - `APP_BASE_URL` — the exact deployed Streamlit Creator Services URL, including https
 - `TOKEN_ENCRYPTION_KEY` — base64 encoding of 32 random bytes (generate locally with `openssl rand -base64 32`; never send it in chat)
 
-The project-provided Supabase URL and server credentials are read inside Edge Functions. Never copy the service-role/secret key into Streamlit or GitHub. The Streamlit app uses only the publishable key.
+The project-provided Supabase URL is read inside Edge Functions. Set `SUPABASE_SECRET_KEY` in the dedicated project's Edge Function Secrets as the canonical server credential; the functions retain temporary compatibility fallbacks for `SUPABASE_SECRET_KEYS` and `SUPABASE_SERVICE_ROLE_KEY`. Never copy the service-role/secret key into Streamlit or GitHub. The Streamlit app uses only the publishable key.
 
 ## AI YouTube SEO generation
 
