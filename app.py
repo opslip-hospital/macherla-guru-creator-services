@@ -597,12 +597,12 @@ else:
                     type=["mp4", "mov", "avi", "webm"], max_upload_size=200,
                 )
                 thumbnail_file = st.file_uploader(
-                    "Thumbnail image (optional • JPG/PNG • max 10 MB)",
-                    type=["jpg", "jpeg", "png"], max_upload_size=10,
+                    "Thumbnail image (optional • JPG/PNG • max 2 MB)",
+                    type=["jpg", "jpeg", "png"], max_upload_size=2,
                 )
                 contains_synthetic_media = st.checkbox(
                     "AI-generated / altered realistic content (YouTube disclosure)",
-                    value=False,
+                    value=True,
                 )
                 submit_video = st.form_submit_button("⬆️ Upload video", type="primary", use_container_width=True)
         if submit_video:
@@ -622,8 +622,8 @@ else:
                     st.error("This file is larger than 200 MB.")
                 elif not mime_type:
                     st.error("Use an MP4, MOV, AVI or WEBM video file.")
-                elif thumbnail_bytes is not None and len(thumbnail_bytes) > 10485760:
-                    st.error("Thumbnail must be 10 MB or smaller.")
+                elif thumbnail_bytes is not None and len(thumbnail_bytes) > 2097152:
+                    st.error("Thumbnail must be 2 MB or smaller (YouTube custom thumbnail limit).")
                 else:
                     try:
                         upload_title = Path(safe_filename).stem[:100] or "New video"
