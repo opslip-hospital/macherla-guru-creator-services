@@ -514,5 +514,12 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertNotIn("youtube.com/@macherlaguru", APP)
 
 
+    def test_customer_workflow_is_schedule_only_after_private_upload(self):
+        self.assertIn('job["id"], "schedule", scheduled_local.isoformat()', APP)
+        self.assertNotIn('job["id"], "now"', APP)
+        self.assertIn('const mode=body.mode==="schedule"?"schedule":"";', PUBLISH_WORKER)
+        self.assertNotIn('body.mode==="now"', PUBLISH_WORKER)
+
+
 if __name__ == "__main__":
     unittest.main()
