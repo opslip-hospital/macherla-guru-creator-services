@@ -1,4 +1,13 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+function supabaseSecretKey(): string {
+ const direct=Deno.env.get("SUPABASE_SECRET_KEY");
+ if(direct)return direct;
+ const legacyJson=Deno.env.get("SUPABASE_SECRET_KEYS");
+ if(legacyJson){try{const parsed=JSON.parse(legacyJson);if(typeof parsed?.default==="string"&&parsed.default)return parsed.default;}catch{/* legacy fallback */}}
+ const legacy=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+ if(legacy)return legacy;
+ throw new Error("missing_configuration");
+}
 const headers={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const json=(v:unknown,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const clean=(v:unknown,n:number)=>typeof v==="string"?v.trim().slice(0,n):"";
@@ -7,7 +16,7 @@ Deno.serve(async(req)=>{
  if(req.method!=="POST")return json({error:"method_not_allowed"},405);
  try{
   const url=Deno.env.get("SUPABASE_URL")!,pub=Deno.env.get("SUPABASE_PUBLISHABLE_KEY")??Deno.env.get("SUPABASE_ANON_KEY");
-  const service=Deno.env.get("SUPABASE_SECRET_KEY")??Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const service=supabaseSecretKey();
   const key=Deno.env.get("GEMINI_API_KEY");if(!url||!pub||!service||!key)return json({error:"ai_not_configured"},503);
   const bearer=(req.headers.get("Authorization")??"").match(/^Bearer\s+(.+)$/i)?.[1];
   if(!bearer)return json({error:"authentication_required"},401);
