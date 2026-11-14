@@ -592,7 +592,18 @@ else:
             st.warning("Your workspace is not active yet. Upload and AI actions are paused; contact the service team.")
         else:
             with st.form("customer_video_intake", clear_on_submit=True):
-                video_file = st.file_uploader("Choose video file", type=["mp4", "mov", "webm"], max_upload_size=100)
+                video_file = st.file_uploader(
+                    "Choose video file (MP4, MOV, AVI, WEBM • max 200 MB)",
+                    type=["mp4", "mov", "avi", "webm"], max_upload_size=200,
+                )
+                thumbnail_file = st.file_uploader(
+                    "Thumbnail image (optional • JPG/PNG • max 10 MB)",
+                    type=["jpg", "jpeg", "png"], max_upload_size=10,
+                )
+                contains_synthetic_media = st.checkbox(
+                    "AI-generated / altered realistic content (YouTube disclosure)",
+                    value=False,
+                )
                 submit_video = st.form_submit_button("⬆️ Upload video", type="primary", use_container_width=True)
         if submit_video:
             if video_file is None:
@@ -600,11 +611,19 @@ else:
             else:
                 safe_filename = re.sub(r"[^A-Za-z0-9._-]", "_", Path(video_file.name).name)[:255]
                 file_bytes = video_file.getvalue()
-                mime_type = video_file.type or ""
-                if len(file_bytes) > 104857600:
-                    st.error("This file is larger than 100 MB.")
-                elif mime_type not in {"video/mp4", "video/quicktime", "video/webm"}:
-                    st.error("Use an MP4, MOV or WebM video file.")
+                extension = Path(safe_filename).suffix.lower()
+                mime_by_extension = {
+                    ".mp4": "video/mp4", ".mov": "video/quicktime",
+                    ".avi": "video/x-msvideo", ".webm": "video/webm",
+                }
+                mime_type = mime_by_extension.get(extension, "")
+                thumbnail_bytes = thumbnail_file.getvalue() if thumbnail_file is not None else None
+                if len(file_bytes) > 209715200:
+                    st.error("This file is larger than 200 MB.")
+                elif not mime_type:
+                    st.error("Use an MP4, MOV, AVI or WEBM video file.")
+                elif thumbnail_bytes is not None and len(thumbnail_bytes) > 10485760:
+                    st.error("Thumbnail must be 10 MB or smaller.")
                 else:
                     try:
                         upload_title = Path(safe_filename).stem[:100] or "New video"
@@ -621,8 +640,23 @@ else:
                             object_path, file_bytes,
                             file_options={"content-type": mime_type, "upsert": "false"},
                         )
+                        thumbnail_path = None
+                        if thumbnail_bytes is not None:
+                            thumbnail_ext = Path(thumbnail_file.name).suffix.lower()
+                            thumbnail_name = "thumbnail.png" if thumbnail_ext == ".png" else "thumbnail.jpg"
+                            thumbnail_path = f"{selected_active_tenant_id}/{job_id}/{thumbnail_name}"
+                            thumbnail_mime = "image/png" if thumbnail_name.endswith(".png") else "image/jpeg"
+                            supabase.storage.from_("customer-video-intake").upload(
+                                thumbnail_path, thumbnail_bytes,
+                                file_options={"content-type": thumbnail_mime, "upsert": "false"},
+                            )
                         supabase.rpc("finalize_customer_video_upload", {
                             "p_job": job_id, "p_object_path": object_path,
+                        }).execute()
+                        supabase.rpc("set_customer_upload_assets", {
+                            "p_job": job_id,
+                            "p_thumbnail_path": thumbnail_path,
+                            "p_contains_synthetic_media": contains_synthetic_media,
                         }).execute()
                     except Exception:
                         st.error("Secure upload did not complete. Please retry; no YouTube publishing was started.")
