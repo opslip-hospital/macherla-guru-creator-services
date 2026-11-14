@@ -293,7 +293,10 @@ class AuthenticationContractTests(unittest.TestCase):
 
     def test_customer_ai_seo_is_owner_scoped_and_saved_server_side(self):
         self.assertIn('customer-youtube-seo', APP)
-        self.assertIn('✨ Generate SEO, Tags, Hashtags & Captions', APP)
+        self.assertIn('✨ Create Captions, SEO & Tags', APP)
+        self.assertNotIn('✨ Generate SEO, Tags, Hashtags & Captions', APP)
+        self.assertIn('creator_seo_failed_job_id', APP)
+        self.assertIn('🔁 Retry Captions, SEO & Tags', APP)
         self.assertIn('Save my SEO edits', APP)
         self.assertIn('membership_role', CUSTOMER_SEO_FUNCTION)
         self.assertIn('GEMINI_API_KEY', CUSTOMER_SEO_FUNCTION)
@@ -499,8 +502,10 @@ class AuthenticationContractTests(unittest.TestCase):
     def test_gemini_video_analysis_requires_explicit_free_tier_consent(self):
         self.assertIn("gemini_video_consent_required", CUSTOMER_SEO_FUNCTION)
         self.assertIn("customer_gemini_video_consent_granted", CUSTOMER_SEO_FUNCTION)
-        self.assertIn('gemini_video_consent_', APP)
-        self.assertIn("disabled=not gemini_job_consent", APP)
+        self.assertIn('gemini_video_consent = st.checkbox', APP)
+        self.assertIn('"ai_consent": bool(gemini_video_consent)', APP)
+        self.assertIn('retry_consent = st.checkbox', APP)
+        self.assertIn('"stage": "consent_validation"', CUSTOMER_SEO_FUNCTION)
         self.assertIn("Gemini API Free Tier may use submitted content to improve Google products", APP)
 
     def test_gemini_text_and_growth_analysis_require_explicit_consent(self):
