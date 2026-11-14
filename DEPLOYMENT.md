@@ -89,19 +89,19 @@ The current integration uses the Gemini Developer API. Google's current document
 The customer home is intentionally limited to one video workflow: upload one video to the private intake bucket, generate/review/edit/save Gemini SEO, connect YouTube if not already connected, upload privately, then choose an IST schedule time with AM/PM. Customers without a YouTube channel can still prepare SEO using their workspace brand name. Exactly five hashtags are stored; one is the workspace brand until a channel is connected, then the connected channel's brand after regeneration. There is no thumbnail feature, customer analytics panel, Growth Doctor, Content Studio, support panel, billing panel, or Publish Now control in this customer workflow. The Master Admin view remains separate and is used for workspace activation/status.
 
 
-## Supabase Edge Function configuration and service key
+## Supabase Edge Function configuration and service keys
 
-The repository's `supabase/config.toml` disables JWT verification only for
-`youtube-oauth-callback`, because Google's browser redirect does not include
-a Supabase Authorization header. All other customer-facing functions retain JWT
-verification and perform their own authenticated-user and workspace checks.
+The repository's `supabase/config.toml` disables gateway JWT verification
+only for `youtube-oauth-callback`, because Google's browser redirect does not
+include a Supabase Authorization header. All other functions retain JWT
+verification and enforce their authenticated-user and workspace checks.
+Deploy the callback with `supabase functions deploy youtube-oauth-callback --no-verify-jwt`.
 
-Use `SUPABASE_SECRET_KEY` as the canonical Edge Function secret name. During
-migration, functions temporarily accept the legacy `SUPABASE_SECRET_KEYS`
-JSON object's `default` value or `SUPABASE_SERVICE_ROLE_KEY` as fallbacks.
-After setting and verifying `SUPABASE_SECRET_KEY` in the dedicated Creator
-Services Supabase project, remove legacy values in a separate controlled
-secret-rotation step. Never commit secret values.
+Use `SUPABASE_SECRET_KEYS` and `SUPABASE_PUBLISHABLE_KEYS` JSON maps as the
+canonical Edge Function variables (each map must contain a `default` key).
+Functions temporarily fall back to the legacy singular secret/publishable
+variables and service-role/anon keys while secrets are migrated. Never commit
+secret values.
 
 ## Large private YouTube uploads
 
