@@ -1,16 +1,23 @@
-function supabaseSecretKey(): string {
-  const direct = Deno.env.get("SUPABASE_SECRET_KEY");
-  if (direct) return direct;
-  // Backward compatibility during controlled secret rotation.
-  const legacyJson = Deno.env.get("SUPABASE_SECRET_KEYS");
-  if (legacyJson) {
-    try {
-      const parsed = JSON.parse(legacyJson);
-      if (typeof parsed?.default === "string" && parsed.default) return parsed.default;
-    } catch { /* try legacy service-role variable below */ }
+function supabaseEnvMap(name: string): Record<string, string> {
+  try {
+    const parsed = JSON.parse(Deno.env.get(name) ?? "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
   }
-  const legacyServiceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (legacyServiceRole) return legacyServiceRole;
+}
+function supabaseSecretKey(): string {
+  const mapped = supabaseEnvMap("SUPABASE_SECRET_KEYS").default;
+  if (typeof mapped === "string" && mapped) return mapped;
+  const legacy = Deno.env.get("SUPABASE_SECRET_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) return legacy;
+  throw new Error("missing_configuration");
+}
+function supabasePublishableKey(): string {
+  const mapped = supabaseEnvMap("SUPABASE_PUBLISHABLE_KEYS").default;
+  if (typeof mapped === "string" && mapped) return mapped;
+  const legacy = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY");
+  if (legacy) return legacy;
   throw new Error("missing_configuration");
 }
 const hash=async(s:string)=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,"0")).join("");
