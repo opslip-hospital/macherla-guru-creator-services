@@ -456,10 +456,13 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("SEO metadata uploaded to YouTube (read-only)", APP)
         self.assertIn("locked after private upload", APP)
 
-    def test_youtube_upload_uses_bounded_range_chunks(self):
-        self.assertIn("video: Blob", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("body: video,", CUSTOMER_SEO_FUNCTION)
-        self.assertIn("videoBlob.slice(0, 12).arrayBuffer()", CUSTOMER_SEO_FUNCTION)
+    def test_video_workers_use_bounded_range_chunks(self):
+        self.assertIn("storageUrl: URL", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("createSignedUrl(job.storage_object_path, 3600)", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("Range: `bytes=${offset}-${end}`", CUSTOMER_SEO_FUNCTION)
+        self.assertIn("chunkBytes = 8 * 1024 * 1024", CUSTOMER_SEO_FUNCTION)
+        self.assertIn('X-Goog-Upload-Command": finalChunk ? "upload, finalize" : "upload"', CUSTOMER_SEO_FUNCTION)
+        self.assertNotIn("videoBlob", CUSTOMER_SEO_FUNCTION)
         self.assertIn("createSignedUrl", YOUTUBE_WORKER)
         self.assertIn("Range: `bytes=${offset}-${end}`", YOUTUBE_WORKER)
         self.assertIn("chunkBytes = 8 * 1024 * 1024", YOUTUBE_WORKER)
@@ -468,7 +471,6 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("youtubeUploadOutcomeUnknown = true", YOUTUBE_WORKER)
         self.assertNotIn("body: videoBlob", YOUTUBE_WORKER)
         self.assertNotIn("download(claimed.storage_object_path)", YOUTUBE_WORKER)
-        self.assertNotIn("new Uint8Array(await videoBlob.arrayBuffer())", CUSTOMER_SEO_FUNCTION)
 
     def test_video_container_signatures_are_checked_before_ai_or_youtube_upload(self):
         self.assertIn("hasExpectedVideoContainer", CUSTOMER_SEO_FUNCTION)
