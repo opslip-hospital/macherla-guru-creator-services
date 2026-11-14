@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
     if (!tokenData.access_token) throw new Error("google_access_token_missing");
 
     const totalBytes = Number(claimed.file_size_bytes);
-    if (!Number.isSafeInteger(totalBytes) || totalBytes <= 0 || totalBytes > 209715200) {
+    if (!Number.isSafeInteger(totalBytes) || totalBytes <= 0 || totalBytes > 52428800) {
       throw new Error("video_file_size_mismatch");
     }
     const { data: signed, error: signedError } = await admin.storage
