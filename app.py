@@ -612,10 +612,11 @@ else:
                     "✨ Create Captions, SEO & Tags",
                     type="primary",
                     use_container_width=True,
-                    disabled=not gemini_video_consent,
                 )
         if submit_video:
-            if video_file is None:
+            if not gemini_video_consent:
+                st.warning("Please confirm consent before sending the video to Gemini.")
+            elif video_file is None:
                 st.warning("Choose a video file.")
             else:
                 safe_filename = re.sub(r"[^A-Za-z0-9._-]", "_", Path(video_file.name).name)[:255]
