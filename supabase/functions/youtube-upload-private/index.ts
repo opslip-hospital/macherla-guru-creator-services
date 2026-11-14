@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
       youtubeUploadResponded = true;
       if (uploaded.status === 308) {
         const range = uploaded.headers.get("Range");
-        const acknowledged = range?.match(/bytes=0-(\\d+)/);
+        const acknowledged = range?.match(/bytes=0-(\d+)/);
         const nextOffset = acknowledged ? Number(acknowledged[1]) + 1 : 0;
         if (nextOffset <= offset || nextOffset > totalBytes) {
           youtubeUploadOutcomeUnknown = true;
