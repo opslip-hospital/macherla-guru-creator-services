@@ -50,7 +50,7 @@ st.caption("One video • Gemini SEO • Private YouTube upload • IST scheduli
 st.markdown(
     "Upload one video first. Gemini prepares your SEO title, description, tags, five hashtags and captions. "
     "You can do this before connecting a YouTube channel; connect later for private upload and IST scheduling. "
-    "Review and save every AI suggestion before continuing."
+    "Review and edit every Gemini suggestion before the private YouTube upload."
 )
 st.page_link("pages/Privacy_Policy.py", label="Privacy Policy")
 st.page_link("pages/Terms_of_Service.py", label="Terms of Service")
@@ -683,8 +683,6 @@ else:
 
         # 3–5 appear once Gemini has generated metadata for the current video.
         if selected_job and saved_meta and selected_job.get("status") == "received":
-            st.subheader("3. Thumbnail upload (optional)")
-            st.caption("JPG/PNG • maximum 2 MB. YouTube may ignore files over 2 MB.")
             with st.form(f"customer_final_private_upload_{selected_job['id']}"):
                 details = saved_meta.get("metadata_details") or {}
                 st.subheader("Review your Gemini details")
@@ -721,21 +719,21 @@ else:
                     key=f"contains_synthetic_media_{selected_job['id']}",
                 )
                 st.subheader("5. Private YouTube upload")
-                if not has_upload_permission:
-                    st.info("Connect your YouTube channel to enable the private upload. Your Gemini draft is already saved.")
-                    if st.form_submit_button("Connect / reconnect YouTube channel", use_container_width=True):
-                        try:
-                            google_url = start_youtube_oauth(selected_active_tenant_id, supabase)
-                        except RuntimeError:
-                            st.error("Google connection could not be started. Please contact the service administrator.")
-                        else:
-                            st.link_button("Continue securely with Google", google_url, type="primary")
                 final_upload_clicked = st.form_submit_button(
                     "🔒 Review చేసిన వివరాలతో Privateగా Upload చేయి",
                     type="primary",
                     use_container_width=True,
                     disabled=not has_upload_permission,
                 )
+            if not has_upload_permission:
+                st.info("Connect your YouTube channel to enable the private upload. Your Gemini draft is already saved.")
+                if st.button("Connect / reconnect YouTube channel", key=f"connect_youtube_{selected_job['id']}", use_container_width=True):
+                    try:
+                        google_url = start_youtube_oauth(selected_active_tenant_id, supabase)
+                    except RuntimeError:
+                        st.error("Google connection could not be started. Please contact the service administrator.")
+                    else:
+                        st.link_button("Continue securely with Google", google_url, type="primary")
             if final_upload_clicked and has_upload_permission:
                 try:
                     if len(edit_title.strip()) > 100 or not edit_title.strip():
