@@ -505,7 +505,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('gemini_video_consent = st.checkbox', APP)
         self.assertIn('"ai_consent": bool(gemini_video_consent)', APP)
         self.assertIn('retry_consent = st.checkbox', APP)
-        self.assertIn('"stage": "consent_validation"', CUSTOMER_SEO_FUNCTION)
+        self.assertIn('return json({ error: "gemini_video_consent_required", stage }, 400);', CUSTOMER_SEO_FUNCTION)
         self.assertIn("Gemini API Free Tier may use submitted content to improve Google products", APP)
 
     def test_gemini_text_and_growth_analysis_require_explicit_consent(self):
