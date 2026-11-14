@@ -32,7 +32,7 @@ Deno.serve(async(req)=>{
   const body=await req.json().catch(()=>({}));
   jobId=typeof body.job_id==="string"?body.job_id:"";
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId))return json({error:"invalid_job_id"},400);
-  const mode=body.mode==="schedule"?"schedule":body.mode==="now"?"now":"";
+  const mode=body.mode==="schedule"?"schedule":"";
   if(!mode)return json({error:"invalid_publish_mode"},400);
   let publishAt:string|null=null;
   if(mode==="schedule"){
