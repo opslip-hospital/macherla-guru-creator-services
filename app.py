@@ -670,7 +670,6 @@ else:
                         st.rerun()
                 except RuntimeError as exc:
                     st.error(str(exc)[:220])
-                    st.rerun()
                 except Exception:
                     st.error("Video upload or Gemini generation failed. Your workspace data remains protected. Retry the same step; do not upload again if the video is already saved.")
 
@@ -679,18 +678,6 @@ else:
             st.subheader("3. Thumbnail upload (optional)")
             st.caption("JPG/PNG • maximum 2 MB. YouTube may ignore files over 2 MB.")
             with st.form(f"customer_final_private_upload_{selected_job['id']}"):
-                thumbnail_file = st.file_uploader(
-                    "Thumbnail image (ఐచ్ఛికం)",
-                    type=["jpg", "jpeg", "png"],
-                    max_upload_size=2,
-                    key=f"customer_thumbnail_{selected_job['id']}",
-                )
-                st.subheader("4. YouTube disclosure")
-                contains_synthetic_media = st.checkbox(
-                    "AI-generated / altered realistic content (YouTube disclosure)",
-                    value=True,
-                    key=f"contains_synthetic_media_{selected_job['id']}",
-                )
                 details = saved_meta.get("metadata_details") or {}
                 st.subheader("Review your Gemini details")
                 edit_title = st.text_input(
@@ -710,6 +697,20 @@ else:
                 edit_caption = st.text_area(
                     "Captions", value=details.get("youtube_caption") or saved_meta.get("caption") or "",
                     max_chars=2200,
+                )
+                st.subheader("3. Thumbnail upload (optional)")
+                st.caption("JPG/PNG • maximum 2 MB. YouTube may ignore files over 2 MB.")
+                thumbnail_file = st.file_uploader(
+                    "Thumbnail image (ఐచ్ఛికం)",
+                    type=["jpg", "jpeg", "png"],
+                    max_upload_size=2,
+                    key=f"customer_thumbnail_{selected_job['id']}",
+                )
+                st.subheader("4. YouTube disclosure")
+                contains_synthetic_media = st.checkbox(
+                    "AI-generated / altered realistic content (YouTube disclosure)",
+                    value=True,
+                    key=f"contains_synthetic_media_{selected_job['id']}",
                 )
                 st.subheader("5. Private YouTube upload")
                 if not has_upload_permission:
