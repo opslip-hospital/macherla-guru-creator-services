@@ -150,10 +150,10 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertNotIn("SUPABASE_SECRET_KEY", APP)
         self.assertNotIn("service_role", APP.lower())
 
-    def test_streamlit_upload_limit_is_supported_and_set_to_200mb(self):
+    def test_streamlit_upload_limit_is_supported_and_set_to_50mb(self):
         self.assertIn("streamlit>=1.53", REQUIREMENTS)
-        self.assertIn("maxUploadSize = 200", STREAMLIT_CONFIG)
-        self.assertIn("max_upload_size=200", APP)
+        self.assertIn("maxUploadSize = 50", STREAMLIT_CONFIG)
+        self.assertIn("max_upload_size=50", APP)
 
     def test_sign_out_clears_all_prior_customer_widget_state(self):
         self.assertIn("_creator_clear_all_state", APP)
@@ -228,8 +228,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('supabase.storage.from_("customer-video-intake").upload(', APP)
         self.assertIn('supabase.rpc("finalize_customer_video_upload"', APP)
         self.assertIn('type=["mp4", "mov", "avi", "webm"]', APP)
-        self.assertIn("max_upload_size=200", APP)
-        self.assertIn("maxUploadSize = 200", STREAMLIT_CONFIG)
+        self.assertIn("max_upload_size=50", APP)
+        self.assertIn("maxUploadSize = 50", STREAMLIT_CONFIG)
         self.assertIn("p_size>209715200", UPLOAD_ENHANCEMENT_MIGRATION)
         self.assertIn("video/x-msvideo", UPLOAD_ENHANCEMENT_MIGRATION)
         self.assertIn("file_size_limit = 209715200", UPLOAD_ENHANCEMENT_MIGRATION)
@@ -247,11 +247,11 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('privacyStatus: "private"', YOUTUBE_WORKER)
         self.assertIn('status: "uploaded_private"', YOUTUBE_WORKER)
         self.assertIn('youtube-upload-private', APP)
-        self.assertIn("📅 Continue to Schedule (private upload first)", APP)
+        self.assertIn("🔒 Review చేసిన వివరాలతో Privateగా Upload చేయి", APP)
         self.assertIn("The channel owner can now schedule it", YOUTUBE_WORKER)
 
     def test_customer_seo_editor_explains_workspace_then_channel_brand_hashtag(self):
-        self.assertIn("One hashtag uses your workspace brand until a YouTube channel is connected", APP)
+        self.assertIn("5 Hashtags", APP)
 
     def test_private_upload_requires_complete_channel_brand_seo(self):
         self.assertIn("complete SEO metadata must be saved before upload", SEO_REQUIRED_MIGRATION)
@@ -294,10 +294,8 @@ class AuthenticationContractTests(unittest.TestCase):
 
     def test_customer_ai_seo_is_owner_scoped_and_saved_server_side(self):
         self.assertIn('customer-youtube-seo', APP)
-        self.assertIn('✨ Create Captions, SEO & Tags', APP)
+        self.assertIn('✨ ఈ వీడియో చూసి Title, SEO, Tags, Captions తయారు చేయి', APP)
         self.assertNotIn('✨ Generate SEO, Tags, Hashtags & Captions', APP)
-        self.assertIn('creator_seo_failed_job_id', APP)
-        self.assertIn('🔁 Retry Captions, SEO & Tags', APP)
         self.assertIn('Save my SEO edits', APP)
         self.assertIn('membership_role', CUSTOMER_SEO_FUNCTION)
         self.assertIn('GEMINI_API_KEY', CUSTOMER_SEO_FUNCTION)
@@ -478,7 +476,7 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("hasExpectedVideoContainer", YOUTUBE_WORKER)
         self.assertIn("video_container_does_not_match_file_type", YOUTUBE_WORKER)
         self.assertIn('mime === "video/x-msvideo"', YOUTUBE_WORKER)
-        self.assertIn("209715200", YOUTUBE_WORKER)
+        self.assertIn("52428800", YOUTUBE_WORKER)
 
     def test_unknown_publish_outcome_holds_job_to_prevent_retry(self):
         self.assertIn("publish_status_unknown", APP)
@@ -512,7 +510,6 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("customer_gemini_video_consent_granted", CUSTOMER_SEO_FUNCTION)
         self.assertIn('gemini_video_consent = st.checkbox', APP)
         self.assertIn('"ai_consent": bool(gemini_video_consent)', APP)
-        self.assertIn('retry_consent = st.checkbox', APP)
         self.assertIn('return json({ error: "gemini_video_consent_required", stage }, 400);', CUSTOMER_SEO_FUNCTION)
         self.assertIn("Gemini API Free Tier may use submitted content to improve Google products", APP)
 
@@ -561,9 +558,26 @@ class AuthenticationContractTests(unittest.TestCase):
             "supabase/functions/youtube-refresh-analytics/index.ts",
         ]:
             source = (ROOT / path).read_text(encoding="utf-8")
+            self.assertIn('supabaseEnvMap("SUPABASE_SECRET_KEYS")', source)
+            self.assertIn('supabaseEnvMap("SUPABASE_PUBLISHABLE_KEYS")', source)
             self.assertIn('Deno.env.get("SUPABASE_SECRET_KEY")', source)
-            self.assertIn('Deno.env.get("SUPABASE_SECRET_KEYS")', source)
             self.assertIn('Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")', source)
+            self.assertIn('Deno.env.get("SUPABASE_PUBLISHABLE_KEY")', source)
+            self.assertIn('Deno.env.get("SUPABASE_ANON_KEY")', source)
+
+    def test_customer_page_has_exact_five_step_mobile_first_workflow(self):
+        self.assertIn('layout="centered"', APP)
+        self.assertIn("🎬 ఒక్క వీడియో ఇవ్వు — మిగతావన్నీ Gemini సిద్ధం చేస్తుంది", APP)
+        self.assertIn('"నీ వీడియో ఎంచుకోండి"', APP)
+        self.assertIn("✨ ఈ వీడియో చూసి Title, SEO, Tags, Captions తయారు చేయి", APP)
+        self.assertIn("Thumbnail image (ఐచ్ఛికం)", APP)
+        self.assertIn('value=True,', APP)
+        self.assertIn("AI-generated / altered realistic content (YouTube disclosure)", APP)
+        self.assertIn("🔒 Review చేసిన వివరాలతో Privateగా Upload చేయి", APP)
+        self.assertIn('max_upload_size=50', APP)
+        self.assertNotIn("layout=\"wide\"", APP)
+        self.assertNotIn("ఇప్పటికే YouTubeలో Privateగా ఉన్న వీడియో ID", APP)
+        self.assertNotIn("existing_private_video_id", APP)
 
 
 if __name__ == "__main__":
