@@ -225,12 +225,12 @@ Deno.serve(async (req: Request) => {
       geminiKey = required("GEMINI_API_KEY");
       if (!job.storage_object_path || !["video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"].includes(String(job.mime_type)) ||
           !Number.isFinite(Number(job.file_size_bytes)) || Number(job.file_size_bytes) <= 0 ||
-          Number(job.file_size_bytes) > 209715200) {
+          Number(job.file_size_bytes) > 52428800) {
         return json({ error: "video_file_unavailable_or_unsupported" }, 409);
       }
       stage = "video_storage_download";
       const totalBytes = Number(job.file_size_bytes);
-      if (!Number.isSafeInteger(totalBytes) || totalBytes <= 0 || totalBytes > 209715200) {
+      if (!Number.isSafeInteger(totalBytes) || totalBytes <= 0 || totalBytes > 52428800) {
         return json({ error: "video_file_size_mismatch" }, 409);
       }
       const { data: signed, error: storageError } = await admin.storage
