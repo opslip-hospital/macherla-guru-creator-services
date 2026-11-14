@@ -22,6 +22,11 @@ function hasExpectedVideoContainer(bytes: Uint8Array, mime: string): boolean {
     return bytes.length >= 12 &&
       String.fromCharCode(...bytes.slice(4, 8)) === "ftyp";
   }
+  if (mime === "video/x-msvideo") {
+    return bytes.length >= 12 &&
+      String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" &&
+      String.fromCharCode(...bytes.slice(8, 12)) === "AVI ";
+  }
   return false;
 }
 function cleanText(value: unknown, max: number): string {
@@ -184,16 +189,16 @@ Deno.serve(async (req: Request) => {
     let metadata: Record<string, unknown>;
     if (action === "generate") {
       geminiKey = required("GEMINI_API_KEY");
-      if (!job.storage_object_path || !["video/mp4", "video/quicktime", "video/webm"].includes(String(job.mime_type)) ||
+      if (!job.storage_object_path || !["video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"].includes(String(job.mime_type)) ||
           !Number.isFinite(Number(job.file_size_bytes)) || Number(job.file_size_bytes) <= 0 ||
-          Number(job.file_size_bytes) > 104857600) {
+          Number(job.file_size_bytes) > 209715200) {
         return json({ error: "video_file_unavailable_or_unsupported" }, 409);
       }
       stage = "video_storage_download";
       const { data: videoBlob, error: storageError } = await admin.storage
         .from("customer-video-intake").download(job.storage_object_path);
       if (storageError || !videoBlob) return json({ error: "video_file_unavailable" }, 409);
-      if (videoBlob.size !== Number(job.file_size_bytes) || videoBlob.size > 104857600) {
+      if (videoBlob.size !== Number(job.file_size_bytes) || videoBlob.size > 209715200) {
         return json({ error: "video_file_size_mismatch" }, 409);
       }
       const videoHeader = new Uint8Array(await videoBlob.slice(0, 12).arrayBuffer());
