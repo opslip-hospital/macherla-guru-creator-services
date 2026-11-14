@@ -1,6 +1,22 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 const headers={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers});
+function supabaseSecretKey(): string {
+  const direct = Deno.env.get("SUPABASE_SECRET_KEY");
+  if (direct) return direct;
+  // Backward compatibility during controlled secret rotation.
+  const legacyJson = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (legacyJson) {
+    try {
+      const parsed = JSON.parse(legacyJson);
+      if (typeof parsed?.default === "string" && parsed.default) return parsed.default;
+    } catch { /* try legacy service-role variable below */ }
+  }
+  const legacyServiceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacyServiceRole) return legacyServiceRole;
+  throw new Error("missing_configuration");
+}
+
 function required(name:string){const v=Deno.env.get(name);if(!v)throw new Error("missing_configuration");return v;}
 function decodeHex(value:string){if(!/^(?:[0-9a-f]{2})+$/i.test(value))throw new Error("invalid_token");return new Uint8Array(value.match(/.{2}/g)!.map(x=>parseInt(x,16)));}
 async function decrypt(hex:string,b64:string){
@@ -22,7 +38,7 @@ Deno.serve(async(req)=>{
  try{
   const url=required("SUPABASE_URL");
   const publishable=Deno.env.get("SUPABASE_PUBLISHABLE_KEY")??Deno.env.get("SUPABASE_ANON_KEY");
-  const service=Deno.env.get("SUPABASE_SECRET_KEY")??Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const service=supabaseSecretKey();
   if(!publishable||!service)throw new Error("missing_configuration");
   const bearer=(req.headers.get("Authorization")??"").match(/^Bearer\s+(.+)$/i)?.[1];
   if(!bearer)return json({error:"authentication_required"},401);
