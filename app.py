@@ -603,6 +603,7 @@ else:
             key="customer_video_file_50mb",
             help="MP4, MOV, AVI లేదా WEBM • గరిష్ఠంగా 50 MB",
         )
+        st.caption("MP4 • MOV • AVI • WEBM — Maximum file size: 50 MB")
 
         # 2. Gemini generation. The consent and per-workspace rate limit remain in force.
         st.subheader("2. Gemini — Title, SEO, Tags & Captions")
