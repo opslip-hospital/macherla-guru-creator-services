@@ -71,6 +71,9 @@ PUBLISH_MIGRATION = (
 PUBLISH_WORKER = (
     ROOT / "supabase/functions/youtube-publish-approved/index.ts"
 ).read_text(encoding="utf-8")
+SCHEDULE_ONLY_MIGRATION = (
+    ROOT / "supabase/migrations/20261114130000_schedule_only_customer_publish.sql"
+).read_text(encoding="utf-8")
 OAUTH_START = (
     ROOT / "supabase/functions/youtube-oauth-start/index.ts"
 ).read_text(encoding="utf-8")
@@ -520,6 +523,8 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn('const mode=body.mode==="schedule"?"schedule":"";', PUBLISH_WORKER)
         self.assertNotIn('body.mode==="now"', PUBLISH_WORKER)
         self.assertNotIn('mode==="now"', PUBLISH_WORKER)
+        self.assertIn("only schedule mode is supported", SCHEDULE_ONLY_MIGRATION)
+        self.assertIn("p_mode is distinct from 'schedule'", SCHEDULE_ONLY_MIGRATION)
         self.assertNotIn('privacyStatus:"public"', PUBLISH_WORKER)
         self.assertIn('const status={privacyStatus:"private",publishAt};', PUBLISH_WORKER)
 
