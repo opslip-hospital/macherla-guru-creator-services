@@ -29,7 +29,7 @@ async function decrypt(hex:string,b64:string){
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers});
  if(req.method!=="POST")return json({error:"method_not_allowed"},405);
- let admin:ReturnType<typeof createClient>|null=null,jobId:string|null=null;
+ let admin:any=null,jobId:string|null=null;
  let youtubeUpdated=false;
  let youtubeUpdateStarted=false;
  let youtubeUpdateResponded=false;
@@ -46,8 +46,9 @@ Deno.serve(async(req)=>{
   const {data:auth,error:authError}=await userClient.auth.getUser(bearer);
   if(authError||!auth.user)return json({error:"invalid_session"},401);
   const body=await req.json().catch(()=>({}));
-  jobId=typeof body.job_id==="string"?body.job_id:"";
-  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId))return json({error:"invalid_job_id"},400);
+  const requestedJobId=typeof body.job_id==="string"?body.job_id:"";
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedJobId))return json({error:"invalid_job_id"},400);
+  jobId=requestedJobId;
   const mode=body.mode==="schedule"?"schedule":"";
   if(!mode)return json({error:"invalid_publish_mode"},400);
   let publishAt:string|null=null;
@@ -58,7 +59,7 @@ Deno.serve(async(req)=>{
   }
   admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data:claimed,error:claimError}=await userClient.rpc("claim_youtube_publish_job",{
-   p_job_id:jobId,p_admin_user_id:auth.user.id,p_mode:mode,p_publish_at:publishAt,
+   p_job_id:requestedJobId,p_admin_user_id:auth.user.id,p_mode:mode,p_publish_at:publishAt,
   });
   if(claimError||!claimed)return json({error:"workspace_owner_or_private_upload_required"},409);
   youtubeVideoId=String(claimed.youtube_video_id);
@@ -84,7 +85,7 @@ Deno.serve(async(req)=>{
   const finalStatus="scheduled";
   const {error:updateError}=await admin.from("upload_jobs").update({
    status:finalStatus,scheduled_for:publishAt,updated_at:new Date().toISOString(),
-  }).eq("id",jobId).eq("status","publishing");
+  }).eq("id",requestedJobId).eq("status","publishing");
   if(updateError)throw new Error("job_status_update_failed");
   await admin.from("audit_events").insert({
    tenant_id:claimed.tenant_id,actor_user_id:auth.user.id,event_type:"youtube_video_scheduled",
