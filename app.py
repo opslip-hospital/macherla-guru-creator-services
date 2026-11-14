@@ -42,6 +42,9 @@ if st.session_state.pop("_creator_clear_all_state", False):
     for _session_key in list(st.session_state.keys()):
         st.session_state.pop(_session_key, None)
 
+if st.session_state.pop("_creator_clear_video_uploader", False):
+    st.session_state.pop("customer_video_file_50mb", None)
+
 st.title("🎬 Macherla Guru Creator Services")
 st.caption("One video • Gemini SEO • Private YouTube upload • IST scheduling")
 st.markdown(
@@ -609,13 +612,16 @@ else:
             key="gemini_video_consent_single_flow",
         )
         st.caption("Gemini SEO limit: up to 5 video generations per workspace per hour.")
-        create_seo_clicked = st.button(
-            "✨ ఈ వీడియో చూసి Title, SEO, Tags, Captions తయారు చేయి",
-            type="primary",
-            use_container_width=True,
-            disabled=video_file is None and not pending_seo_job_id,
-            key="create_video_seo_single_action",
-        )
+        show_seo_action = not saved_meta or video_file is not None or bool(pending_seo_job_id)
+        create_seo_clicked = False
+        if show_seo_action:
+            create_seo_clicked = st.button(
+                "✨ ఈ వీడియో చూసి Title, SEO, Tags, Captions తయారు చేయి",
+                type="primary",
+                use_container_width=True,
+                disabled=video_file is None and not pending_seo_job_id,
+                key="create_video_seo_single_action",
+            )
         if create_seo_clicked:
             if not gemini_video_consent:
                 st.warning("Please confirm Gemini consent before sending the video.")
@@ -666,7 +672,8 @@ else:
                                 {"title": upload_title, "language": "Telugu", "ai_consent": True},
                             )
                         st.session_state.pop("creator_pending_seo_job_id", None)
-                        st.success("Gemini prepared your metadata. Review and edit it in Step 5.")
+                        st.session_state["_creator_clear_video_uploader"] = True
+                        st.success("Gemini prepared your metadata. Review and edit it below.")
                         st.rerun()
                 except RuntimeError as exc:
                     st.error(str(exc)[:220])
