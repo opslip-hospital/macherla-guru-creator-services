@@ -197,7 +197,7 @@ Deno.serve(async (req: Request) => {
       console.warn("SEO generation stopped: explicit Gemini video consent was not received.");
       return json({ error: "gemini_video_consent_required", stage }, 400);
     }
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(jobId)) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId)) {
       return json({ error: "invalid_job_id" }, 400);
     }
     stage = "job_lookup";
