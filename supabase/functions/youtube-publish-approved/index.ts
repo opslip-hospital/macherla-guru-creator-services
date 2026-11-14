@@ -53,7 +53,7 @@ Deno.serve(async(req)=>{
   });
   if(!tokenResponse.ok)throw new Error("google_token_refresh_failed");
   const tokenData=await tokenResponse.json();if(!tokenData.access_token)throw new Error("google_access_token_missing");
-  const status=mode==="now"?{privacyStatus:"public"}:{privacyStatus:"private",publishAt};
+  const status={privacyStatus:"private",publishAt};
   youtubeUpdateStarted=true;
   const update=await fetch("https://www.googleapis.com/youtube/v3/videos?part=status",{
    method:"PUT",headers:{Authorization:`Bearer ${tokenData.access_token}`,"Content-Type":"application/json"},
@@ -65,18 +65,18 @@ Deno.serve(async(req)=>{
    throw new Error("youtube_video_update_failed");
   }
   youtubeUpdated=true;
-  const finalStatus=mode==="now"?"published":"scheduled";
+  const finalStatus="scheduled";
   const {error:updateError}=await admin.from("upload_jobs").update({
    status:finalStatus,scheduled_for:publishAt,updated_at:new Date().toISOString(),
   }).eq("id",jobId).eq("status","publishing");
   if(updateError)throw new Error("job_status_update_failed");
   await admin.from("audit_events").insert({
-   tenant_id:claimed.tenant_id,actor_user_id:auth.user.id,event_type:mode==="now"?"youtube_video_published":"youtube_video_scheduled",
+   tenant_id:claimed.tenant_id,actor_user_id:auth.user.id,event_type:"youtube_video_scheduled",
    details:{upload_job_id:jobId,youtube_video_id:claimed.youtube_video_id,channel_id:claimed.channel_id,publish_at:publishAt,initiated_by_authenticated_owner:true},
   });
   return json({success:true,status:finalStatus,youtube_video_id:claimed.youtube_video_id,
    youtube_url:`https://www.youtube.com/watch?v=${claimed.youtube_video_id}`,
-   message:mode==="now"?"Your video is now public.":"Your video is scheduled."});
+   message:"Your video is scheduled."});
  }catch{
   const outcomeUnknown=youtubeUpdateStarted&&(!youtubeUpdateResponded||youtubeUpdateOutcomeUnknown);
   if(admin&&jobId&&!youtubeUpdated&&!outcomeUnknown)await admin.from("upload_jobs").update({status:"uploaded_private",scheduled_for:null,updated_at:new Date().toISOString()}).eq("id",jobId).eq("status","publishing");
