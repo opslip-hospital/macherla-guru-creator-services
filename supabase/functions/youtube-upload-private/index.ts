@@ -18,6 +18,11 @@ function hasExpectedVideoContainer(bytes: Uint8Array, mime: string): boolean {
     return bytes.length >= 12 &&
       String.fromCharCode(...bytes.slice(4, 8)) === "ftyp";
   }
+  if (mime === "video/x-msvideo") {
+    return bytes.length >= 12 &&
+      String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" &&
+      String.fromCharCode(...bytes.slice(8, 12)) === "AVI ";
+  }
   return false;
 }
 function secret(name: string): string {
@@ -109,7 +114,7 @@ Deno.serve(async (req) => {
       .from("customer-video-intake")
       .download(claimed.storage_object_path);
     if (storageError || !videoBlob) throw new Error("private_video_file_unavailable");
-    if (videoBlob.size !== Number(claimed.file_size_bytes) || videoBlob.size > 104857600) {
+    if (videoBlob.size !== Number(claimed.file_size_bytes) || videoBlob.size > 209715200) {
       throw new Error("video_file_size_mismatch");
     }
     const videoHeader = new Uint8Array(await videoBlob.slice(0, 12).arrayBuffer());
@@ -177,7 +182,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           snippet: { title, description, tags, categoryId },
-          status: { privacyStatus: "private" },
+          status: { privacyStatus: "private", containsSyntheticMedia: claimed.contains_synthetic_media === true },
         }),
       },
     );
@@ -205,6 +210,29 @@ Deno.serve(async (req) => {
     uploadedVideoId = String(youtubeVideo.id);
     youtubeUploadOutcomeUnknown = false;
 
+    // Apply the customer's optional custom thumbnail after YouTube confirms the video ID.
+    // Thumbnail failure never changes the successful private-video upload outcome.
+    let thumbnailApplied = false;
+    if (claimed.thumbnail_storage_object_path) {
+      try {
+        const { data: thumbnailBlob } = await admin.storage
+          .from("customer-video-intake").download(String(claimed.thumbnail_storage_object_path));
+        if (thumbnailBlob && thumbnailBlob.size <= 2097152) {
+          const thumbnailMime = String(claimed.thumbnail_storage_object_path).toLowerCase().endsWith(".png")
+            ? "image/png" : "image/jpeg";
+          const form = new FormData();
+          form.append("media", new Blob([thumbnailBlob], { type: thumbnailMime }), "thumbnail");
+          const thumbnailResponse = await fetch(
+            `https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${encodeURIComponent(uploadedVideoId)}`,
+            { method: "POST", headers: { Authorization: `Bearer ${tokenData.access_token}` }, body: form },
+          );
+          thumbnailApplied = thumbnailResponse.ok;
+        }
+      } catch {
+        thumbnailApplied = false;
+      }
+    }
+
     const { error: updateError } = await admin.from("upload_jobs").update({
       status: "uploaded_private",
       youtube_video_id: youtubeVideo.id,
@@ -222,6 +250,7 @@ Deno.serve(async (req) => {
       status: "uploaded_private",
       youtube_video_id: youtubeVideo.id,
       youtube_url: `https://www.youtube.com/watch?v=${youtubeVideo.id}`,
+      thumbnail_applied: thumbnailApplied,
       message: "Video uploaded as private. The channel owner can now publish or schedule it.",
     });
   } catch {
