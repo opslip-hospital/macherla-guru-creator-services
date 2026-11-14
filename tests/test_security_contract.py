@@ -29,6 +29,9 @@ UPLOAD_MIGRATION = (
 UPLOAD_ENHANCEMENT_MIGRATION = (
     ROOT / "supabase/migrations/20261114053752_customer_upload_200mb_avi_thumbnail_disclosure.sql"
 ).read_text(encoding="utf-8")
+THUMBNAIL_LIMIT_MIGRATION = (
+    ROOT / "supabase/migrations/20261114120000_customer_thumbnail_youtube_limit.sql"
+).read_text(encoding="utf-8")
 UPLOAD_OUTCOME_MIGRATION = (
     ROOT / "supabase/migrations/20261113168000_preserve_unknown_youtube_upload_outcomes.sql"
 ).read_text(encoding="utf-8")
@@ -143,10 +146,10 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertNotIn("SUPABASE_SECRET_KEY", APP)
         self.assertNotIn("service_role", APP.lower())
 
-    def test_streamlit_upload_limit_is_supported_and_set_to_100mb(self):
+    def test_streamlit_upload_limit_is_supported_and_set_to_200mb(self):
         self.assertIn("streamlit>=1.53", REQUIREMENTS)
-        self.assertIn("maxUploadSize = 100", STREAMLIT_CONFIG)
-        self.assertIn("max_upload_size=100", APP)
+        self.assertIn("maxUploadSize = 200", STREAMLIT_CONFIG)
+        self.assertIn("max_upload_size=200", APP)
 
     def test_sign_out_clears_all_prior_customer_widget_state(self):
         self.assertIn("_creator_clear_all_state", APP)
@@ -482,6 +485,10 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertIn("set_customer_upload_assets", APP)
         self.assertIn("thumbnail_storage_object_path", UPLOAD_ENHANCEMENT_MIGRATION)
         self.assertIn("thumbnail_storage_object_path", YOUTUBE_WORKER)
+        self.assertIn("max_upload_size=2", APP)
+        self.assertIn("2097152", APP)
+        self.assertIn("2097152", THUMBNAIL_LIMIT_MIGRATION)
+        self.assertIn("value=True", APP)
         self.assertIn("contains_synthetic_media", UPLOAD_ENHANCEMENT_MIGRATION)
         self.assertIn("containsSyntheticMedia", YOUTUBE_WORKER)
         self.assertNotIn("thumbnail_prompt", CUSTOMER_SEO_FUNCTION.lower())
