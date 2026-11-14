@@ -677,14 +677,18 @@ else:
                             try:
                                 customer_youtube_seo_request(
                                     "generate", job_id, supabase,
-                                    {"title": upload_title, "language": "Telugu", "ai_consent": True},
+                                    {"title": upload_title, "language": "Telugu", "ai_consent": bool(gemini_video_consent)},
                                 )
                             except RuntimeError as exc:
-                                if "ai_rate_limit_exceeded" in str(exc):
-                                    st.warning("Your video is safely uploaded. The workspace reached its hourly Gemini limit; try generating again after the limit resets.")
+                                st.session_state["creator_seo_failed_job_id"] = job_id
+                                if "gemini_video_consent_required" in str(exc):
+                                    st.warning("The video is safely uploaded. Tick the Gemini consent box below, then retry SEO.")
+                                elif "ai_rate_limit_exceeded" in str(exc):
+                                    st.warning("Your video is safely uploaded. The workspace reached its hourly Gemini limit; retry after the limit resets.")
                                 else:
-                                    st.error(f"Video uploaded, but Gemini could not finish SEO: {str(exc)[:130]}")
+                                    st.error(f"Video uploaded, but Gemini could not finish SEO: {str(exc)[:180]}")
                             else:
+                                st.session_state.pop("creator_seo_failed_job_id", None)
                                 st.success("Gemini created your captions, SEO, tags and hashtags. Review and save them below.")
                         st.rerun()
 
@@ -717,7 +721,34 @@ else:
             if not saved_meta and job.get("status") == "received":
                 st.info("Gemini will review this video and prepare its YouTube metadata. On the current Gemini API Free Tier, submitted content may be used to improve Google products.")
             if job.get("status") == "received" and not saved_meta:
-                st.info("Select your video above and press “Create Captions, SEO & Tags”. Gemini will prepare everything in one step.")
+                if st.session_state.get("creator_seo_failed_job_id") == str(job["id"]):
+                    st.warning("Your video is saved securely, but Gemini SEO did not finish. You do not need to upload the video again.")
+                    retry_consent = st.checkbox(
+                        "I consent to send this saved video to Google Gemini for captions, SEO, tags and hashtags. The Gemini API Free Tier may use submitted content to improve Google products.",
+                        value=False,
+                        key=f"gemini_retry_consent_{job['id']}",
+                    )
+                    if st.button(
+                        "🔁 Retry Captions, SEO & Tags",
+                        key=f"retry_seo_{job['id']}",
+                        type="primary",
+                        use_container_width=True,
+                        disabled=not retry_consent,
+                    ):
+                        with st.spinner("Gemini is reviewing your saved video..."):
+                            try:
+                                customer_youtube_seo_request(
+                                    "generate", str(job["id"]), supabase,
+                                    {"title": job.get("video_title") or "", "language": "Telugu", "ai_consent": True},
+                                )
+                            except RuntimeError as exc:
+                                st.error(f"Gemini SEO retry failed: {str(exc)[:180]}")
+                            else:
+                                st.session_state.pop("creator_seo_failed_job_id", None)
+                                st.success("Gemini created your captions, SEO, tags and hashtags.")
+                                st.rerun()
+                else:
+                    st.info("Select your video above and press “Create Captions, SEO & Tags”. Gemini will prepare everything in one step.")
             if job.get("status") == "received":
                 st.caption("Gemini fair-use limit: up to 5 video SEO generations per workspace per hour.")
 
